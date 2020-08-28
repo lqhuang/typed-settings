@@ -19,17 +19,23 @@ build:
     - python -m pep517.build --source --binary .
   artifacts:
     paths:
-      - dist/*.whl
+      - dist/
 
-test:
+test-builds:
   stage: test
   parallel:
     matrix:
-      - PY: ["3.7", "3.8", "3.9-rc"]
+      - PY: ["3.8", "3.9-rc"]
         PKG_FORMAT: ["tar.gz", "whl"]
   image: python:$PY
   script:
     - pip install $(ls dist/*.$PKG_FORMAT)[dev]
+    - pytest --cov=src/ --cov-report=term-missing
+
+test-coverage:
+  stage: test
+  script:
+    - pip install -e.[dev]
     - pytest --cov=src/ --cov-report=term-missing
   coverage: '/^TOTAL.*\s+(\d+\%)\s*$/'
 
