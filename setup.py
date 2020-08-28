@@ -25,7 +25,6 @@ if __name__ == '__main__':
         package_dir={'': 'src'},
         include_package_data=True,
         zip_safe=False,
-        options={'bdist_wheel': {'universal': '1'}},
         python_requires='>=3.7',
         install_requires=[
             'attrs',
