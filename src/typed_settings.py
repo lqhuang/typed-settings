@@ -4,7 +4,10 @@ from pathlib import Path
 import os
 
 import attr
-import click
+try:
+    import click
+except ImportError as e:
+    click = e
 import toml
 
 
@@ -109,6 +112,11 @@ def load_settings(
 
 
 def click_options(settings_cls, appname, config_files):
+    if isinstance(click, Exception):
+        raise ModuleNotFoundError(
+            'You need to install "click" to use this feature'
+        ) from click
+
     def pass_settings(f):
         """Similar to :func:`pass_context`, but only pass the object on the
         context onwards (:attr:`Context.obj`).  This is useful if that object

@@ -34,6 +34,7 @@ if __name__ == '__main__':
         extras_require={
             'click': ['click'],
             'dev': [
+                'click',
                 'coverage[toml]>=5.0.2',
                 'pytest-cov',
                 'pytest>=6',
