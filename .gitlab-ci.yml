@@ -1,6 +1,7 @@
 stages:
   - build
   - test
+  - release-check
   - release
 
 variables:
@@ -39,9 +40,20 @@ test-coverage:
     - pytest --cov=src/ --cov-report=term-missing
   coverage: '/^TOTAL.*\s+(\d+\%)\s*$/'
 
-release:
+release-check:
   stage: release
   only:
     - tags
   script:
-    - 'echo "Uploading: $(ls dist/)"'
+    - pip install twine
+    - twine check dist/*
+    - twine --repository-url https://test.pypi.org/legacy/ --username __token__ --password $(cat $PYPI_TOKEN)
+
+release:
+  stage: release
+  only:
+    - tags
+  when: manual
+  script:
+    - pip install twine
+    - twine --repository-url https://upload.pypi.org/legacy/ --username __token__ --password $(cat $PYPI_TOKEN)
