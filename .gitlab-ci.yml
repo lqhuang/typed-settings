@@ -3,12 +3,11 @@ stages:
   - test
   - release
 
+variables:
+  PIP_CACHE_DIR: "$CI_PROJECT_DIR/.cache/pip"
+
 default:
   image: python:latest
-
-  variables:
-    PIP_CACHE_DIR: "$CI_PROJECT_DIR/.cache/pip"
-
   cache:
     paths:
       - .cache/pip
@@ -27,9 +26,10 @@ test:
   parallel:
     matrix:
       - PY: ["3.7", "3.8", "3.9-rc"]
+        PKG_FORMAT: ["tar.gz", "whl"]
   image: python:$PY
   script:
-    - pip install $(ls dist/*.whl)[dev]
+    - pip install $(ls dist/*.$PKG_FORMAT)[dev]
     - pytest --cov=src/ --cov-report=term-missing
   coverage: '/^TOTAL.*\s+(\d+\%)\s*$/'
 
@@ -38,4 +38,4 @@ release:
   only:
     - tags
   script:
-    - echo "Uploading: $(ls dist/)"
+    - 'echo "Uploading: $(ls dist/)"'
