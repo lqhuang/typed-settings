@@ -100,11 +100,11 @@ def load_settings(
         settings_env_prefix = f'{appname.upper()}_'
 
     settings: Dict[str, Any] = {}
-    paths = _get_settings_filenames(config_files, config_files_var)
+    paths = _get_config_filenames(config_files, config_files_var)
     for path in paths:
         s = toml.load(path.open())
-        _dict_merge(settings, s.get(config_file_section, {}))
-    # _dict_merge(settings, _get_env_dict(settings_cls, os.environ, settings_env_prefix))
+        _merge_dicts(settings, s.get(config_file_section, {}))
+    _merge_dicts(settings, _get_env_dict(settings_cls, os.environ, settings_env_prefix))
 
     settings = _clean_settings(settings, settings_cls)
 
@@ -148,44 +148,50 @@ def click_options(settings_cls, appname, config_files):
     return wrap
 
 
-def _get_settings_filenames(
+def _get_config_filenames(
     config_files: Iterable[Union[str, Path]],
     config_files_var: Optional[str],
 ) -> List[Path]:
+    """Concatenates *config_files* and files from env var *config_files_var*, filters
+    non existing files and returns the result.
+    """
     candidates = list(config_files)
     if config_files_var:
         candidates += os.getenv(config_files_var, '').split(':')
     return [p for f in candidates if (p := Path(f)).is_file()]
 
 
-def _dict_merge(d1, d2):
+def _merge_dicts(d1: Dict[str, Any], d2: Dict[str, Any]) -> None:
+    """Recursively merges *d2* into *d1*.  *d1* is modified in place."""
     for k, v in d2.items():
         if k in d1 and isinstance(d1[k], dict):
-            _dict_merge(d1[k], d2[k])
+            _merge_dicts(d1[k], d2[k])
         else:
-            d1[k] = d2[k]
+            d1[k] = v
 
 
 def _clean_settings(settings: Dict[str, Any], cls: Type[T]) -> Dict[str, Any]:
-    settings = {
-        a.name: settings[a.name] for a in attr.fields(cls) if a.name in settings
-    }
-    return settings
-
-
-def _get_env_var_names(cls: Type[T], prefix: str) -> List[str]:
-    names = [f'{prefix}{a.name.upper()}' for a in attr.fields(cls)]
+    """Recursively remove invalid entries from *settings* and return a new dict."""
+    cleaned = {}
+    cls = attr.resolve_types(cls)
+    for a in attr.fields(cls):
+        if a.name in settings:
+            val = settings[a.name]
+            if a.type is not None and attr.has(a.type):
+                val = _clean_settings(val, a.type)
+            cleaned[a.name] = val
+    return cleaned
 
 
 def _get_env_dict(cls, env, prefix) -> dict:
     prefix_len = len(prefix)
     values = {}
     def check(r_cls, r_values, r_prefix):
+        r_cls = attr.resolve_types(r_cls)
         for a in attr.fields(r_cls):
-            val = getattr(r_cls, a.name)
-            if attr.has(val):
+            if a.type and attr.has(a.type):
                 r_values[a.name] = {}
-                check(val, r_values[a.name], f'{r_prefix}{a.name.upper()}_')
+                check(a.type, r_values[a.name], f'{r_prefix}{a.name.upper()}_')
             else:
                 varname = f'{r_prefix}{a.name.upper()}'
                 if varname in env:
