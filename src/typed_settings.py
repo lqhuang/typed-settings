@@ -1,17 +1,13 @@
 from functools import update_wrapper
-from typing import Any, Dict, Iterable, List, Optional, Type, TypeVar, Union
+from typing import Any, Dict, Iterable, List, Optional, Type, TypeVar, Union, cast
 from pathlib import Path
 import os
 
 import attr
-try:
-    import click
-except ImportError as e:
-    click = e
 import toml
 
 
-class _Auto(object):
+class _Auto:
     """
     Sentinel class to indicate the lack of a value when ``None`` is ambiguous.
 
@@ -96,11 +92,12 @@ def load_settings(
         config_file_section = appname
     if config_files_var is AUTO:
         config_files_var = f'{appname.upper()}_SETTINGS'
-    if settings_env_prefix is AUTO:
+    # if settings_env_prefix is AUTO:
+    if isinstance(settings_env_prefix, _Auto):
         settings_env_prefix = f'{appname.upper()}_'
 
     settings: Dict[str, Any] = {}
-    paths = _get_config_filenames(config_files, config_files_var)
+    paths = _get_config_filenames(config_files, cast(Optional[str], config_files_var))
     for path in paths:
         s = toml.load(path.open())
         _merge_dicts(settings, s.get(config_file_section, {}))
@@ -112,10 +109,12 @@ def load_settings(
 
 
 def click_options(settings_cls, appname, config_files):
-    if isinstance(click, Exception):
+    try:
+        import click
+    except ImportError as e:
         raise ModuleNotFoundError(
             'You need to install "click" to use this feature'
-        ) from click
+        ) from e
 
     def pass_settings(f):
         """Similar to :func:`pass_context`, but only pass the object on the
@@ -183,13 +182,12 @@ def _clean_settings(settings: Dict[str, Any], cls: Type[T]) -> Dict[str, Any]:
     return cleaned
 
 
-def _get_env_dict(cls, env, prefix) -> dict:
-    prefix_len = len(prefix)
-    values = {}
-    def check(r_cls, r_values, r_prefix):
+def _get_env_dict(cls: Type[T], env: Dict[str, str], prefix: str) -> Dict[str, Any]:
+    values: Dict[str, str] = {}
+    def check(r_cls: type, r_values: Dict[str, Any], r_prefix: str):
         r_cls = attr.resolve_types(r_cls)
         for a in attr.fields(r_cls):
-            if a.type and attr.has(a.type):
+            if a.type is not None and attr.has(a.type):
                 r_values[a.name] = {}
                 check(a.type, r_values[a.name], f'{r_prefix}{a.name.upper()}_')
             else:

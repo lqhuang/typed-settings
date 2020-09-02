@@ -1,7 +1,7 @@
 from pathlib import Path
 from typing import List
 
-from attr import frozen, field, resolve_types
+from attr import frozen, field
 import pytest
 
 import typed_settings as ts
