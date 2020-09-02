@@ -1,3 +1,6 @@
+[![pipeline status](https://gitlab.com/sscherfke/typed-settings/badges/main/pipeline.svg)](https://gitlab.com/sscherfke/typed-settings/-/commits/main)
+[![coverage report](https://gitlab.com/sscherfke/typed-settings/badges/main/coverage.svg)](https://gitlab.com/sscherfke/typed-settings/-/commits/main)
+
 # Typed Settings
 
 PoC for library for managing (typed) settings – for server processes as
