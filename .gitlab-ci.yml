@@ -41,13 +41,13 @@ test-coverage:
   coverage: '/^TOTAL.*\s+(\d+\%)\s*$/'
 
 release-check:
-  stage: release
+  stage: release-check
   only:
     - tags
   script:
     - pip install twine
     - twine check dist/*
-    - twine --repository-url https://test.pypi.org/legacy/ --username __token__ --password $(cat $PYPI_TOKEN)
+    - twine upload --repository-url https://test.pypi.org/legacy/ --username __token__ --password $(cat $TEST_PYPI_TOKEN) dist/*
 
 release:
   stage: release
@@ -56,4 +56,4 @@ release:
   when: manual
   script:
     - pip install twine
-    - twine --repository-url https://upload.pypi.org/legacy/ --username __token__ --password $(cat $PYPI_TOKEN)
+    - twine upload --repository-url https://upload.pypi.org/legacy/ --username __token__ --password $(cat $UPLOAD_PYPI_TOKEN) dist/*
