@@ -26,7 +26,7 @@ test-builds:
   stage: test
   parallel:
     matrix:
-      - PY: ["3.8", "3.9-rc"]
+      - PY: ["3.7", "3.8", "3.9-rc"]
         PKG_FORMAT: ["tar.gz", "whl"]
   image: python:$PY
   script:

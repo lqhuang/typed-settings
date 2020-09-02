@@ -157,7 +157,7 @@ def _get_config_filenames(
     candidates = list(config_files)
     if config_files_var:
         candidates += os.getenv(config_files_var, '').split(':')
-    return [p for f in candidates if (p := Path(f)).is_file()]
+    return [p for p in (Path(f) for f in candidates) if p.is_file()]
 
 
 def _merge_dicts(d1: Dict[str, Any], d2: Dict[str, Any]) -> None:
