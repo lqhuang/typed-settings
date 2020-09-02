@@ -4,7 +4,7 @@ from setuptools import setup
 if __name__ == '__main__':
     setup(
         name='typed-settings',
-        version='0.1',
+        version='0.2',
         description='Typed settings based on attrs classes',
         license='MIT',
         url='https://gitlab.com/sscherfke/typed-settings',
