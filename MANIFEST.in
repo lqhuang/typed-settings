@@ -1,0 +1,8 @@
+include LICENSE *.md *.toml
+
+include src/typed_settings/py.typed
+
+recursive-include tests *.py
+
+recursive-include docs *
+prune docs/_build
