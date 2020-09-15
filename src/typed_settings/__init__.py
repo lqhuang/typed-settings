@@ -100,8 +100,8 @@ def load_settings(
     settings: Dict[str, Any] = {}
     paths = _get_config_filenames(config_files, cast(Optional[str], config_files_var))
     for path in paths:
-        s = toml.load(path.open())
-        _merge_dicts(settings, s.get(config_file_section, {}))
+        toml_settings = _load_toml(path, config_file_section)
+        _merge_dicts(settings,toml_settings)
     _merge_dicts(settings, _get_env_dict(settings_cls, os.environ, settings_env_prefix))
 
     settings = _clean_settings(settings, settings_cls)
@@ -120,6 +120,29 @@ def _get_config_filenames(
     if config_files_var:
         candidates += os.getenv(config_files_var, '').split(':')
     return [p for p in (Path(f) for f in candidates) if p.is_file()]
+
+
+def _load_toml(path: Path, section: str) -> Dict[str, Any]:
+    sections = section.split('.')
+    settings = toml.load(path.open())
+    for section in sections:
+        try:
+            settings = settings[section]
+        except KeyError:
+            return {}
+    settings = _rename_dict_keys(settings)
+    return settings
+
+
+def _rename_dict_keys(d: Dict[str, Any]) -> Dict[str, Any]:
+    """Recursively replaces "-" in dict keys with "_"."""
+    result = {}
+    for k, v in d.items():
+        if isinstance(v, dict):
+            v = _rename_dict_keys(v)
+        result[k.replace('-', '_')] = v
+    return result
+
 
 
 def _merge_dicts(d1: Dict[str, Any], d2: Dict[str, Any]) -> None:
