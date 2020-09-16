@@ -1,7 +1,8 @@
 stages:
   - build
   - test
-  - release-check
+  - post-test
+  - pre-release
   - release
 
 variables:
@@ -9,6 +10,8 @@ variables:
 
 default:
   image: python:latest
+  before_script:
+    - pip install nox
   cache:
     paths:
       - .cache/pip
@@ -16,32 +19,49 @@ default:
 build:
   stage: build
   script:
-    - pip install pep517 #twine
-    - python -m pep517.build --source --binary .
+    - nox -s build
   artifacts:
     paths:
       - dist/
 
-test-builds:
+lint:
+  stage: test
+  script:
+    - nox -s lint
+
+mypy:
+  stage: test
+  script:
+    - nox -s mypy
+
+test:
   stage: test
   parallel:
     matrix:
       - PY: ["3.7", "3.8", "3.9-rc"]
-        PKG_FORMAT: ["tar.gz", "whl"]
+        PKG_FORMAT: ["src", "whl"]
   image: python:$PY
   script:
-    - pip install $(ls dist/*.$PKG_FORMAT)[dev]
-    - pytest --cov=src/ --cov-report=term-missing
+    # "%%-*" strips the longest possible match of "-*" from the right:
+    - >-
+      nox -s "test-${PY%%-*}($PKG_FORMAT)"
+      --junit-xml=report-${PY%%-*}-${PKG_FORMAT}.xml
+      tests
+  artifacts:
+    paths:
+      - ".coverage"
+      - ".coverage.*"
+    reports:
+      junit: "report-*.xml"
 
 test-coverage:
-  stage: test
+  stage: post-test
   script:
-    - pip install -e.[dev]
-    - pytest --cov=src/ --cov-report=term-missing
+    - nox -s coverage-report
   coverage: '/^TOTAL.*\s+(\d+\%)\s*$/'
 
 release-check:
-  stage: release-check
+  stage: pre-release
   only:
     - tags
   script:
