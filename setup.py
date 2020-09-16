@@ -9,9 +9,9 @@ DEPS_LINT = DEPS_CLICK + [
     "flake8-black",
     "flake8-bugbear",
     "flake8-isort",
+    "mypy",
 ]
-DEPS_MYPY = DEPS_CLICK + ["mypy"]
-DEPS_DEV = DEPS_TEST + DEPS_LINT + DEPS_MYPY + ["nox"]
+DEPS_DEV = DEPS_TEST + DEPS_LINT + ["nox"]
 
 
 if __name__ == "__main__":

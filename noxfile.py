@@ -56,9 +56,10 @@ def lint(session):
     args = session.posargs or LOCATIONS
     session.run("flake8", *args)
 
+
 @nox.session
 def mypy(session):
-    session.install(".[mypy]")
+    session.install(".[lint]")
 
     args = session.posargs or ["--ignore-missing-imports"] + LOCATIONS
     session.run("mypy", *args)

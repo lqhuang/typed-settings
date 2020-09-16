@@ -44,7 +44,7 @@ test:
   script:
     # "%%-*" strips the longest possible match of "-*" from the right:
     - >-
-      nox -s "test-${PY%%-*}($PKG_FORMAT)"
+      nox -s "test-${PY%%-*}($PKG_FORMAT)" --
       --junit-xml=report-${PY%%-*}-${PKG_FORMAT}.xml
       tests
   artifacts:
