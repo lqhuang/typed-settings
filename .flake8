@@ -1,5 +1,7 @@
 [flake8]
-select = B,B9,BLK,C,E,F,I,W
+select = B,B9,BLK,C,E,F,I,S,W
 max-complexity = 10
 max-line-length = 79
-per-file-ignores = setup.py:E501
+per-file-ignores =
+    setup.py:E501
+    tests/*:S101

@@ -34,6 +34,11 @@ mypy:
   script:
     - nox --forcecolor -s mypy
 
+safety:
+  stage: test
+  script:
+    - nox --forcecolor -s safety
+
 test:
   stage: test
   parallel:
@@ -64,6 +69,8 @@ release-check:
   stage: pre-release
   only:
     - tags
+  except:
+    - schedules
   variables:
     TWINE_USERNAME: "__token__"
     TWINE_PASSWORD: "$TEST_PYPI_TOKEN"
@@ -78,6 +85,8 @@ release:
   stage: release
   only:
     - tags
+  except:
+    - schedules
   when: manual
   variables:
     TWINE_USERNAME: "__token__"

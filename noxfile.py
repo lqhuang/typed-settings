@@ -63,3 +63,9 @@ def mypy(session):
 
     args = session.posargs or ["--ignore-missing-imports"] + LOCATIONS
     session.run("mypy", *args)
+
+
+@nox.session
+def safety(session):
+    session.install(".[dev]")  # Install *everything*
+    session.run("safety", "check")

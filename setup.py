@@ -6,12 +6,13 @@ DEPS_CLICK = ["click"]
 DEPS_TEST = DEPS_CLICK + ["pytest>=6", "pytest-cov", "coverage[toml]>=5.0.2"]
 DEPS_LINT = DEPS_CLICK + [
     "flake8",
+    "flake8-bandit",
     "flake8-black",
     "flake8-bugbear",
     "flake8-isort",
     "mypy",
 ]
-DEPS_DEV = DEPS_TEST + DEPS_LINT + ["nox"]
+DEPS_DEV = DEPS_TEST + DEPS_LINT + ["nox", "safety"]
 
 
 if __name__ == "__main__":
