@@ -22,6 +22,16 @@ class Settings:
     )
 
 
+class TestAuto:
+    """Tests for the AUTO sentinel."""
+
+    def test_is_singleton(self):
+        assert _core.AUTO is _core._Auto()
+
+    def test_str(self):
+        assert str(_core.AUTO) == "AUTO"
+
+
 class TestLoadSettings:
     """Tests for load_settings()."""
 
@@ -52,6 +62,32 @@ class TestLoadSettings:
                 port=42,
             ),
         )
+
+    def test_load_settings_explicit_config(self, tmp_path, monkeypatch):
+        """
+        The automatically derived config section name and settings files var
+        name can be overriden.
+        """
+        config_file = tmp_path.joinpath("settings.toml")
+        config_file.write_text(
+            """[le-section]
+            spam = "eggs"
+        """
+        )
+
+        monkeypatch.setenv("LE_SETTINGS", str(config_file))
+
+        @frozen
+        class Settings:
+            spam: str = ""
+
+        settings = _core.load_settings(
+            settings_cls=Settings,
+            appname="example",
+            config_file_section="le-section",
+            config_files_var="LE_SETTINGS",
+        )
+        assert settings == Settings(spam="eggs")
 
     def test_disable_environ(self, monkeypatch):
         """Setting env_prefix=None diables loading env vars."""
