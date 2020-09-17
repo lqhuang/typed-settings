@@ -46,7 +46,7 @@ if __name__ == "__main__":
             "dev": DEPS_DEV,
         },
         classifiers=[
-            "Development Status :: 1 - Planning",
+            "Development Status :: 3 - Alpha",
             "Environment :: Console",
             "Intended Audience :: Developers",
             "Natural Language :: English",
