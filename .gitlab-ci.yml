@@ -64,16 +64,26 @@ release-check:
   stage: pre-release
   only:
     - tags
+  variables:
+    TWINE_USERNAME: "__token__"
+    TWINE_PASSWORD: "$TEST_PYPI_TOKEN"
+    TWINE_REPOSITORY_URL: "https://test.pypi.org/legacy/"
+    TWINE_NON_INTERACTIVE: "1"
   script:
     - pip install twine
     - twine check dist/*
-    - twine upload --repository-url https://test.pypi.org/legacy/ --username __token__ --password $(cat $TEST_PYPI_TOKEN) dist/*
+    - twine upload  dist/*
 
 release:
   stage: release
   only:
     - tags
   when: manual
+  variables:
+    TWINE_USERNAME: "__token__"
+    TWINE_PASSWORD: "$UPLOAD_PYPI_TOKEN"
+    TWINE_REPOSITORY_URL: "https://upload.pypi.org/legacy/"
+    TWINE_NON_INTERACTIVE: "1"
   script:
     - pip install twine
-    - twine upload --repository-url https://upload.pypi.org/legacy/ --username __token__ --password $(cat $UPLOAD_PYPI_TOKEN) dist/*
+    - twine upload dist/*
