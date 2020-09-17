@@ -52,14 +52,14 @@ def load_settings(
     config_files: Iterable[Union[str, Path]] = (),
     config_file_section: Union[_Auto, str] = AUTO,
     config_files_var: Union[None, _Auto, str] = AUTO,
-    settings_env_prefix: Union[None, _Auto, str] = AUTO,
+    env_prefix: Union[None, _Auto, str] = AUTO,
 ) -> T:
     """Loads settings for *appname* and returns an instance of *settings_cls*
 
     Settings can be loaded from *config_files* and/or from the files specified
     via the *config_files_var* environment variable.  Settings can also be
     overridden via environment variables named like the corresponding setting
-    and prefixed with *settings_env_prefix*.
+    and prefixed with *env_prefix*.
 
     Settings precedence (from lowest to highest priority):
 
@@ -70,7 +70,7 @@ def load_settings(
     - First file from *config_files_var*
     - ...
     - Last file from *config_files_var*
-    - Environment variable *settings_env_prefix*_{SETTING}
+    - Environment variable *env_prefix*_{SETTING}
 
     Args:
       appname: Your application's name.  Used to derive defaults for the
@@ -90,9 +90,9 @@ def load_settings(
 
         Set to ``None`` to disable this feature.
 
-      settings_env_prefix: Load settings from environment variables with this
-        prefix.  By default, use *APPNAME_*.  Set to ``None`` to disable
-        loading env vars.
+      env_prefix: Load settings from environment variables with this prefix.
+        By default, use *APPNAME_*.  Set to ``None`` to disable loading env
+        vars.
 
     Returns:
       An instance of *settings_cls* populated with settings from settings files
@@ -107,9 +107,8 @@ def load_settings(
         config_file_section = appname
     if config_files_var is AUTO:
         config_files_var = f"{appname.upper()}_SETTINGS"
-    if settings_env_prefix is AUTO:
-        # if isinstance(settings_env_prefix, _Auto):
-        settings_env_prefix = f"{appname.upper()}_"
+    if env_prefix is AUTO:
+        env_prefix = f"{appname.upper()}_"
 
     settings: Dict[str, Any] = {}
     paths = _get_config_filenames(
@@ -119,9 +118,9 @@ def load_settings(
         toml_settings = _load_toml(path, cast(str, config_file_section))
         _merge_dicts(settings, toml_settings)
 
-    if settings_env_prefix is not None:
+    if env_prefix is not None:
         env_settings = _get_env_dict(
-            settings_cls, os.environ, cast(str, settings_env_prefix)
+            settings_cls, os.environ, cast(str, env_prefix)
         )
         _merge_dicts(settings, env_settings)
 

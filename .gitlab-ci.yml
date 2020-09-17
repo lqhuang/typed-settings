@@ -19,7 +19,7 @@ default:
 build:
   stage: build
   script:
-    - nox -s build
+    - nox --forcecolor -s build
   artifacts:
     paths:
       - dist/
@@ -27,12 +27,12 @@ build:
 lint:
   stage: test
   script:
-    - nox -s lint
+    - nox --forcecolor -s lint
 
 mypy:
   stage: test
   script:
-    - nox -s mypy
+    - nox --forcecolor -s mypy
 
 test:
   stage: test
@@ -44,7 +44,7 @@ test:
   script:
     # "%%-*" strips the longest possible match of "-*" from the right:
     - >-
-      nox -s "test-${PY%%-*}($PKG_FORMAT)" --
+      nox --forcecolor -s "test-${PY%%-*}($PKG_FORMAT)" --
       --junit-xml=report-${PY%%-*}-${PKG_FORMAT}.xml
       tests
   artifacts:
@@ -57,7 +57,7 @@ test:
 test-coverage:
   stage: post-test
   script:
-    - nox -s coverage-report
+    - nox --forcecolor -s coverage-report
   coverage: '/^TOTAL.*\s+(\d+\%)\s*$/'
 
 release-check:

@@ -54,9 +54,9 @@ class TestLoadSettings:
         )
 
     def test_disable_environ(self, monkeypatch):
-        """Setting settings_env_prefix=None diables loading env vars."""
+        """Setting env_prefix=None diables loading env vars."""
 
-        @frozen()
+        @frozen
         class Settings:
             x: str = "spam"
 
@@ -64,11 +64,25 @@ class TestLoadSettings:
         monkeypatch.setattr(_core, "_get_env_dict", None)
 
         settings = _core.load_settings(
-            settings_cls=Settings,
-            appname="example",
-            settings_env_prefix=None,
+            settings_cls=Settings, appname="example", env_prefix=None
         )
         assert settings == Settings(x="spam")
+
+    def test_no_env_prefix(self, monkeypatch):
+        """
+        The prefix for env vars can be disabled w/o disabling loading env. vars
+        themselves.
+        """
+        monkeypatch.setenv("CONFIG_VAL", "42")
+
+        @frozen
+        class Settings:
+            config_val: str
+
+        settings = _core.load_settings(
+            settings_cls=Settings, appname="example", env_prefix=""
+        )
+        assert settings == Settings(config_val="42")
 
 
 class TestGetConfigFilenames:
