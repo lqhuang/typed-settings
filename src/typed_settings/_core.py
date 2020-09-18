@@ -47,9 +47,10 @@ T = TypeVar("T")
 
 
 def load_settings(
-    appname: str,
     settings_cls: Type[T],
+    appname: str,
     config_files: Iterable[Union[str, Path]] = (),
+    *,
     config_file_section: Union[_Auto, str] = AUTO,
     config_files_var: Union[None, _Auto, str] = AUTO,
     env_prefix: Union[None, _Auto, str] = AUTO,
@@ -73,10 +74,10 @@ def load_settings(
     - Environment variable *env_prefix*_{SETTING}
 
     Args:
+      settings_cls: Attrs class with default settings.
+
       appname: Your application's name.  Used to derive defaults for the
         remaining args.
-
-      settings_cls: Attrs class with default settings.
 
       config_files: Load settings from these TOML files.
 
