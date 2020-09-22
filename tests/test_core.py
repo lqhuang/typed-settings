@@ -230,31 +230,6 @@ class TestLoadToml:
         }
 
 
-class TestDictMerge:
-    """Tests for _dict_merge()"""
-
-    def test_dict_merge(self):
-        """Dicts must be merged recursively.  Lists are just overridden."""
-        d1 = {
-            "1a": 3,
-            "1b": {"2a": "spam", "2b": {"3a": "foo"}},
-            "1c": [{"2a": 3.14}, {"2b": 34.3}],
-            "1d": 4,
-        }
-        d2 = {
-            "1b": {"2a": "eggs", "2b": {"3b": "bar"}},
-            "1c": [{"2a": 23}, {"2b": 34.3}],
-            "1d": 5,
-        }
-        _core._merge_dicts(d1, d2)
-        assert d1 == {
-            "1a": 3,
-            "1b": {"2a": "eggs", "2b": {"3a": "foo", "3b": "bar"}},
-            "1c": [{"2a": 23}, {"2b": 34.3}],
-            "1d": 5,
-        }
-
-
 class TestCleanSettings:
     """Tests for _clean_settings()"""
 

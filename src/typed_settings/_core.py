@@ -16,8 +16,9 @@ from typing import (
     cast,
 )
 
-import attr
 import toml
+
+from ._dict_utils import _deep_fields, _get_path, _merge_dicts, _set_path
 
 
 class _Auto:
@@ -166,45 +167,26 @@ def _rename_dict_keys(d: Mapping[str, Any]) -> Dict[str, Any]:
     return result
 
 
-def _merge_dicts(d1: Dict[str, Any], d2: Dict[str, Any]) -> None:
-    """Recursively merges *d2* into *d1*.  *d1* is modified in place."""
-    for k, v in d2.items():
-        if k in d1 and isinstance(d1[k], dict):
-            _merge_dicts(d1[k], d2[k])
-        else:
-            d1[k] = v
-
-
 def _clean_settings(settings: Dict[str, Any], cls: Type[T]) -> Dict[str, Any]:
     """
     Recursively remove invalid entries from *settings* and return a new dict.
     """
-    cleaned = {}
-    cls = attr.resolve_types(cls)
-    for a in attr.fields(cls):
-        if a.name in settings:
-            val = settings[a.name]
-            if a.type is not None and attr.has(a.type):
-                val = _clean_settings(val, a.type)
-            cleaned[a.name] = val
+    cleaned: Dict[str, Any] = {}
+    for path, _field, _cls in _deep_fields(cls):
+        try:
+            val = _get_path(settings, path)
+        except KeyError:
+            continue
+        _set_path(cleaned, path, val)
     return cleaned
 
 
 def _get_env_dict(
     cls: Type[T], env: Mapping[str, str], prefix: str
 ) -> Dict[str, Any]:
-    values: Dict[str, str] = {}
-
-    def check(r_cls: type, r_values: Dict[str, Any], r_prefix: str):
-        r_cls = attr.resolve_types(r_cls)
-        for a in attr.fields(r_cls):
-            if a.type is not None and attr.has(a.type):
-                r_values[a.name] = {}
-                check(a.type, r_values[a.name], f"{r_prefix}{a.name.upper()}_")
-            else:
-                varname = f"{r_prefix}{a.name.upper()}"
-                if varname in env:
-                    r_values[a.name] = env[varname]
-
-    check(cls, values, prefix)
+    values: Dict[str, Any] = {}
+    for path, _field, _cls in _deep_fields(cls):
+        varname = f"{prefix}{path.upper().replace('.', '_')}"
+        if varname in env:
+            _set_path(values, path, env[varname])
     return values
