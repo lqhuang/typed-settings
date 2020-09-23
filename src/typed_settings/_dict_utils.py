@@ -3,7 +3,10 @@ from typing import Any, Dict, List, Tuple
 from attr import Attribute, fields, has, resolve_types
 
 
-def _deep_fields(cls: type) -> List[Tuple[str, Attribute, type]]:
+FieldList = List[Tuple[str, Attribute, type]]
+
+
+def _deep_fields(cls: type) -> FieldList:
     """
     Recursively iterates *cls* and nested attrs classes and returns a flat
     list of *(path, Attribute, type)* tuples.

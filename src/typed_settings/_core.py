@@ -13,12 +13,17 @@ from typing import (
     Type,
     TypeVar,
     Union,
-    cast,
 )
 
 import toml
 
-from ._dict_utils import _deep_fields, _get_path, _merge_dicts, _set_path
+from ._dict_utils import (
+    FieldList,
+    _deep_fields,
+    _get_path,
+    _merge_dicts,
+    _set_path,
+)
 
 
 class _Auto:
@@ -52,11 +57,12 @@ def load_settings(
     appname: str,
     config_files: Iterable[Union[str, Path]] = (),
     *,
-    config_file_section: Union[_Auto, str] = AUTO,
-    config_files_var: Union[None, _Auto, str] = AUTO,
-    env_prefix: Union[None, _Auto, str] = AUTO,
+    config_file_section: Union[str, _Auto] = AUTO,
+    config_files_var: Union[None, str, _Auto] = AUTO,
+    env_prefix: Union[None, str, _Auto] = AUTO,
 ) -> T:
-    """Loads settings for *appname* and returns an instance of *settings_cls*
+    """
+    Loads settings for *appname* and returns an instance of *settings_cls*
 
     Settings can be loaded from *config_files* and/or from the files specified
     via the *config_files_var* environment variable.  Settings can also be
@@ -75,60 +81,120 @@ def load_settings(
     - Environment variable *env_prefix*_{SETTING}
 
     Args:
-      settings_cls: Attrs class with default settings.
+        settings_cls: Attrs class with default settings.
 
-      appname: Your application's name.  Used to derive defaults for the
-        remaining args.
+        appname: Your application's name.  Used to derive defaults for the
+          remaining args.
 
-      config_files: Load settings from these TOML files.
+        config_files: Load settings from these TOML files.
 
-      config_file_section: Name of your app's section in the config file.
-        By default, use *appname*.
+        config_file_section: Name of your app's section in the config file.
+          By default, use *appname*.
 
-      config_files_var: Load list of settings files from this environment
-        variable.  By default, use *APPNAME*_SETTINGS.  Multiple paths have to
-        be separated by ":".  Each settings file will update its predecessor,
-        so the last file will have the highest priority.
+        config_files_var: Load list of settings files from this environment
+          variable.  By default, use *APPNAME*_SETTINGS.  Multiple paths have
+          to be separated by ":".  Each settings file will update its
+          predecessor, so the last file will have the highest priority.
 
-        Set to ``None`` to disable this feature.
+          Set to ``None`` to disable this feature.
 
-      env_prefix: Load settings from environment variables with this prefix.
-        By default, use *APPNAME_*.  Set to ``None`` to disable loading env
-        vars.
+        env_prefix: Load settings from environment variables with this prefix.
+          By default, use *APPNAME_*.  Set to ``None`` to disable loading env
+          vars.
 
     Returns:
-      An instance of *settings_cls* populated with settings from settings files
-      and environment variables.
+        An instance of *settings_cls* populated with settings from settings
+        files and environment variables.
 
     Raises:
-      TypeError: Config values cannot be converted to the required type
-      ValueError: Config values don't meet their requirements
-
+        TypeError: Config values cannot be converted to the required type
+        ValueError: Config values don't meet their requirements
     """
-    if config_file_section is AUTO:
-        config_file_section = appname
-    if config_files_var is AUTO:
-        config_files_var = f"{appname.upper()}_SETTINGS"
-    if env_prefix is AUTO:
-        env_prefix = f"{appname.upper()}_"
-
-    settings: Dict[str, Any] = {}
-    paths = _get_config_filenames(
-        config_files, cast(Optional[str], config_files_var)
+    fields = _deep_fields(settings_cls)
+    settings = _load_settings(
+        fields=fields,
+        appname=appname,
+        config_files=config_files,
+        config_file_section=config_file_section,
+        config_files_var=config_files_var,
+        env_prefix=env_prefix,
     )
-    for path in paths:
-        toml_settings = _load_toml(path, cast(str, config_file_section))
-        _merge_dicts(settings, toml_settings)
-
-    if env_prefix is not None:
-        env_settings = _get_env_dict(
-            settings_cls, os.environ, cast(str, env_prefix)
-        )
-        _merge_dicts(settings, env_settings)
-
-    settings = _clean_settings(settings, settings_cls)
-
     return settings_cls(**settings)  # type: ignore
+
+
+def _load_settings(
+    *,
+    fields: FieldList,
+    appname: str,
+    config_files: Iterable[Union[str, Path]],
+    config_file_section: Union[str, _Auto],
+    config_files_var: Union[None, str, _Auto],
+    env_prefix: Union[None, str, _Auto],
+) -> Dict[str, Any]:
+    """
+    Loads settings for *fields* and returns them as dict.
+
+    This function makes it easier to extend settings since it returns a dict
+    that can easily be updated (as compared to of frozen settings instances).
+
+    See :func:`load_settings() for details on the arguments.
+    """
+    loaded_settings = [
+        _from_toml(
+            fields=fields,
+            appname=appname,
+            files=config_files,
+            section=config_file_section,
+            var_name=config_files_var,
+        ),
+        # _from_dotenv(),
+        _from_env(fields=fields, appname=appname, prefix=env_prefix),
+    ]
+    settings: Dict[str, Any] = {}
+    for ls in loaded_settings:
+        _merge_dicts(settings, ls)
+    return settings
+
+
+def _from_toml(
+    fields: FieldList,
+    appname: str,
+    files: Iterable[Union[str, Path]],
+    section: Union[str, _Auto],
+    var_name: Union[None, str, _Auto],
+) -> Dict[str, Any]:
+    """
+    Loads settings from toml files.
+
+    Settings of multiple files will be merged.  The last file has the highest
+    precedence.
+
+    Args:
+        fields: The list of available settings.
+        appname: Appname to derive *section* and *var_name* from.
+        files: A list of filenames to try to load.
+        section: The name of the TOML file section to load data from.  Will be
+          :code:`{appname}` if it is :data:`AUTO`.
+        var_name: Name of the environment variable that may hold additional
+          file paths.  Will be :code:`{APPNAME}_SETTINGS` if it is
+          :data:`AUTO`.
+
+    Returns:
+        A dict with the loaded settings.
+    """
+    section = appname if isinstance(section, _Auto) else section
+    var_name = (
+        f"{appname.upper()}_SETTINGS"
+        if isinstance(var_name, _Auto)
+        else var_name
+    )
+
+    paths = _get_config_filenames(files, var_name)
+    settings: Dict[str, Any] = {}
+    for path in paths:
+        toml_settings = _load_toml(fields, path, section)
+        _merge_dicts(settings, toml_settings)
+    return settings
 
 
 def _get_config_filenames(
@@ -138,6 +204,15 @@ def _get_config_filenames(
     """
     Concatenates *config_files* and files from env var *config_files_var*,
     filters non existing files and returns the result.
+
+    Args:
+        config_files: A list of paths to settings files.
+        config_files_var: The name of the environment variable that may held
+          additional settings file names.
+
+    Returns:
+        A list of paths to existing config files.  Paths of files that don't
+        exist are stripped from the input.
     """
     candidates = list(config_files)
     if config_files_var:
@@ -145,20 +220,40 @@ def _get_config_filenames(
     return [p for p in (Path(f) for f in candidates) if p.is_file()]
 
 
-def _load_toml(path: Path, section: str) -> Dict[str, Any]:
+def _load_toml(fields: FieldList, path: Path, section: str) -> Dict[str, Any]:
+    """
+    Loads settings from a TOML file and returns them.
+
+    Args:
+        fields: The list of available settings.
+        path: The path to the config file.
+        section: The config file section to load settings from.
+
+    Returns:
+        A dict with the loaded settings.
+    """
     sections = section.split(".")
     settings = toml.load(path.open())
-    for section in sections:
+    for s in sections:
         try:
-            settings = settings[section]
+            settings = settings[s]
         except KeyError:
             return {}
     settings = _rename_dict_keys(settings)
+    settings = _clean_settings(fields, settings)
     return settings
 
 
 def _rename_dict_keys(d: Mapping[str, Any]) -> Dict[str, Any]:
-    """Recursively replaces "-" in dict keys with "_"."""
+    """
+    Recursively replaces "-" in dict keys with "_".
+
+    Args:
+        d: The input dict.
+
+    Returns:
+        A newly created dict with the renamed keys.
+    """
     result = {}
     for k, v in d.items():
         if isinstance(v, dict):
@@ -167,12 +262,21 @@ def _rename_dict_keys(d: Mapping[str, Any]) -> Dict[str, Any]:
     return result
 
 
-def _clean_settings(settings: Dict[str, Any], cls: Type[T]) -> Dict[str, Any]:
+def _clean_settings(
+    fields: FieldList, settings: Dict[str, Any]
+) -> Dict[str, Any]:
     """
     Recursively remove invalid entries from *settings* and return a new dict.
+
+    Args:
+        fields: The list of available settings.
+        settings: The settings to be cleaned.
+
+    Returns:
+        A newly created dict with the cleaned settings.
     """
     cleaned: Dict[str, Any] = {}
-    for path, _field, _cls in _deep_fields(cls):
+    for path, _field, _cls in fields:
         try:
             val = _get_path(settings, path)
         except KeyError:
@@ -181,12 +285,30 @@ def _clean_settings(settings: Dict[str, Any], cls: Type[T]) -> Dict[str, Any]:
     return cleaned
 
 
-def _get_env_dict(
-    cls: Type[T], env: Mapping[str, str], prefix: str
+def _from_env(
+    fields: FieldList, appname: str, prefix: Union[None, str, _Auto]
 ) -> Dict[str, Any]:
+    """
+    Loads settings from environment variables.
+
+    Args:
+        fields: The list of available settings.
+        appname: Appname to derive *prefix* from.
+        prefix: Prefix for environment variables.  Will be :code:`{APPNAME_}`
+          if it is :data:`Auto`.  If it is ``None``, no vars will be loaed.
+
+    Returns:
+        A dict with the loaded settings.
+    """
+    prefix = f"{appname.upper()}_" if isinstance(prefix, _Auto) else prefix
+    if prefix is None:
+        return {}
+
+    env = os.environ
     values: Dict[str, Any] = {}
-    for path, _field, _cls in _deep_fields(cls):
+    for path, _field, _cls in fields:
         varname = f"{prefix}{path.upper().replace('.', '_')}"
         if varname in env:
             _set_path(values, path, env[varname])
+
     return values

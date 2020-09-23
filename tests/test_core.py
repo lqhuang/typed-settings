@@ -1,3 +1,4 @@
+import os
 from pathlib import Path
 from typing import List
 
@@ -5,6 +6,7 @@ import pytest
 from attr import field, frozen
 
 from typed_settings import _core
+from typed_settings._dict_utils import _deep_fields
 
 
 @frozen
@@ -35,19 +37,19 @@ class TestAuto:
 class TestLoadSettings:
     """Tests for load_settings()."""
 
+    config = """[example]
+        url = "https://example.com"
+        [example.host]
+        name = "example.com"
+        port = 443
+    """
+
     def test_load_settings(self, tmp_path, monkeypatch):
         """Test basic functionality."""
         monkeypatch.setenv("EXAMPLE_HOST_PORT", "42")
 
         config_file = tmp_path.joinpath("settings.toml")
-        config_file.write_text(
-            """[example]
-            url = "https://example.com"
-            [example.host]
-            name = "example.com"
-            port = 443
-        """
-        )
+        config_file.write_text(self.config)
 
         settings = _core.load_settings(
             settings_cls=Settings,
@@ -63,66 +65,36 @@ class TestLoadSettings:
             ),
         )
 
-    def test_load_settings_explicit_config(self, tmp_path, monkeypatch):
+    def test__load_settings(self, tmp_path, monkeypatch):
         """
-        The automatically derived config section name and settings files var
-        name can be overriden.
+        The _load_settings() can be easier reused.  It takes the fields lists
+        and returns the settings as dict that can still be updated.
         """
+        monkeypatch.setenv("EXAMPLE_HOST_PORT", "42")
+
         config_file = tmp_path.joinpath("settings.toml")
-        config_file.write_text(
-            """[le-section]
-            spam = "eggs"
-        """
-        )
+        config_file.write_text(self.config)
 
-        monkeypatch.setenv("LE_SETTINGS", str(config_file))
-
-        @frozen
-        class Settings:
-            spam: str = ""
-
-        settings = _core.load_settings(
-            settings_cls=Settings,
+        settings = _core._load_settings(
+            fields=_deep_fields(Settings),
             appname="example",
-            config_file_section="le-section",
-            config_files_var="LE_SETTINGS",
+            config_files=[config_file],
+            config_file_section=_core.AUTO,
+            config_files_var=_core.AUTO,
+            env_prefix=_core.AUTO,
         )
-        assert settings == Settings(spam="eggs")
-
-    def test_disable_environ(self, monkeypatch):
-        """Setting env_prefix=None diables loading env vars."""
-
-        @frozen
-        class Settings:
-            x: str = "spam"
-
-        # Make calling "_get_env_dict()" raise an error
-        monkeypatch.setattr(_core, "_get_env_dict", None)
-
-        settings = _core.load_settings(
-            settings_cls=Settings, appname="example", env_prefix=None
-        )
-        assert settings == Settings(x="spam")
-
-    def test_no_env_prefix(self, monkeypatch):
-        """
-        The prefix for env vars can be disabled w/o disabling loading env. vars
-        themselves.
-        """
-        monkeypatch.setenv("CONFIG_VAL", "42")
-
-        @frozen
-        class Settings:
-            config_val: str
-
-        settings = _core.load_settings(
-            settings_cls=Settings, appname="example", env_prefix=""
-        )
-        assert settings == Settings(config_val="42")
+        assert settings == {
+            "url": "https://example.com",
+            # "default": 3,  # This is from the cls!
+            "host": {
+                "name": "example.com",
+                "port": "42",  # Value not yet converted
+            },
+        }
 
 
-class TestGetConfigFilenames:
-    """Tests for _get_config_filenames()"""
+class TestFromToml:
+    """Tests for _from_toml()"""
 
     @pytest.fixture
     def fnames(self, tmp_path: Path) -> List[Path]:
@@ -161,12 +133,18 @@ class TestGetConfigFilenames:
         paths = _core._get_config_filenames([fnames[i] for i in cfn], env)
         assert paths == [fnames[i] for i in expected]
 
-
-class TestLoadToml:
-    """Tests for _load_toml()"""
-
     def test_load_toml(self, tmp_path):
         """We can load settings from toml."""
+
+        @frozen
+        class Sub:
+            b: str
+
+        @frozen
+        class Settings:
+            a: str
+            sub: Sub
+
         config_file = tmp_path.joinpath("settings.toml")
         config_file.write_text(
             """[example]
@@ -175,7 +153,10 @@ class TestLoadToml:
             b = "eggs"
         """
         )
-        assert _core._load_toml(config_file, "example") == {
+        results = _core._load_toml(
+            _deep_fields(Settings), config_file, "example"
+        )
+        assert results == {
             "a": "spam",
             "sub": {"b": "eggs"},
         }
@@ -184,6 +165,16 @@ class TestLoadToml:
         """
         We can load settings from a nested section (e.g., "tool.example").
         """
+
+        @frozen
+        class Sub:
+            b: str
+
+        @frozen
+        class Settings:
+            a: str
+            sub: Sub
+
         config_file = tmp_path.joinpath("settings.toml")
         config_file.write_text(
             """[tool.example]
@@ -192,7 +183,10 @@ class TestLoadToml:
             b = "eggs"
         """
         )
-        assert _core._load_toml(config_file, "tool.example") == {
+        results = _core._load_toml(
+            _deep_fields(Settings), config_file, "tool.example"
+        )
+        assert results == {
             "a": "spam",
             "sub": {"b": "eggs"},
         }
@@ -202,18 +196,34 @@ class TestLoadToml:
         An empty tick is returned when the config file does not contain the
         desired section.
         """
+
+        @frozen
+        class Settings:
+            pass
+
         config_file = tmp_path.joinpath("settings.toml")
         config_file.write_text(
             """[tool]
             a = "spam"
         """
         )
-        assert _core._load_toml(config_file, "tool.example") == {}
+        assert _core._load_toml(Settings, config_file, "tool.example") == {}
 
     def test_load_convert_dashes(self, tmp_path):
         """
         Dashes in settings and section names are replaced with underscores.
         """
+
+        @frozen
+        class Sub:
+            b_1: str
+
+        @frozen
+        class Settings:
+            a_1: str
+            a_2: str
+            sub_section: Sub
+
         config_file = tmp_path.joinpath("settings.toml")
         config_file.write_text(
             """[example]
@@ -223,15 +233,14 @@ class TestLoadToml:
             b-1 = "bacon"
         """
         )
-        assert _core._load_toml(config_file, "example") == {
+        results = _core._load_toml(
+            _deep_fields(Settings), config_file, "example"
+        )
+        assert results == {
             "a_1": "spam",
             "a_2": "eggs",
             "sub_section": {"b_1": "bacon"},
         }
-
-
-class TestCleanSettings:
-    """Tests for _clean_settings()"""
 
     def test_clean_settings(self):
         """
@@ -242,7 +251,7 @@ class TestCleanSettings:
             "host": {"port": 23, "eggs": 42},
             "spam": 23,
         }
-        result = _core._clean_settings(settings, Settings)
+        result = _core._clean_settings(_deep_fields(Settings), settings)
         assert result == {
             "url": "abc",
             "host": {"port": 23},
@@ -264,24 +273,81 @@ class TestCleanSettings:
             )
 
         settings = {"host": {"port": 23, "eggs": 42}}
-        result = _core._clean_settings(settings, Settings)
+        result = _core._clean_settings(_deep_fields(Settings), settings)
         assert result == {"host": {"port": 23}}
 
+    def test_load_settings_explicit_config(self, tmp_path, monkeypatch):
+        """
+        The automatically derived config section name and settings files var
+        name can be overriden.
+        """
+        config_file = tmp_path.joinpath("settings.toml")
+        config_file.write_text(
+            """[le-section]
+            spam = "eggs"
+        """
+        )
 
-class TestGetEnvDict:
-    """Tests for _get_env_dict()"""
+        monkeypatch.setenv("LE_SETTINGS", str(config_file))
 
-    def test_get_env_dict(self):
+        @frozen
+        class Settings:
+            spam: str = ""
+
+        settings = _core._from_toml(
+            _deep_fields(Settings),
+            appname="example",
+            files=[],
+            section="le-section",
+            var_name="LE_SETTINGS",
+        )
+        assert settings == {"spam": "eggs"}
+
+
+class TestFromEnv:
+    """Tests for _from_env()"""
+
+    @pytest.mark.parametrize("prefix", ["T_", _core.AUTO])
+    def test_from_env(self, prefix, monkeypatch):
         """Ignore env vars for which no settings attrib exis_core."""
-        env = {
-            "T_URL": "foo",
-            "T_HOST": "spam",  # Haha! Just a deceit!
-            "T_HOST_PORT": "25",
-        }
-        settings = _core._get_env_dict(Settings, env, "T_")
+        fields = _deep_fields(Settings)
+        monkeypatch.setattr(
+            os,
+            "environ",
+            {
+                "T_URL": "foo",
+                "T_HOST": "spam",  # Haha! Just a deceit!
+                "T_HOST_PORT": "25",
+            },
+        )
+        settings = _core._from_env(fields, "t", prefix)
         assert settings == {
             "url": "foo",
             "host": {
                 "port": "25",
             },
         }
+
+    def test_no_env_prefix(self, monkeypatch):
+        """
+        The prefix for env vars can be disabled w/o disabling loading env. vars
+        themselves.
+        """
+        monkeypatch.setenv("CONFIG_VAL", "42")
+
+        @frozen
+        class Settings:
+            config_val: str
+
+        settings = _core._from_env(_deep_fields(Settings), "example", "")
+        assert settings == {"config_val": "42"}
+
+    def test_disable_environ(self):
+        """Setting env_prefix=None diables loading env vars."""
+
+        @frozen
+        class Settings:
+            x: str = "spam"
+
+        settings = _core._from_env(_deep_fields(Settings), "example", None)
+        assert settings == {}
