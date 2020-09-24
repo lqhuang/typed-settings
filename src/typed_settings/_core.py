@@ -15,6 +15,7 @@ from typing import (
     Union,
 )
 
+import attr
 import toml
 
 from ._dict_utils import (
@@ -120,6 +121,35 @@ def load_settings(
         env_prefix=env_prefix,
     )
     return settings_cls(**settings)  # type: ignore
+
+
+def update_settings(settings: T, path: str, value: Any) -> T:
+    """Returns a copy of *settings* with an updated *value* at *path*.
+
+    Args:
+        settings: An instance of a settings class.
+        path: A dot-separated path to the setting to update.
+        value: The new value to set to the attribute at *path*.
+
+    Returns:
+        A copy of *settings* with the updated value.
+
+    Raises:
+        AttributeError: *path* does not point to an existing attribute.
+    """
+    current = settings
+    for name in path.split("."):
+        try:
+            print(current, name)
+            current = getattr(current, name)
+        except AttributeError:
+            raise AttributeError(
+                f"'{type(settings).__name__}' object has no setting '{path}'"
+            ) from None
+
+    settings_dict = attr.asdict(settings)
+    _set_path(settings_dict, path, value)
+    return type(settings)(**settings_dict)  # type: ignore
 
 
 def _load_settings(
