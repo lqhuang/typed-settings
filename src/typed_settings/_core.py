@@ -81,6 +81,11 @@ def load_settings(
     - Last file from *config_files_var*
     - Environment variable *env_prefix*_{SETTING}
 
+    Config files (both, explicitly specified, and loaded from an environment
+    variable) are optional by default.  You can prepend an ``!`` to their path
+    to mark them as mandatory (e.g., `!/etc/credentials.toml`).  An error is
+    raised if a mandatory file does not exist.
+
     Args:
         settings_cls: Attrs class with default settings.
 
@@ -108,8 +113,9 @@ def load_settings(
         files and environment variables.
 
     Raises:
-        TypeError: Config values cannot be converted to the required type
-        ValueError: Config values don't meet their requirements
+        FileNotFoundError: If a mandatory config file does not exist.
+        TypeError: If config values cannot be converted to the required type.
+        ValueError: If config values don't meet their requirements.
     """
     fields = _deep_fields(settings_cls)
     settings = _load_settings(
@@ -232,8 +238,10 @@ def _get_config_filenames(
     config_files_var: Optional[str],
 ) -> List[Path]:
     """
-    Concatenates *config_files* and files from env var *config_files_var*,
-    filters non existing files and returns the result.
+    Concatenates *config_files* and files from env var *config_files_var*.
+
+    Mandatory files can be prefixed with ``!``.  Optional files will be
+    stripped from the result if they don't exist.
 
     Args:
         config_files: A list of paths to settings files.
@@ -244,10 +252,22 @@ def _get_config_filenames(
         A list of paths to existing config files.  Paths of files that don't
         exist are stripped from the input.
     """
-    candidates = list(config_files)
+    candidates = [str(f) for f in config_files]
     if config_files_var:
         candidates += os.getenv(config_files_var, "").split(":")
-    return [p for p in (Path(f) for f in candidates) if p.is_file()]
+
+    paths = []
+    for f in candidates:
+        if f and f[0] == "!":
+            # Always add mandatory files
+            paths.append(Path(f[1:]))
+        else:
+            # Add optional files only if they exist
+            p = Path(f)
+            if p.is_file():
+                paths.append(p)
+
+    return paths
 
 
 def _load_toml(fields: FieldList, path: Path, section: str) -> Dict[str, Any]:
@@ -261,6 +281,9 @@ def _load_toml(fields: FieldList, path: Path, section: str) -> Dict[str, Any]:
 
     Returns:
         A dict with the loaded settings.
+
+    Raises:
+        FileNotFoundError: If *path* does not exist.
     """
     sections = section.split(".")
     settings = toml.load(path.open())

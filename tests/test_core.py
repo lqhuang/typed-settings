@@ -1,4 +1,5 @@
 import os
+from itertools import product
 from pathlib import Path
 from typing import List
 
@@ -347,6 +348,41 @@ class TestFromToml:
             var_name="LE_SETTINGS",
         )
         assert settings == {"spam": "eggs"}
+
+    @pytest.mark.parametrize(
+        "is_mandatory, is_path, in_env, exists",
+        product([True, False], repeat=4),
+    )
+    def test_mandatory_files(
+        self,
+        is_mandatory,
+        is_path,
+        in_env,
+        exists,
+        tmp_path,
+        monkeypatch,
+    ):
+        """
+        Paths with a "!" are mandatory and an error is raised if they don't
+        exist.
+        """
+        p = tmp_path.joinpath("s.toml")
+        if exists:
+            p.touch()
+        p = f"!{p}" if is_mandatory else str(p)
+        if is_path:
+            p = Path(p)
+        files = []
+        if in_env:
+            monkeypatch.setenv("TEST_SETTINGS", str(p))
+        else:
+            files = [p]
+
+        args = ([], "test", files, _core.AUTO, _core.AUTO)
+        if is_mandatory and not exists:
+            pytest.raises(FileNotFoundError, _core._from_toml, *args)
+        else:
+            _core._from_toml(*args)
 
 
 class TestFromEnv:
