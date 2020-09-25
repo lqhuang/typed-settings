@@ -61,7 +61,7 @@ def lint(session):
 def mypy(session):
     session.install(".[lint]")
 
-    args = session.posargs or ["--ignore-missing-imports"] + LOCATIONS
+    args = session.posargs or LOCATIONS
     session.run("mypy", *args)
 
 
