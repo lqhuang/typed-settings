@@ -48,23 +48,22 @@ well as commandline programms.
 ## Example
 
 ```python
-from attr import frozen, field
 import click
 
 import typed_settings as ts
 
 
-@frozen
+@ts.settings
 class Host:
     name: str
-    port: int = field(converter=int)
+    port: int = ts.option(converter=int)
 
 
-@frozen(kw_only=True)
+@ts.settings(kw_only=True)
 class Settings:
     url: str
     default: int = 3
-    host: Host = field(converter=lambda d: Host(**d))
+    host: Host = ts.option(converter=lambda d: Host(**d))
 
 
 settings = ts.load_settings(
