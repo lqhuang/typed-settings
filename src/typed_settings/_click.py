@@ -2,6 +2,8 @@ from functools import update_wrapper
 from pathlib import Path
 from typing import Any, Callable, Iterable, Type, Union
 
+import attr
+
 from ._core import AUTO, T, _Auto, _load_settings
 from ._dict_utils import _deep_fields, _merge_dicts, _set_path
 
@@ -81,7 +83,7 @@ def click_options(
         return update_wrapper(new_func, f)
 
     def wrap(f):
-        for path, field, _cls in fields:
+        for path, field, _cls in reversed(fields):
             option = _mk_option(click.option, path, field)
             f = option(f)
         f = pass_settings(f)
@@ -100,10 +102,21 @@ def _mk_option(option, path, field) -> Decorator:
         _set_path(settings, path, value)
         return value
 
+    kwargs = {}
+    if field.default is not attr.NOTHING:
+        kwargs["default"] = field.default
+
+    opt_name = path.replace(".", "-")
+    param_decl = f"--{opt_name}"
+    if field.type is bool:
+        param_decl = f"{param_decl}/--no-{opt_name}"
+
     return option(
-        f"--{path.replace('.', '-')}",
+        param_decl,
         type=field.type,
+        show_default=True,
         callback=cb,
         expose_value=False,
         is_eager=True,
+        **kwargs,
     )
