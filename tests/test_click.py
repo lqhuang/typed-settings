@@ -1,3 +1,4 @@
+from enum import Enum
 from pathlib import Path
 
 import click
@@ -6,6 +7,11 @@ import pytest
 
 from typed_settings import option, secret, settings
 from typed_settings._click import click_options
+
+
+class LeEnum(Enum):
+    spam = "le spam"
+    eggs = "Le eggs"
 
 
 @settings
@@ -23,6 +29,10 @@ class Settings:
     e: float = 0
     f: bool = False
     g: bool = True
+    h: LeEnum = option(
+        default=LeEnum.spam,
+        converter=lambda v: LeEnum(v) if isinstance(v, str) else v,  # type: ignore  # noqa
+    )
     p: Path = Path("/")
     n: Nested = option(
         default=Nested(),
@@ -79,6 +89,7 @@ class TestClickOptions:
             "--e=3.1",
             "--f",
             "--no-g",
+            "--h=eggs",
             "--p=/spam",
             "--n-a=eggs4",
             "--n-b=3",
@@ -93,6 +104,7 @@ class TestClickOptions:
             e=3.1,
             f=True,
             g=False,
+            h=LeEnum.eggs,
             p=Path("/spam"),
             n=Nested("eggs4", 3),
         )
@@ -119,14 +131,15 @@ class TestClickOptions:
             "Options:\n"
             "  --a TEXT\n"
             "  --b TEXT\n"
-            "  --c TEXT       [default: spam]\n"
-            "  --d INTEGER    [default: 0]\n"
-            "  --e FLOAT      [default: 0]\n"
-            "  --f / --no-f   [default: False]\n"
-            "  --g / --no-g   [default: True]\n"
-            "  --p PATH       [default: /]\n"
-            "  --n-a TEXT     [default: nested]\n"
-            "  --n-b INTEGER  [default: 0]\n"
-            "  --help         Show this message and exit.\n"
+            "  --c TEXT         [default: spam]\n"
+            "  --d INTEGER      [default: 0]\n"
+            "  --e FLOAT        [default: 0]\n"
+            "  --f / --no-f     [default: False]\n"
+            "  --g / --no-g     [default: True]\n"
+            "  --h [spam|eggs]  [default: spam]\n"
+            "  --p PATH         [default: /]\n"
+            "  --n-a TEXT       [default: nested]\n"
+            "  --n-b INTEGER    [default: 0]\n"
+            "  --help           Show this message and exit.\n"
         )
         assert result.exit_code == 0

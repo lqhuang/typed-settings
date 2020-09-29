@@ -1,8 +1,22 @@
+from enum import Enum
 from functools import update_wrapper
 from pathlib import Path
-from typing import Any, Callable, Iterable, Type, Union
+from typing import Any, Callable, Iterable, Optional, Type, Union
 
 import attr
+
+
+try:
+    import click
+
+    CLICK_ERROR: Optional[Exception] = None
+except ImportError as e:
+    CLICK_ERROR = e
+
+    class click:  # type: ignore
+        class Choice:
+            pass
+
 
 from ._core import AUTO, T, _Auto, _load_settings
 from ._dict_utils import _deep_fields, _merge_dicts, _set_path
@@ -10,6 +24,22 @@ from ._dict_utils import _deep_fields, _merge_dicts, _set_path
 
 AnyFunc = Callable[..., Any]
 Decorator = Callable[[AnyFunc], AnyFunc]
+
+
+class EnumChoice(click.Choice):
+    """*Click* parameter type for representing enums."""
+
+    def __init__(self, enum_type: Type[Enum]):
+        self.__enum = enum_type
+        super().__init__(enum_type.__members__)
+
+    def convert(
+        self,
+        value: str,
+        param: Optional[click.Parameter],
+        ctx: Optional[click.Context],
+    ) -> Enum:
+        return self.__enum[super().convert(value, param, ctx)]
 
 
 def click_options(
@@ -43,12 +73,10 @@ def click_options(
 
     See :func:`.load_settings()` for argument descriptions.
     """
-    try:
-        import click
-    except ImportError as e:
+    if CLICK_ERROR is not None:
         raise ModuleNotFoundError(
             'You need to install "click" to use this feature'
-        ) from e
+        ) from CLICK_ERROR
 
     fields = _deep_fields(settings_cls)
 
@@ -108,12 +136,17 @@ def _mk_option(option, path, field) -> Decorator:
 
     opt_name = path.replace(".", "-")
     param_decl = f"--{opt_name}"
+    option_type = field.type
     if field.type is bool:
         param_decl = f"{param_decl}/--no-{opt_name}"
+    if issubclass(field.type, Enum):
+        option_type = EnumChoice(field.type)
+        if "default" in kwargs:
+            kwargs["default"] = kwargs["default"].name
 
     return option(
         param_decl,
-        type=field.type,
+        type=option_type,
         show_default=True,
         callback=cb,
         expose_value=False,
