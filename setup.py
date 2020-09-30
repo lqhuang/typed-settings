@@ -12,7 +12,8 @@ DEPS_LINT = DEPS_CLICK + [
     "flake8-isort",
     "mypy",
 ]
-DEPS_DEV = DEPS_TEST + DEPS_LINT + ["nox", "safety"]
+DEPS_DOCS = DEPS_CLICK + ["sphinx", "sphinx-rtd-theme"]
+DEPS_DEV = DEPS_TEST + DEPS_LINT + DEPS_DOCS + ["nox", "safety"]
 
 
 if __name__ == "__main__":
@@ -44,6 +45,7 @@ if __name__ == "__main__":
             "click": DEPS_CLICK,
             "test": DEPS_TEST,
             "lint": DEPS_LINT,
+            "docs": DEPS_DOCS,
             "dev": DEPS_DEV,
         },
         classifiers=[

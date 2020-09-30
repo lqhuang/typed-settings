@@ -1,7 +1,9 @@
 *.egg-info/
+.DS_Store
 .corerage.*
 .coverage
 __pycache__/
+docs/_build
 build/
 coverage.xml
 dist/
