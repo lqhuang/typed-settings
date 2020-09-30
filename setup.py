@@ -24,7 +24,7 @@ if __name__ == "__main__":
         license="MIT",
         url="https://gitlab.com/sscherfke/typed-settings",
         project_urls={
-            "Documentation": "https://gitlab.com/sscherfke/typed-settings",
+            "Documentation": "https://typed-settings.readthedocs.io",
             "Bug Tracker": "https://gitlab.com/sscherfke/typed-settings/-/issues",
             "Source Code": "https://gitlab.com/sscherfke/typed-settings",
         },
