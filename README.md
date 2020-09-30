@@ -1,5 +1,7 @@
-[![pipeline status](https://gitlab.com/sscherfke/typed-settings/badges/main/pipeline.svg)](https://gitlab.com/sscherfke/typed-settings/-/commits/main)
-[![coverage report](https://gitlab.com/sscherfke/typed-settings/badges/main/coverage.svg)](https://gitlab.com/sscherfke/typed-settings/-/commits/main)
+[![Documentation Status](https://readthedocs.org/projects/typed-settings/badge/?version=latest)](https://typed-settings.readthedocs.io/en/latest/?badge=latest)
+[![Pipeline Status](https://gitlab.com/sscherfke/typed-settings/badges/main/pipeline.svg)](https://gitlab.com/sscherfke/typed-settings/-/commits/main)
+[![Coverage Report](https://gitlab.com/sscherfke/typed-settings/badges/main/coverage.svg)](https://gitlab.com/sscherfke/typed-settings/-/commits/main)
+[![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 
 # Typed Settings
 
