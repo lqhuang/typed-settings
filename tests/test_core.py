@@ -86,12 +86,36 @@ class TestLoadSettings:
         )
         assert settings == {
             "url": "https://example.com",
-            # "default": 3,  # This is from the cls!
+            "default": 3,  # This is from the cls
             "host": {
                 "name": "example.com",
                 "port": "42",  # Value not yet converted
             },
         }
+
+    def test_load_nested_settings_by_default(self):
+        """
+        Instantiate nested settings with default settings and pass it to the
+        parent settings even if no nested settings are defined in a config
+        file or env var.
+
+        Otherwise, the parent classed needed to set a default_factory for
+        creating a nested settings instance.
+        """
+
+        @frozen
+        class Nested:
+            a: int = 3
+            b: str = "spam"
+
+        @frozen
+        class Settings:
+            nested: Nested = field(
+                converter=lambda d: Nested(**d) if isinstance(d, dict) else d
+            )
+
+        settings = _core.load_settings(Settings, "test")
+        assert settings == Settings(Nested())
 
 
 class TestUpdateSettings:

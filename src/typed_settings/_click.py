@@ -78,6 +78,7 @@ def click_options(
             'You need to install "click" to use this feature'
         ) from CLICK_ERROR
 
+    settings_cls = attr.resolve_types(settings_cls)
     fields = _deep_fields(settings_cls)
 
     def pass_settings(f: AnyFunc) -> Decorator:

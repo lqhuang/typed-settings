@@ -175,6 +175,14 @@ def _load_settings(
 
     See :func:`load_settings() for details on the arguments.
     """
+    settings: Dict[str, Any] = {}
+
+    # Populate dict with default settings.  This avoids problems with nested
+    # settings classes for which no settings are loaded.
+    for path, field, _cls in fields:
+        if field.default is not attr.NOTHING:
+            _set_path(settings, path, field.default)
+
     loaded_settings = [
         _from_toml(
             fields=fields,
@@ -186,7 +194,6 @@ def _load_settings(
         # _from_dotenv(),
         _from_env(fields=fields, appname=appname, prefix=env_prefix),
     ]
-    settings: Dict[str, Any] = {}
     for ls in loaded_settings:
         _merge_dicts(settings, ls)
     return settings
