@@ -4,19 +4,7 @@ from pathlib import Path
 from typing import Any, Callable, Iterable, Optional, Type, Union
 
 import attr
-
-
-try:
-    import click
-
-    CLICK_ERROR: Optional[Exception] = None
-except ImportError as e:
-    CLICK_ERROR = e
-
-    class click:  # type: ignore
-        class Choice:
-            pass
-
+import click
 
 from ._core import AUTO, T, _Auto, _load_settings
 from ._dict_utils import _deep_fields, _merge_dicts, _set_path
@@ -73,11 +61,6 @@ def click_options(
 
     See :func:`.load_settings()` for argument descriptions.
     """
-    if CLICK_ERROR is not None:
-        raise ModuleNotFoundError(
-            'You need to install "click" to use this feature'
-        ) from CLICK_ERROR
-
     settings_cls = attr.resolve_types(settings_cls)
     fields = _deep_fields(settings_cls)
 
