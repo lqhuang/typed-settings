@@ -118,7 +118,7 @@ def _mk_option(option, path, field) -> Decorator:
     if field.default is not attr.NOTHING:
         kwargs["default"] = field.default
 
-    opt_name = path.replace(".", "-")
+    opt_name = path.replace(".", "-").replace("_", "-")
     param_decl = f"--{opt_name}"
     option_type = field.type
     if field.type is bool:

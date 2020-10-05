@@ -5,8 +5,126 @@
 
 # Typed Settings
 
-PoC for library for managing (typed) settings – for server processes as
-well as commandline programms.
+This package allows you to cleanly structure your settings with [attrs](https://www.attrs.org) classes.
+Type annotations will be used to automatically convert values to the
+proper type[^1].
+You can currently load settings from these sources:
+
+- TOML files (multiple, if you want to).  Paths can statically specified or dynamically set via a environment variable.
+- Environment variables
+- [click](https://click.palletsprojects.com) command line options
+
+You can use Typed settings, e.g., for
+
+- server processes
+- containerized apps
+- command line applications
+
+[^1]: Not yet: https://github.com/python-attrs/attrs/pull/653
+
+## Examples
+
+### Hello, World!, with env. vars.
+
+This is a very simple example that demonstrates how you can load settings from environment variables.
+
+```python
+# example.py
+import typed_settings as ts
+
+@ts.settings
+class Settings:
+    option: str
+
+settings = ts.load_settings(cls=Settings, appname="example")
+print(settings)
+```
+
+```console
+$ EXAMPLE_OPTION="Hello, World!" python example.py
+Settings(option='Hello, World!')
+```
+
+
+### Nested classes and config files
+
+Settings classes can be nested.
+Config files define a different section for each class.
+
+```python
+# example.py
+import click
+
+import typed_settings as ts
+
+@ts.settings
+class Host:
+    name: str
+    port: int = ts.option(converter=int)
+
+@ts.settings(kw_only=True)
+class Settings:
+    host: Host = ts.option(converter=lambda d: Host(**d))
+    endpoint: str
+    retries: int = 3
+
+settings = ts.load_settings(
+    cls=Settings, appname='example', config_files=['settings.toml']
+)
+print(settings)
+```
+
+```toml
+# settings.toml
+[example]
+endpoint = "/spam"
+
+[example.host]
+name = "example.com"
+port = 443
+```
+
+```console
+$ python example.py
+Settings(host=Host(name='example.com', port=443), endpoint='/spam', retries=3)
+```
+
+
+### Click
+
+Optionally, click options can be generated for each option.  Config files and environment variables will still be read and can be overriden by passing command line options.
+
+
+```python
+# example.py
+import click
+import typed_settings as ts
+
+@ts.settings
+class Settings:
+    a_str: str = "default"
+    an_int: int = 3
+
+@click.command()
+@ts.click_options(Settings, 'example')
+def main(settings):
+    print(settings)
+
+if __name__ == '__main__':
+    main()
+```
+
+```console
+$ python example.py --help
+Usage: example.py [OPTIONS]
+
+Options:
+  --a-str TEXT      [default: default]
+  --an-int INTEGER  [default: 3]
+  --help            Show this message and exit.
+$ python example.py --a-str=spam --an-int=1
+Settings(a_str='spam', an_int=1)
+```
 
 
 ## Requirements
@@ -45,41 +163,3 @@ well as commandline programms.
 
 - Both functions allow you to customize config file paths, prefixes et
   cetera.
-
-
-## Example
-
-```python
-import click
-
-import typed_settings as ts
-
-
-@ts.settings
-class Host:
-    name: str
-    port: int = ts.option(converter=int)
-
-
-@ts.settings(kw_only=True)
-class Settings:
-    url: str
-    default: int = 3
-    host: Host = ts.option(converter=lambda d: Host(**d))
-
-
-settings = ts.load_settings(
-    settings_cls=Settings, appname='example', config_files=['settings.toml']
-)
-print(settings)
-
-
-@click.command()
-@ts.click_options(Settings, 'example', ['settings.toml'])
-def main(settings):
-    print(settings)
-
-
-if __name__ == '__main__':
-    main()
-```
