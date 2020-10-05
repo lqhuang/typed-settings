@@ -31,7 +31,7 @@ class EnumChoice(click.Choice):
 
 
 def click_options(
-    settings_cls: Type[T],
+    cls: Type[T],
     appname: str,
     config_files: Iterable[Union[str, Path]] = (),
     config_file_section: Union[_Auto, str] = AUTO,
@@ -42,7 +42,7 @@ def click_options(
     Generates :mod:`click` options for a CLI which override settins loaded via
     :func:`.load_settings()`.
 
-    A single *settings_cls* instance is passed to the decorated function
+    A single *cls* instance is passed to the decorated function
 
     Example:
 
@@ -61,12 +61,12 @@ def click_options(
 
     See :func:`.load_settings()` for argument descriptions.
     """
-    settings_cls = attr.resolve_types(settings_cls)
-    fields = _deep_fields(settings_cls)
+    cls = attr.resolve_types(cls)
+    fields = _deep_fields(cls)
 
     def pass_settings(f: AnyFunc) -> Decorator:
         """
-        Creates a *settings_cls* instances from the settings dict stored in
+        Creates a *cls* instances from the settings dict stored in
         :attr:`click.Context.obj` and passes it to the decorated function *f*.
         """
 
@@ -82,7 +82,7 @@ def click_options(
                     env_prefix=env_prefix,
                 )
                 _merge_dicts(settings, ctx.obj.get("settings"))
-                ctx.obj["settings"] = settings_cls(**settings)
+                ctx.obj["settings"] = cls(**settings)
             except (
                 AttributeError,
                 FileNotFoundError,

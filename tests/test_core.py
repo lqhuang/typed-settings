@@ -53,7 +53,7 @@ class TestLoadSettings:
         config_file.write_text(self.config)
 
         settings = _core.load_settings(
-            settings_cls=Settings,
+            cls=Settings,
             appname="example",
             config_files=[config_file],
         )

@@ -54,7 +54,7 @@ T = TypeVar("T")
 
 
 def load_settings(
-    settings_cls: Type[T],
+    cls: Type[T],
     appname: str,
     config_files: Iterable[Union[str, Path]] = (),
     *,
@@ -63,7 +63,7 @@ def load_settings(
     env_prefix: Union[None, str, _Auto] = AUTO,
 ) -> T:
     """
-    Loads settings for *appname* and returns an instance of *settings_cls*
+    Loads settings for *appname* and returns an instance of *cls*
 
     Settings can be loaded from *config_files* and/or from the files specified
     via the *config_files_var* environment variable.  Settings can also be
@@ -72,7 +72,7 @@ def load_settings(
 
     Settings precedence (from lowest to highest priority):
 
-    - Default value from *settings_cls*
+    - Default value from *cls*
     - First file from *config_files*
     - ...
     - Last file from *config_files*
@@ -87,7 +87,7 @@ def load_settings(
     raised if a mandatory file does not exist.
 
     Args:
-        settings_cls: Attrs class with default settings.
+        cls: Attrs class with default settings.
 
         appname: Your application's name.  Used to derive defaults for the
           remaining args.
@@ -109,7 +109,7 @@ def load_settings(
           vars.
 
     Returns:
-        An instance of *settings_cls* populated with settings from settings
+        An instance of *cls* populated with settings from settings
         files and environment variables.
 
     Raises:
@@ -117,7 +117,7 @@ def load_settings(
         TypeError: If config values cannot be converted to the required type.
         ValueError: If config values don't meet their requirements.
     """
-    fields = _deep_fields(settings_cls)
+    fields = _deep_fields(cls)
     settings = _load_settings(
         fields=fields,
         appname=appname,
@@ -126,7 +126,7 @@ def load_settings(
         config_files_var=config_files_var,
         env_prefix=env_prefix,
     )
-    return settings_cls(**settings)  # type: ignore
+    return cls(**settings)  # type: ignore
 
 
 def update_settings(settings: T, path: str, value: Any) -> T:
