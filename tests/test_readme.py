@@ -1,5 +1,9 @@
+"""
+Extract examples from the README and assert they work.
+"""
 import pathlib
 import subprocess
+from typing import Dict, List, Tuple
 
 import pytest
 
@@ -7,15 +11,22 @@ import pytest
 HERE = pathlib.Path(__file__).parent
 
 
-def readme():
+def readme() -> str:
+    """
+    Returns the contents of the `README.md`.
+    """
     return HERE.parent.joinpath("README.md").read_text()
 
 
-def load_readme():
+def load_readme() -> List[Tuple[str, List[str]]]:
+    """
+    Extracts the examples and returns a dict mapping example titles to a list
+    of all lines in that section.
+    """
     lines = readme().splitlines()
     in_examples = False
     example_title = None
-    examples = {}
+    examples: Dict[str, List[str]] = {}
     for line in lines:
         if line == "## Examples":
             in_examples = True
@@ -35,9 +46,21 @@ def load_readme():
         if example_title:
             examples[example_title].append(line)
 
+    raise AssertionError("We should not have gotten here")
+
 
 @pytest.fixture
 def example(request, tmp_path):
+    """
+    Splits the example lines into code blocks.
+
+    If a code block starts with "# filename", write the contents to that file
+    in *tmp_path*.
+
+    Else, assume that the block contains a console session.  Lines starting
+    with "$" are commands, other lines are the expected output of the above
+    command.
+    """
     example_lines = request.param
     code_lines = None
     for line in example_lines:
@@ -71,6 +94,10 @@ def example(request, tmp_path):
     indirect=True,
 )
 def test_readme(example, tmp_path):
+    """
+    All commands in the *console* block of an example produce the exact same
+    results as shown in the example.
+    """
     for cmd, expected in example.items():
         result = subprocess.run(
             cmd,
