@@ -19,7 +19,7 @@ DEPS_DEV = DEPS_TEST + DEPS_LINT + DEPS_DOCS + ["nox", "safety"]
 if __name__ == "__main__":
     setup(
         name="typed-settings",
-        version="0.5",
+        version="0.6",
         description="Typed settings based on attrs classes",
         license="MIT",
         url="https://gitlab.com/sscherfke/typed-settings",

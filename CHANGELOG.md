@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.6 (2020-10-11)
+
+- ✨ Add `pass_settings` decorator that pass settings to nested Click commands.
+- 📝 Initialize documentaion at https://typed-settings.readthedocs.io
+- 📝 Improve README and automatically test examples
+
 ## 0.5 (2020-09-30)
 
 - ✨ Click options for basic data types (`bool`, `int`, `str`, `Enum`) can be generated now.
