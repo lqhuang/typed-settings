@@ -127,39 +127,32 @@ Settings(a_str='spam', an_int=1)
 ```
 
 
-## Requirements
+## Features
 
-- Default settings are defined by app and can be overridden by config
-  files, environment variables and click options.
+- Settings are defined as type-hinted `attrs` classes.
 
-- You define settings as attrs class with types, converters and
-  validators.
+- Typed Settings’ `settings` decorator adds automatic type converstion for option values and makes your settings class frozen (immutable) by default.
 
-- Attributes are basic data types (bool, int, float, str), lists of
-  basic types, or nested settings classes.
+- Settings can currently be loaded from:
 
-- Settings can be loaded from multiple config files.
+  - TOML files
+  - Environment variables
+  - click Commaoptions
 
-- Config files are allowed to contain settings for multiple apps (like
-  `pyproject.toml`)
+- Paths to settings files can be “hard-coded” into your code or specified via an environment variable.
 
-- Paths to config files have to be explicitly named.  Most defaults are
-  not useful in many cases and have to be changed anyways.
+- Order of precedence:
 
-- Additional paths for config files can be specified via an environment
-  variable.  As in `PATH`, multiple paths are separated by a `:`.  The
-  last file in the list has the highest priority.
+  - Default value from settings class
+  - First file from hard-coded config files list
+  - ...
+  - Last file from hard-coded config files list
+  - First file from config files env var
+  - ...
+  - Last file from config files env var
+  - Environment variable `{PREFIX}_{SETTING_NAME}`
+  - (Value passed to Click option)
 
-- Environment variables with a defined prefix override settings from
-  config files.  This can optionally be disabled.
+- Config files are “optional” by default – no error is raised if a specified file does not exist.
 
-- [Click](https://click.palletsprojects.com/) options for some or all
-  settings can be generated.  They are passed to the cli function as
-  a single object (instead of individually).
-
-- Settings must be explicitly loaded, either via
-  `typed_settings.load_settings()` or via
-  `typed_settings.click_options()`.
-
-- Both functions allow you to customize config file paths, prefixes et
-  cetera.
+- Config files can be marked as mandatory by prefixing them with an `!`.
