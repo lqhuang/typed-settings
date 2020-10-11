@@ -13,6 +13,7 @@ __all__ = [
     "click_options",
     "load_settings",
     "option",
+    "pass_settings",
     "secret",
     "settings",
     "update_settings",
@@ -24,6 +25,10 @@ def __getattr__(name: str) -> Any:
         from ._click import click_options
 
         return click_options
+    if name == "pass_settings":
+        from ._click import pass_settings
+
+        return pass_settings
 
     raise AttributeError(f"module '{__name__}' has no attribute '{name}'")
 

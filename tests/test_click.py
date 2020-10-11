@@ -5,8 +5,13 @@ import click
 import click.testing
 import pytest
 
-from typed_settings import option, secret, settings
-from typed_settings._click import click_options
+from typed_settings import (
+    click_options,
+    option,
+    pass_settings,
+    secret,
+    settings,
+)
 
 
 class LeEnum(Enum):
@@ -38,6 +43,7 @@ class Settings:
         default=Nested(),
         converter=lambda d: Nested(**d) if isinstance(d, dict) else d,  # type: ignore  # noqa
     )
+    long_name: str = option(default="val")
 
 
 @pytest.fixture
@@ -64,7 +70,7 @@ def cli():
 
     runner = Runner()
 
-    @click.command()
+    @click.group(invoke_without_command=True)
     @click_options(Settings, "test", ["settings.toml"])
     def cli(settings):
         runner.settings = settings
@@ -126,20 +132,71 @@ class TestClickOptions:
         """All options get a proper help string."""
         result = cli("--help")
         assert result.output == (
-            "Usage: cli [OPTIONS]\n"
+            "Usage: cli [OPTIONS] COMMAND [ARGS]...\n"
             "\n"
             "Options:\n"
             "  --a TEXT\n"
             "  --b TEXT\n"
-            "  --c TEXT         [default: spam]\n"
-            "  --d INTEGER      [default: 0]\n"
-            "  --e FLOAT        [default: 0]\n"
-            "  --f / --no-f     [default: False]\n"
-            "  --g / --no-g     [default: True]\n"
-            "  --h [spam|eggs]  [default: spam]\n"
-            "  --p PATH         [default: /]\n"
-            "  --n-a TEXT       [default: nested]\n"
-            "  --n-b INTEGER    [default: 0]\n"
-            "  --help           Show this message and exit.\n"
+            "  --c TEXT          [default: spam]\n"
+            "  --d INTEGER       [default: 0]\n"
+            "  --e FLOAT         [default: 0]\n"
+            "  --f / --no-f      [default: False]\n"
+            "  --g / --no-g      [default: True]\n"
+            "  --h [spam|eggs]   [default: spam]\n"
+            "  --p PATH          [default: /]\n"
+            "  --n-a TEXT        [default: nested]\n"
+            "  --n-b INTEGER     [default: 0]\n"
+            "  --long-name TEXT  [default: val]\n"
+            "  --help            Show this message and exit.\n"
         )
+        assert result.exit_code == 0
+
+
+class TestPassSettings:
+    """Tests for pass_settings()."""
+
+    @settings
+    class Settings:
+        opt: str = ""
+
+    def test_pass_settings(self):
+        """
+        A subcommand can receive the settings via the `pass_settings`
+        decorator.
+        """
+
+        @click.group()
+        @click_options(self.Settings, "test")
+        def cli(settings):
+            pass
+
+        @cli.command()
+        @pass_settings
+        def cmd(settings):
+            print(settings)
+            assert settings == self.Settings(opt="spam")
+
+        runner = click.testing.CliRunner()
+        result = runner.invoke(cli, ["--opt=spam", "cmd"])
+        assert result.output == "TestPassSettings.Settings(opt='spam')\n"
+        assert result.exit_code == 0
+
+    def test_pass_settings_no_settings(self):
+        """
+        Pass ``None`` if no settings are defined.
+        """
+
+        @click.group()
+        def cli():
+            pass
+
+        @cli.command()
+        @pass_settings
+        def cmd(settings):
+            print(settings)
+            assert settings is None
+
+        runner = click.testing.CliRunner()
+        result = runner.invoke(cli, ["cmd"])
+        assert result.output == "None\n"
         assert result.exit_code == 0

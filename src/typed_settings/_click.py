@@ -104,6 +104,26 @@ def click_options(
     return wrap
 
 
+def pass_settings(f: AnyFunc) -> AnyFunc:
+    """
+    Marks a callback as wanting to receive the innermost settings instance as
+    first argument.
+    """
+
+    def new_func(*args, **kwargs):
+        ctx = click.get_current_context()
+        node = ctx
+        settings = None
+        while node is not None:
+            if isinstance(node.obj, dict) and "settings" in node.obj:
+                settings = node.obj["settings"]
+                break
+            node = node.parent
+        return ctx.invoke(f, settings, *args, **kwargs)
+
+    return update_wrapper(new_func, f)
+
+
 def _mk_option(option, path, field) -> Decorator:
     """Recursively creates click options and returns them as a list."""
 
