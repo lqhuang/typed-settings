@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.7 (2020-10-13)
+
+- 🐛 Fix loaded settings not being used as option defaults with click.
+- 📝 Add API reference to docs.
+
 ## 0.6 (2020-10-11)
 
 - ✨ Add `pass_settings` decorator that pass settings to nested Click commands.
