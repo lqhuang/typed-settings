@@ -22,7 +22,7 @@ class LeEnum(Enum):
 @settings
 class Nested:
     a: str = "nested"
-    b: int = option(default=0, converter=int)
+    b: int = option(default=0, converter=int)  # type: ignore
 
 
 @settings(kw_only=True)
@@ -40,14 +40,14 @@ class Settings:
     )
     p: Path = Path("/")
     n: Nested = option(
-        default=Nested(),
+        default=Nested(),  # type: ignore
         converter=lambda d: Nested(**d) if isinstance(d, dict) else d,  # type: ignore  # noqa
     )
     long_name: str = option(default="val")
 
 
 @pytest.fixture
-def cli():
+def cli(tmp_path):
     """
     Creates a click command for ``Settings`` and returns a functions that
     invokes a click test runner with the passed arguments.
@@ -71,7 +71,7 @@ def cli():
     runner = Runner()
 
     @click.group(invoke_without_command=True)
-    @click_options(Settings, "test", ["settings.toml"])
+    @click_options(Settings, "test", [tmp_path.joinpath("settings.toml")])
     def cli(settings):
         runner.settings = settings
 
@@ -148,6 +148,46 @@ class TestClickOptions:
             "  --n-b INTEGER     [default: 0]\n"
             "  --long-name TEXT  [default: val]\n"
             "  --help            Show this message and exit.\n"
+        )
+        assert result.exit_code == 0
+
+    def test_click_default_from_settings(self, monkeypatch, tmp_path):
+        """
+        If a setting is set in a config file, that value is being used as
+        default for click options - *not* the default defined in the Settings
+        class.
+        """
+
+        tmp_path.joinpath("settings.toml").write_text('[test]\na = "x"\n')
+        spath = tmp_path.joinpath("settings2.toml")
+        print(spath)
+        spath.write_text('[test]\nb = "y"\n')
+        monkeypatch.setenv("TEST_SETTINGS", str(spath))
+        monkeypatch.setenv("TEST_C", "z")
+
+        @settings
+        class Settings:
+            a: str
+            b: str
+            c: str
+            d: str
+
+        @click.command()
+        @click_options(Settings, "test", [tmp_path.joinpath("settings.toml")])
+        def cli(settings):
+            print(settings)
+
+        runner = click.testing.CliRunner()
+        result = runner.invoke(cli, ["--help"])
+        assert result.output == (
+            "Usage: cli [OPTIONS]\n"
+            "\n"
+            "Options:\n"
+            "  --a TEXT  [default: x]\n"
+            "  --b TEXT  [default: y]\n"
+            "  --c TEXT  [default: z]\n"
+            "  --d TEXT\n"
+            "  --help    Show this message and exit.\n"
         )
         assert result.exit_code == 0
 

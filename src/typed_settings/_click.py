@@ -7,7 +7,7 @@ import attr
 import click
 
 from ._core import AUTO, T, _Auto, _load_settings
-from ._dict_utils import _deep_fields, _merge_dicts, _set_path
+from ._dict_utils import _deep_fields, _get_path, _merge_dicts, _set_path
 
 
 AnyFunc = Callable[..., Any]
@@ -63,6 +63,14 @@ def click_options(
     """
     cls = attr.resolve_types(cls)
     fields = _deep_fields(cls)
+    settings = _load_settings(
+        fields=fields,
+        appname=appname,
+        config_files=config_files,
+        config_file_section=config_file_section,
+        config_files_var=config_files_var,
+        env_prefix=env_prefix,
+    )
 
     def pass_settings(f: AnyFunc) -> Decorator:
         """
@@ -73,14 +81,6 @@ def click_options(
         def new_func(*args, **kwargs):
             ctx = click.get_current_context()
             try:
-                settings = _load_settings(
-                    fields=fields,
-                    appname=appname,
-                    config_files=config_files,
-                    config_file_section=config_file_section,
-                    config_files_var=config_files_var,
-                    env_prefix=env_prefix,
-                )
                 _merge_dicts(settings, ctx.obj.get("settings"))
                 ctx.obj["settings"] = cls(**settings)
             except (
@@ -96,7 +96,11 @@ def click_options(
 
     def wrap(f):
         for path, field, _cls in reversed(fields):
-            option = _mk_option(click.option, path, field)
+            try:
+                default = _get_path(settings, path)
+            except KeyError:
+                default = field.default
+            option = _mk_option(click.option, path, field, default)
             f = option(f)
         f = pass_settings(f)
         return f
@@ -124,7 +128,12 @@ def pass_settings(f: AnyFunc) -> AnyFunc:
     return update_wrapper(new_func, f)
 
 
-def _mk_option(option, path, field) -> Decorator:
+def _mk_option(
+    option: Callable[..., Decorator],
+    path: str,
+    field: attr.Attribute,
+    default: Any,
+) -> Decorator:
     """Recursively creates click options and returns them as a list."""
 
     def cb(ctx, _param, value):
@@ -135,16 +144,16 @@ def _mk_option(option, path, field) -> Decorator:
         return value
 
     kwargs = {}
-    if field.default is not attr.NOTHING:
-        kwargs["default"] = field.default
+    if default is not attr.NOTHING:
+        kwargs["default"] = default
 
     opt_name = path.replace(".", "-").replace("_", "-")
     param_decl = f"--{opt_name}"
     option_type = field.type
     if field.type is bool:
         param_decl = f"{param_decl}/--no-{opt_name}"
-    if issubclass(field.type, Enum):
-        option_type = EnumChoice(field.type)
+    if field.type and issubclass(field.type, Enum):
+        option_type = EnumChoice(field.type)  # type: ignore
         if "default" in kwargs:
             kwargs["default"] = kwargs["default"].name
 
