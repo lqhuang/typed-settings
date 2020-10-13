@@ -10,6 +10,8 @@ Welcome to Typed Settings's documentation!
    :maxdepth: 2
    :caption: Contents:
 
+   apiref
+
 
 
 Indices and tables

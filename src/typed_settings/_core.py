@@ -79,7 +79,7 @@ def load_settings(
     - First file from *config_files_var*
     - ...
     - Last file from *config_files_var*
-    - Environment variable *env_prefix*_{SETTING}
+    - Environment variable :code:`{env_prefix}_{SETTING}`
 
     Config files (both, explicitly specified, and loaded from an environment
     variable) are optional by default.  You can prepend an ``!`` to their path
@@ -98,9 +98,9 @@ def load_settings(
           By default, use *appname*.
 
         config_files_var: Load list of settings files from this environment
-          variable.  By default, use *APPNAME*_SETTINGS.  Multiple paths have
-          to be separated by ":".  Each settings file will update its
-          predecessor, so the last file will have the highest priority.
+          variable.  By default, use :code:`{APPNAME}_SETTINGS`.  Multiple
+          paths have to be separated by ":".  Each settings file will update
+          its predecessor, so the last file will have the highest priority.
 
           Set to ``None`` to disable this feature.
 
@@ -146,7 +146,6 @@ def update_settings(settings: T, path: str, value: Any) -> T:
     current = settings
     for name in path.split("."):
         try:
-            print(current, name)
             current = getattr(current, name)
         except AttributeError:
             raise AttributeError(

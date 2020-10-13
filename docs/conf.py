@@ -29,7 +29,9 @@ extensions = [
     "sphinx.ext.autodoc",
     "sphinx.ext.doctest",
     "sphinx.ext.intersphinx",
+    "sphinx.ext.napoleon",
     "sphinx.ext.viewcode",
+    "sphinx_autodoc_typehints",
 ]
 templates_path = ["_templates"]
 exclude_patterns = ["_build", "Thumbs.db", ".DS_Store"]
@@ -54,5 +56,6 @@ autodoc_member_order = "bysource"
 # Intersphinx
 intersphinx_mapping = {
     "python": ("https://docs.python.org/3/", None),
-    "click": ("http://click.pocoo.org/6/", None),
+    "attrs": ("https://www.attrs.org/en/stable/", None),
+    "click": ("https://click.palletsprojects.com/en/master/", None),
 }
