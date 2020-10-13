@@ -9,7 +9,7 @@ variables:
   PIP_CACHE_DIR: "$CI_PROJECT_DIR/.cache/pip"
 
 default:
-  image: python:latest
+  image: python:3.8
   before_script:
     - pip install nox
   cache:
