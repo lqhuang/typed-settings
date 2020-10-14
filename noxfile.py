@@ -14,9 +14,9 @@ LOCATIONS = [
 
 @nox.session
 def build(session):
-    session.install("pep517")
-    session.run("rm", "-rf", "build", "dist")
-    session.run("python", "-m", "pep517.build", "--source", "--binary", ".")
+    session.install("build")
+    session.run("rm", "-rf", "build", "dist", external=True)
+    session.run("python", "-m", "build", "--sdist", "--wheel", ".")
 
 
 @nox.session(python=["3.7", "3.8", "3.9"])
