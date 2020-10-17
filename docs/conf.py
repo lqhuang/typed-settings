@@ -39,13 +39,15 @@ exclude_patterns = ["_build", "Thumbs.db", ".DS_Store"]
 
 # -- Options for HTML output -------------------------------------------------
 
-html_theme = "sphinx_rtd_theme"
-html_theme_options = {
-    "logo_only": True,
-}
+html_theme = "furo"
+# html_theme_options = {
+#     "logo_only": True,
+#     "sidebar_hide_name": True,
+# }
 
 html_static_path = ["_static"]
-html_logo = "_static/typed-settings-white.svg"
+html_logo = "_static/typed-settings-spacing.svg"
+html_title = "Typed Settings"
 
 
 # -- Extension configuration -------------------------------------------------

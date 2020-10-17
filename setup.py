@@ -12,11 +12,7 @@ DEPS_LINT = DEPS_CLICK + [
     "flake8-isort",
     "mypy",
 ]
-DEPS_DOCS = DEPS_CLICK + [
-    "sphinx",
-    "sphinx-autodoc-typehints",
-    "sphinx-rtd-theme",
-]
+DEPS_DOCS = DEPS_CLICK + ["furo", "sphinx", "sphinx-autodoc-typehints"]
 DEPS_DEV = DEPS_TEST + DEPS_LINT + DEPS_DOCS + ["nox", "safety"]
 
 
