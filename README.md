@@ -9,9 +9,8 @@
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 
 
-This package allows you to cleanly structure your settings with [attrs](https://www.attrs.org) classes.
-Type annotations will be used to automatically convert values to the
-proper type[^1].
+Typed Settings allows you to cleanly structure your settings with [attrs](https://www.attrs.org) classes.
+Type annotations will be used to automatically convert values to the proper type.
 You can currently load settings from these sources:
 
 - TOML files (multiple, if you want to).  Paths can statically specified or dynamically set via a environment variable.
@@ -23,8 +22,6 @@ You can use Typed settings, e.g., for
 - server processes
 - containerized apps
 - command line applications
-
-[^1]: Not yet: https://github.com/python-attrs/attrs/pull/653
 
 
 ## Installation
