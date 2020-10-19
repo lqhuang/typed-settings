@@ -29,7 +29,7 @@ You can use Typed settings, e.g., for
 Install and update using [pip](https://pip.pypa.io/en/stable/quickstart/):
 
 ```console
-$ pip install -U typed-settings
+$ python -m pip install typed-settings
 ```
 
 ## Examples

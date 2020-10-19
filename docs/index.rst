@@ -25,6 +25,7 @@ You can use Typed settings, e.g., for
 - containerized apps
 - command line applications
 
+
 Installation
 ============
 
@@ -32,7 +33,7 @@ Install and update using `pip <https://pip.pypa.io/en/stable/quickstart/>`_:
 
 .. code-block:: console
 
-   $ pip install -U typed-settings
+   $ python -m pip install typed-settings
 
 
 Example
@@ -77,6 +78,7 @@ Documentation
    :caption: Contents:
 
    apiref
+   changelog
 
 
 
