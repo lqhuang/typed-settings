@@ -408,6 +408,29 @@ class TestFromToml:
         else:
             _core._from_toml(*args)
 
+    def test_env_var_dash_underscore(self, monkeypatch, tmp_path):
+        """
+        Dashes in the appname get replaced with underscores for the settings
+        fiels var name.
+        """
+
+        @frozen
+        class Settings:
+            option: bool = True
+
+        sf = tmp_path.joinpath("settings.py")
+        sf.write_text("[a-b]\noption = false\n")
+        monkeypatch.setenv("A_B_SETTINGS", str(sf))
+
+        result = _core._from_toml(
+            fields=_deep_fields(Settings),
+            appname="a-b",
+            files=[],
+            section=_core.AUTO,
+            var_name=_core.AUTO,
+        )
+        assert result == {"option": False}
+
 
 class TestFromEnv:
     """Tests for _from_env()"""

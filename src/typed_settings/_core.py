@@ -226,7 +226,7 @@ def _from_toml(
     """
     section = appname if isinstance(section, _Auto) else section
     var_name = (
-        f"{appname.upper()}_SETTINGS"
+        f"{appname.upper()}_SETTINGS".replace("-", "_")
         if isinstance(var_name, _Auto)
         else var_name
     )
