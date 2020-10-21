@@ -3,8 +3,8 @@ Typed settings
 """
 from typing import Any, List
 
-from ._attrs import option, secret, settings
 from ._core import load_settings, update_settings
+from .attrs import option, secret, settings
 
 
 __all__ = [
