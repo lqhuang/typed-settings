@@ -2,10 +2,8 @@
 requires = ["setuptools >= 40.6.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
-[tool.coverage.run]
-branch = true
-parallel = true
-source = ["typed_settings"]
+[tool.black]
+line-length = 79
 
 [tool.coverage.paths]
 source = ["src", ".nox/*/site-packages"]
@@ -13,11 +11,17 @@ source = ["src", ".nox/*/site-packages"]
 [tool.coverage.report]
 show_missing = true
 
-[tool.black]
-line-length = 79
+[tool.coverage.run]
+branch = true
+parallel = true
+source = ["typed_settings"]
 
 [tool.isort]
 profile = "black"
 line_length = 79
 lines_after_imports = 2
 src_paths = ["src", "tests"]
+
+[tool.pytest.ini_options]
+addopts = "--doctest-glob='*.rst' --doctest-modules"
+ignore = ["docs/_build"]
