@@ -5,6 +5,8 @@ from functools import partial
 
 import attr
 
+from .hooks import auto_convert
+
 
 class _SecretRepr:
     def __call__(self, _v):
@@ -14,7 +16,7 @@ class _SecretRepr:
         return "***"
 
 
-settings = attr.frozen
+settings = partial(attr.frozen, field_transformer=auto_convert)
 """An alias to :func:`attr.frozen()`"""
 
 # settings = partial(attr.frozen, field_transformer=attr.auto_convert)
