@@ -2,7 +2,7 @@
 Typed Settings
 ==============
 
-*Reliable and flexible settings with types*
+*Safe and flexible settings with types*
 
 `Home <https://typed-settings.readthedocs.io/en/latest>`_ |
 `PyPI <https://pypi.org/project/typed-settings/>`_ |
@@ -77,6 +77,7 @@ Documentation
    :maxdepth: 2
    :caption: Contents:
 
+   quickstart
    apiref
    changelog
 
