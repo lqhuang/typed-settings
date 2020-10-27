@@ -77,7 +77,10 @@ Documentation
    :maxdepth: 2
    :caption: Contents:
 
+   why
    quickstart
+   guides
+   examples
    apiref
    changelog
 
