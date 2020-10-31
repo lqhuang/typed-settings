@@ -1,0 +1,12 @@
+# pypirc.toml
+
+[distutils]
+index-servers = ["pypi", "test"]
+
+[pypi]
+repository = "https://upload.pypi.org/legacy/"
+username = "test"
+
+[test]
+repository = "https://test.pypi.org/legacy/"
+username = "test"

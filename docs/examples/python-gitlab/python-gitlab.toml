@@ -1,0 +1,9 @@
+# python-gitlab.toml
+
+[global]
+default = "gitlab-com"
+
+[gitlab-com]
+url = "https://gitlab.com"
+private_token = "a93af93ff0adf9j3"
+api_version = 4

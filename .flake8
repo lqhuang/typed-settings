@@ -3,5 +3,6 @@ select = B,B9,BLK,C,E,F,I,S,W
 max-complexity = 10
 max-line-length = 79
 per-file-ignores =
+    docs/conftest.py:S101,S404,S602
     setup.py:E501
     tests/*:S101,S404,S602

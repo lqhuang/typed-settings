@@ -1,0 +1,9 @@
+# pypirc.toml
+
+[distutils.repos.pypi]
+repository = "https://upload.pypi.org/legacy/"
+username = "test"
+
+[distutils.repos.test]
+repository = "https://test.pypi.org/legacy/"
+username = "test"

@@ -1,0 +1,2 @@
+$ python pypirc_0.py pypi
+RepoServer(repository='https://upload.pypi.org/legacy/', username='test', password=***)

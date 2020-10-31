@@ -1,0 +1,3 @@
+$ python python_gitlab.py
+GlobalSettings(default='gitlab-com', ssl_verify=True)
+GitlabSettings(url='https://gitlab.com', private_token=***, api_version=4)
