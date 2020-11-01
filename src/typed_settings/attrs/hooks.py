@@ -108,6 +108,7 @@ def _get_converter(
     return converter
 
 
+# TODO: Also add "to_bool()"?
 auto_convert = make_auto_converter({datetime: to_dt})
 """Auto-convert :class:`datetime.datetime` as well as other stuff."""
 

@@ -77,6 +77,43 @@ def to_dt(val):
     return datetime.fromisoformat(val) if isinstance(val, str) else val
 
 
+def to_bool(val):
+    """
+    Convert "boolean" strings (e.g., from env. vars.) to real booleans.
+
+    Values mapping to :code:`True`:
+
+    - :code:`True`
+    - :code:`"True"`
+    - :code:`"true"`
+    - :code:`"yes"`
+    - :code:`"1"`
+    - :code:`1`
+
+    Values mapping to :code:`False`:
+
+    - :code:`False`
+    - :code:`"False"`
+    - :code:`"false"`
+    - :code:`"no"`
+    - :code:`"0"`
+    - :code:`0`
+
+    Raise :exc:`ValueError` for any other value.
+    """
+    truthy = {True, "True", "true", "yes", "1", 1}
+    falsy = {False, "False", "false", "no", "0", 0}
+    try:
+        if val in truthy:
+            return True
+        if val in falsy:
+            return False
+    except TypeError:
+        # Raised when "val" is not hashable (e.g., lists)
+        pass
+    raise ValueError(f"Cannot convert value to bool: {val}")
+
+
 def to_iterable(cls, converter):
     """
     A converter that creates a *cls* iterable (e.g., ``list``) and calls

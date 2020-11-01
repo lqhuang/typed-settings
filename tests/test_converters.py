@@ -9,6 +9,7 @@ import pytest
 
 from typed_settings.attrs.converters import (
     to_attrs,
+    to_bool,
     to_dt,
     to_iterable,
     to_mapping,
@@ -18,7 +19,7 @@ from typed_settings.attrs.converters import (
 
 
 class TestToAttrs:
-    """Tests for to_attrs()."""
+    """Tests for `to_attrs`."""
 
     def test_from_data(self):
         """
@@ -100,7 +101,7 @@ class TestToAttrs:
 
 
 class TestToDt:
-    """Tests for to_dt()."""
+    """Tests for `to_dt`."""
 
     def test_from_dt(self):
         """
@@ -151,8 +152,45 @@ class TestToDt:
             to_dt(3)
 
 
+class TestToBool:
+    """Tests for `to_bool`."""
+
+    @pytest.mark.parametrize(
+        "val, expected",
+        [
+            (True, True),
+            ("True", True),
+            ("true", True),
+            ("yes", True),
+            ("1", True),
+            (1, True),
+            (False, False),
+            ("False", False),
+            ("false", False),
+            ("no", False),
+            ("0", False),
+            (0, False),
+        ],
+    )
+    def test_to_bool(self, val, expected):
+        """
+        Only a limited set of values can be converted to a bool.
+        """
+        assert to_bool(val) is expected
+
+    @pytest.mark.parametrize("val", ["", [], "spam", 2, -1])
+    def test_to_bool_error(self, val):
+        """
+        In contrast to ``bool()``, `to_bool` does no take Pythons default
+        truthyness into account.
+
+        Everything that is not in the sets above raises an error.
+        """
+        pytest.raises(ValueError, to_bool, val)
+
+
 class TestToIterable:
-    """Tests for to_iterable()."""
+    """Tests for `to_iterable`."""
 
     @pytest.mark.parametrize("cls", [list, set, tuple])
     def test_to_iterable(self, cls):
@@ -165,7 +203,7 @@ class TestToIterable:
 
 
 class TestToTuple:
-    """Tests for to_tuple()."""
+    """Tests for `to_tuple`."""
 
     @pytest.mark.parametrize("cls", [tuple])
     def test_to_tuple(self, cls):
@@ -190,7 +228,7 @@ class TestToTuple:
 
 
 class TestToMapping:
-    """Tests for to_mapping()."""
+    """Tests for `to_mapping`."""
 
     @pytest.mark.parametrize("cls", [dict])
     def test_to_dict(self, cls):
@@ -202,7 +240,7 @@ class TestToMapping:
 
 
 class TestToUnion:
-    """Tests for to_union()."""
+    """Tests for `to_union`."""
 
     @pytest.mark.parametrize(
         "types, val, expected_type, expected_val",
