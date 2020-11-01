@@ -359,9 +359,9 @@ def _from_env(
     Returns:
         A dict with the loaded settings.
     """
-    prefix = f"{appname.upper()}_" if isinstance(prefix, _Auto) else prefix
     if prefix is None:
         return {}
+    prefix = f"{appname.upper()}_" if isinstance(prefix, _Auto) else prefix
 
     env = os.environ
     values: Dict[str, Any] = {}

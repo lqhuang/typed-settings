@@ -4,12 +4,12 @@ from mypy.plugins.attrs import attr_attrib_makers, attr_dataclass_makers
 
 # These work just like `attr.dataclass`.
 attr_dataclass_makers.add("attr.frozen")
-attr_dataclass_makers.add("typed_settings.settings")
+attr_dataclass_makers.add("typed_settings.attrs.settings")
 
 # These are our `attr.ib` makers.
 attr_attrib_makers.add("attr.field")
-attr_attrib_makers.add("typed_settings.option")
-attr_attrib_makers.add("typed_settings.secret")
+attr_attrib_makers.add("typed_settings.attrs.option")
+attr_attrib_makers.add("typed_settings.attrs.secret")
 
 
 class MyPlugin(Plugin):

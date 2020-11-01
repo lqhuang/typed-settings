@@ -1,8 +1,6 @@
 """
 Test that all public functions are properly exposed.
 """
-import pytest
-
 import typed_settings as ts
 
 
@@ -24,17 +22,3 @@ def test_update_settings():
     s = Settings("spam", "eggs")
     u = ts.update_settings(s, "p", "bacon")
     assert u == Settings("spam", "bacon")
-
-
-class TestAttrExtensions:
-    """Tests for attrs extensions."""
-
-    @pytest.fixture
-    def inst(self):
-        return Settings(u="spam", p="42")
-
-    def test_secret_str(self, inst):
-        assert str(inst) == "Settings(u='spam', p=***)"
-
-    def test_secret_repr(self, inst):
-        assert repr(inst) == "Settings(u='spam', p=***)"

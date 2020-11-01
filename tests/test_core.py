@@ -422,14 +422,8 @@ class TestFromToml:
         sf.write_text("[a-b]\noption = false\n")
         monkeypatch.setenv("A_B_SETTINGS", str(sf))
 
-        result = _core._from_toml(
-            fields=_deep_fields(Settings),
-            appname="a-b",
-            files=[],
-            section=_core.AUTO,
-            var_name=_core.AUTO,
-        )
-        assert result == {"option": False}
+        result = _core.load_settings(Settings, appname="a-b")
+        assert result == Settings(option=False)
 
 
 class TestFromEnv:

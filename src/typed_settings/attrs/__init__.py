@@ -1,11 +1,13 @@
 """
 Helpers for and additions to attrs.
 """
+from datetime import datetime
 from functools import partial
 
 import attr
 
-from .hooks import auto_convert
+from .converters import to_bool, to_dt
+from .hooks import make_auto_converter
 
 
 class _SecretRepr:
@@ -15,6 +17,9 @@ class _SecretRepr:
     def __repr__(self):
         return "***"
 
+
+auto_convert = make_auto_converter({bool: to_bool, datetime: to_dt})
+"""Auto-convert supported types."""
 
 settings = partial(attr.frozen, field_transformer=auto_convert)
 """An alias to :func:`attr.frozen()`"""
