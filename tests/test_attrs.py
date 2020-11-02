@@ -1,5 +1,6 @@
 from datetime import datetime
 from enum import Enum
+from typing import Any, Dict, List, Optional, Tuple, Union
 
 import pytest
 
@@ -12,7 +13,7 @@ class LeEnum(Enum):
 
 
 @settings
-class Settings:
+class S:
     u: str = option()
     p: str = secret()
 
@@ -22,13 +23,13 @@ class TestAttrExtensions:
 
     @pytest.fixture
     def inst(self):
-        return Settings(u="spam", p="42")
+        return S(u="spam", p="42")
 
     def test_secret_str(self, inst):
-        assert str(inst) == "Settings(u='spam', p=***)"
+        assert str(inst) == "S(u='spam', p=***)"
 
     def test_secret_repr(self, inst):
-        assert repr(inst) == "Settings(u='spam', p=***)"
+        assert repr(inst) == "S(u='spam', p=***)"
 
 
 @pytest.mark.parametrize(
@@ -57,18 +58,25 @@ class TestAttrExtensions:
         # Enums are parsed from their "value"
         (LeEnum, "Le Eggs", LeEnum.eggs),
         # (Nested) attrs classes
-        (Settings, {"u": "user", "p": "pwd"}, Settings("user", "pwd")),
+        (S, {"u": "user", "p": "pwd"}, S("user", "pwd")),
         # Container types
-        # TODO: List[int]
-        # TODO: List[attrs]
-        # TODO: Dict[str, str]
-        # TODO: Dict[str, attr]
-        # TODO: Tuple (list like)
-        # TODO: Tuple (struct like)
+        (List[int], [1, 2], [1, 2]),
+        (List[S], [{"u": 1, "p": 2}], [S("1", "2")]),
+        (Dict[str, int], {"a": 1, "b": 3.1}, {"a": 1, "b": 3}),
+        (Dict[str, S], {"a": {"u": "u", "p": "p"}}, {"a": S("u", "p")}),
+        (Tuple[str, ...], [1, "2", 3], ("1", "2", "3")),
+        (Tuple[int, bool, str], [0, "0", 0], (0, False, "0")),
         # "Special types"
-        # TODO: Any
-        # TODO: Optional
-        # TODO: Union
+        (Any, 2, 2),
+        (Any, "2", "2"),
+        (Any, None, None),
+        (Optional[str], 1, "1"),
+        (Optional[S], None, None),
+        (Optional[S], {"u": "u", "p": "p"}, S("u", "p")),
+        (Optional[LeEnum], "Le Spam", LeEnum.spam),
+        (Union[None, S, List[str]], None, None),
+        (Union[None, S, List[str]], {"u": "u", "p": "p"}, S("u", "p")),
+        (Union[None, S, List[str]], [1, 2], ["1", "2"]),
     ],
 )
 def test_supported_types(typ, value, expected):
