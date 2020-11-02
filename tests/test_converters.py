@@ -116,10 +116,10 @@ class TestToDt:
         [
             ("2020-05-04 13:37:00", datetime(2020, 5, 4, 13, 37)),
             ("2020-05-04T13:37:00", datetime(2020, 5, 4, 13, 37)),
-            # (
-            #     "2020-05-04T13:37:00Z",
-            #     datetime(2020, 5, 4, 13, 37, tzinfo=timezone.utc)),
-            # ),
+            (
+                "2020-05-04T13:37:00Z",
+                datetime(2020, 5, 4, 13, 37, tzinfo=timezone.utc),
+            ),
             (
                 "2020-05-04T13:37:00+00:00",
                 datetime(2020, 5, 4, 13, 37, tzinfo=timezone.utc),

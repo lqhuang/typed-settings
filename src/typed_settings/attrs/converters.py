@@ -74,7 +74,11 @@ def to_dt(val):
             f'Invalid type "{type(val).__name__}"; expected "datetime" or '
             f'"str".'
         )
-    return datetime.fromisoformat(val) if isinstance(val, str) else val
+    if isinstance(val, str):
+        if val[-1] == "Z":
+            val = val.replace("Z", "+00:00")
+        return datetime.fromisoformat(val)
+    return val
 
 
 def to_bool(val):
