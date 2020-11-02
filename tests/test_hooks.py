@@ -5,7 +5,7 @@ import functools
 import json
 from datetime import datetime
 from enum import Enum
-from typing import Dict, List, Optional, Set, Tuple, Type, Union
+from typing import Any, Dict, List, Optional, Set, Tuple, Type, Union
 
 import attr
 import pytest
@@ -232,7 +232,7 @@ class TestAutoConvertHook:
         "d": "2020-05-04T13:37:00",
         "e": [{"x": "23", "y": "42"}],
         "f": ["2020-05-04T13:37:00", "2020-05-04T13:37:00"],
-        "child": {"x": "23", "y": "42"},
+        "child": {"x": 23, "y": "42"},  # Also tests int->str conversion
     }
 
     @pytest.fixture(scope="class")
@@ -378,3 +378,18 @@ class TestAutoConvertHook:
             }
         )
         assert c.x == {(1, 2): [{3: A(4, 5)}, {6: A(7, 8)}]}
+
+    def test_any(self):
+        """
+        "Any" don't convert anything but also do not cause any problems.
+        """
+
+        @auto_converter
+        class C:
+            x: Any
+            y: List[Any]
+
+        o = object()
+        c = C(23, [True, None, 23, 3.14, "spam", o])
+        assert c.x == 23
+        assert c.y == [True, None, 23, 3.14, "spam", o]
