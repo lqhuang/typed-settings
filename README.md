@@ -74,7 +74,7 @@ class Host:
 
 @ts.settings(kw_only=True)
 class Settings:
-    host: Host = ts.option(converter=lambda d: Host(**d))
+    host: Host
     endpoint: str
     retries: int = 3
 

@@ -8,21 +8,20 @@ from attr import field, frozen
 
 from typed_settings import _core
 from typed_settings._dict_utils import _deep_fields
+from typed_settings.attrs import option, settings
 
 
-@frozen
+@settings
 class Host:
     name: str
-    port: int = field(converter=int)
+    port: int = option(converter=int)
 
 
-@frozen(kw_only=True)
+@settings
 class Settings:
+    host: Host
     url: str
     default: int = 3
-    host: Host = field(
-        converter=lambda d: Host(**d) if isinstance(d, dict) else d  # type: ignore  # noqa
-    )
 
 
 class TestAuto:
@@ -103,19 +102,17 @@ class TestLoadSettings:
         creating a nested settings instance.
         """
 
-        @frozen
+        @settings
         class Nested:
             a: int = 3
             b: str = "spam"
 
-        @frozen
+        @settings
         class Settings:
-            nested: Nested = field(
-                converter=lambda d: Nested(**d) if isinstance(d, dict) else d
-            )
+            nested: Nested
 
-        settings = _core.load_settings(Settings, "test")
-        assert settings == Settings(Nested())
+        s = _core.load_settings(Settings, "test")
+        assert s == Settings(Nested())
 
 
 class TestUpdateSettings:
@@ -336,11 +333,9 @@ class TestFromToml:
         class Host:
             port: int = field(converter=int)
 
-        @frozen(kw_only=True)
+        @frozen
         class Settings:
-            host: "Host" = field(
-                converter=lambda d: Host(**d) if isinstance(d, dict) else d
-            )
+            host: "Host"
 
         settings = {"host": {"port": 23, "eggs": 42}}
         with pytest.raises(ValueError) as exc_info:

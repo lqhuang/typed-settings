@@ -34,15 +34,9 @@ class Settings:
     e: float = 0
     f: bool = False
     g: bool = True
-    h: LeEnum = option(  # type: ignore
-        default=LeEnum.spam,
-        converter=lambda v: LeEnum(v) if isinstance(v, str) else v,  # type: ignore  # noqa
-    )
+    h: LeEnum = LeEnum.spam
     p: Path = Path("/")
-    n: Nested = option(  # type: ignore
-        default=Nested(),  # type: ignore
-        converter=lambda d: Nested(**d) if isinstance(d, dict) else d,  # type: ignore  # noqa
-    )
+    n: Nested = Nested()  # type: ignore
     long_name: str = option(default="val")  # type: ignore
 
 
