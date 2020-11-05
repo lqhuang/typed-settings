@@ -18,13 +18,7 @@ from typing import (
 import attr
 import toml
 
-from ._dict_utils import (
-    FieldList,
-    _deep_fields,
-    _get_path,
-    _merge_dicts,
-    _set_path,
-)
+from ._dict_utils import FieldList, _deep_fields, _merge_dicts, _set_path
 
 
 class _Auto:
@@ -116,6 +110,7 @@ def load_settings(
         FileNotFoundError: If a mandatory config file does not exist.
         TypeError: If config values cannot be converted to the required type.
         ValueError: If config values don't meet their requirements.
+        ValueError: If a config file contains an invalid option.
     """
     fields = _deep_fields(cls)
     settings = _load_settings(
@@ -299,7 +294,7 @@ def _load_toml(fields: FieldList, path: Path, section: str) -> Dict[str, Any]:
         except KeyError:
             return {}
     settings = _rename_dict_keys(settings)
-    settings = _clean_settings(fields, settings)
+    _check_settings(fields, settings, path)
     return settings
 
 
@@ -321,27 +316,41 @@ def _rename_dict_keys(d: Mapping[str, Any]) -> Dict[str, Any]:
     return result
 
 
-def _clean_settings(
-    fields: FieldList, settings: Dict[str, Any]
-) -> Dict[str, Any]:
+def _check_settings(
+    fields: FieldList, settings: Dict[str, Any], path: Path
+) -> None:
     """
-    Recursively remove invalid entries from *settings* and return a new dict.
+    Recursively check settings for invalid entries and raise an error.
 
     Args:
         fields: The list of available settings.
         settings: The settings to be cleaned.
 
-    Returns:
-        A newly created dict with the cleaned settings.
+    Raises:
+        ValueError: if invalid settings are found
     """
-    cleaned: Dict[str, Any] = {}
-    for path, _field, _cls in fields:
-        try:
-            val = _get_path(settings, path)
-        except KeyError:
-            continue
-        _set_path(cleaned, path, val)
-    return cleaned
+    invalid_paths = []
+    valid_paths = {path for path, _field, _cls in fields}
+
+    def _iter_dict(d: Dict[str, Any], prefix: str) -> None:
+        for key, val in d.items():
+            path = f"{prefix}{key}"
+
+            # This check prevents us from iterating dicts that are not nested
+            # classes but actual dict values:
+            if path in valid_paths:
+                continue
+
+            if isinstance(val, dict):
+                _iter_dict(val, f"{path}.")
+            else:
+                invalid_paths.append(path)
+
+    _iter_dict(settings, "")
+
+    if invalid_paths:
+        joined_paths = ", ".join(sorted(invalid_paths))
+        raise ValueError(f"Invalid settings found in {path}: {joined_paths}")
 
 
 def _from_env(

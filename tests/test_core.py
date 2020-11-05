@@ -1,7 +1,7 @@
 import os
 from itertools import product
 from pathlib import Path
-from typing import List
+from typing import Any, Dict, List
 
 import pytest
 from attr import field, frozen
@@ -312,20 +312,20 @@ class TestFromToml:
             "sub_section": {"b_1": "bacon"},
         }
 
-    def test_clean_settings(self):
+    def test_invalid_settings(self):
         """
-        Settings for which there is no attribute must be recursively removed.
+        Settings for which there is no attribute are errors
         """
         settings = {
             "url": "abc",
             "host": {"port": 23, "eggs": 42},
             "spam": 23,
         }
-        result = _core._clean_settings(_deep_fields(Settings), settings)
-        assert result == {
-            "url": "abc",
-            "host": {"port": 23},
-        }
+        with pytest.raises(ValueError) as exc_info:
+            _core._check_settings(_deep_fields(Settings), settings, Path("p"))
+        assert str(exc_info.value) == (
+            "Invalid settings found in p: host.eggs, spam"
+        )
 
     def test_clean_settings_unresolved_type(self):
         """
@@ -343,8 +343,22 @@ class TestFromToml:
             )
 
         settings = {"host": {"port": 23, "eggs": 42}}
-        result = _core._clean_settings(_deep_fields(Settings), settings)
-        assert result == {"host": {"port": 23}}
+        with pytest.raises(ValueError) as exc_info:
+            _core._check_settings(_deep_fields(Settings), settings, Path("p"))
+        assert str(exc_info.value) == "Invalid settings found in p: host.eggs"
+
+    def test_clean_settings_dict_values(self):
+        """
+        Some dicts may be actuall values (not nested) classes.  Don't try to
+        check theses as option paths.
+        """
+
+        @frozen
+        class Settings:
+            option: Dict[str, Any]
+
+        settings = {"option": {"a": 1, "b": 2}}
+        _core._check_settings(_deep_fields(Settings), settings, Path("p"))
 
     def test_load_settings_explicit_config(self, tmp_path, monkeypatch):
         """
