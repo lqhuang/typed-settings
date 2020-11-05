@@ -78,7 +78,7 @@ Documentation
    :caption: Contents:
 
    why
-   quickstart
+   getting-started
    guides
    examples
    apiref
