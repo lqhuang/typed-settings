@@ -2,6 +2,27 @@
 Changelog
 =========
 
+0.8 (2020-11-05)
+================
+
+- ✨ Depend on attrs 20.3 and implement auto-converters for attribute values.
+
+- ✨ Properly convert env. vars. with "bool strings" to real booleans.
+
+- 📝 Use Furo_ as documentation theme
+
+- 📝 Update docs:
+
+  - Improve landing page
+  - Add Getting Started section to docs
+  - Add examples to example guide
+  - Add doctests and test examples
+
+- 🐛 Replace "-" in env. var. names with "_"
+
+.. _furo: https://github.com/pradyunsg/furo
+
+
 0.7 (2020-10-13)
 ================
 
@@ -25,9 +46,11 @@ Changelog
 ================
 
 - ✨ Add convenience wrappers for attrs:
+
   - ``settings`` is an alias for ``attr.frozen``
   - ``option`` is an alias for ``attr.field``
   - ``secret`` is an alias for ``attr.field`` and masks the options's value with ``***`` when the settings classes is printed.
+
 - ✨ Add ``update_settings()`` method which is useful for overriding settings in tests.
 - ✨ Mandatory config files can be prefixed with ``!`` (e.g., ``!./credentials.toml``).
   An error is raised if a mandatory config file does not exist.
