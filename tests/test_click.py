@@ -118,7 +118,7 @@ class TestIntFloatStr(ClickTestBase):
 
     _help = [
         "  --a TEXT     [default: spam]",
-        "  --b TEXT     [default: spam]",
+        "  --b TEXT     [default: ***]",
         "  --c INTEGER  [default: 0]",
         "  --d FLOAT    [default: 0]",
     ]
