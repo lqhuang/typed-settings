@@ -16,6 +16,16 @@ from typed_settings import (
 
 
 def make_cli(settings_cls: type) -> Callable[..., Any]:
+    """
+    Returns a ``cli`` fixture that creates a Click command for the given
+    settings class.
+
+    The fixture returns a ``Callable[[Arg, ...], Result]``.  The :result is a
+    :class:`click.testing.Result` with an additional ``settings`` attribute.
+    This contains an instance of the passed settings class.
+
+    """
+
     @pytest.fixture
     def cli(self, tmp_path):
         """
@@ -56,6 +66,16 @@ def make_cli(settings_cls: type) -> Callable[..., Any]:
 
 
 class ClickTestBase:
+    """
+    Base class for Click tests.
+
+    Each test must define a ``cli`` fixture.  That CLI is invoked three times:
+
+    - With "--help", the result is compared to :attr:`_help`.
+    - Without arguments, the result is compared to :attr:`_defaults`.
+    - With arguments defined in :attr:`_options`, the result is compared to
+      :attr:`_values`.
+    """
 
     _help: List[str] = []
     _defaults: Any = None
@@ -63,6 +83,9 @@ class ClickTestBase:
     _values: Any = None
 
     def test_help(self, cli):
+        """
+        The genereated CLI has a proper help output.
+        """
         result = cli("--help")
 
         # fmt: off
@@ -75,12 +98,18 @@ class ClickTestBase:
         # fmt: on
 
     def test_defaults(self, cli):
+        """
+        Arguments of the generated CLI have default values.
+        """
         result = cli()
         assert result.output == ""
         assert result.exit_code == 0
         assert result.settings == self._defaults
 
     def test_options(self, cli):
+        """
+        Default values can be overriden by passing the corresponding args.
+        """
         result = cli(*self._options)
         assert result.output == ""
         assert result.exit_code == 0
@@ -88,6 +117,10 @@ class ClickTestBase:
 
 
 class TestClickBool(ClickTestBase):
+    """
+    Test boolean flags.
+    """
+
     @settings
     class S:
         a: bool
@@ -97,7 +130,7 @@ class TestClickBool(ClickTestBase):
     cli = make_cli(S)
 
     _help = [
-        "  --a / --no-a  [default: False]",
+        "  --a / --no-a  [default: False; required]",
         "  --b / --no-b  [default: True]",
         "  --c / --no-c  [default: False]",
     ]
@@ -107,6 +140,10 @@ class TestClickBool(ClickTestBase):
 
 
 class TestIntFloatStr(ClickTestBase):
+    """
+    Test int, float and str options.
+    """
+
     @settings
     class S:
         a: str = option(default="spam")
@@ -127,24 +164,10 @@ class TestIntFloatStr(ClickTestBase):
     _values = S(a="eggs", b="pwd", c=3, d=3.1)
 
 
-# class TestMandatory(ClickTestBase):
-#
-#     @settings
-#     class S:
-#         a: str
-#
-#     cli = make_cli(S)
-#
-#     _help = (
-#         "  --a TEXT\n"
-#         "  --b TEXT\n"
-#     )
-#     _defaults = S()
-#     _options = ["--a=eggs1", "--b=eggs2"]
-#     _values = S(a="eggs1", b="eggs2")
-
-
 # class TestDateTime(ClickTestBase):
+#     """
+#     Test datetime options
+#     """
 #     pass
 
 
@@ -154,6 +177,10 @@ class LeEnum(Enum):
 
 
 class TestEnum(ClickTestBase):
+    """
+    Test enum options
+    """
+
     @settings
     class S:
         a: LeEnum = LeEnum.spam
@@ -167,6 +194,10 @@ class TestEnum(ClickTestBase):
 
 
 class TestPath(ClickTestBase):
+    """
+    Test Path options
+    """
+
     @settings
     class S:
         a: Path = Path("/")
@@ -180,6 +211,10 @@ class TestPath(ClickTestBase):
 
 
 class TestNested(ClickTestBase):
+    """
+    Test options for nested settings
+    """
+
     @settings
     class S:
         @settings
@@ -200,9 +235,37 @@ class TestNested(ClickTestBase):
     _values = S(S.Nested("eggs", 3))
 
 
-class TestHelp(ClickTestBase):
+def test_no_default(monkeypatch):
     """
-    Tests for specifying a click help string in "option()" and "secret()".
+    Options without a default are mandatory/required.
+    """
+
+    @settings
+    class S:
+        a: str
+        b: str
+
+    monkeypatch.setenv("TEST_A", "spam")  # This makes only "S.b" mandatory!
+
+    @click.command()
+    @click_options(S, "test")
+    def cli(settings):
+        pass
+
+    runner = click.testing.CliRunner()
+    result = runner.invoke(cli, [])
+    assert result.output == (
+        "Usage: cli [OPTIONS]\n"
+        "Try 'cli --help' for help.\n"
+        "\n"
+        "Error: Missing option '--b'.\n"
+    )
+    assert result.exit_code == 2
+
+
+def test_help_text():
+    """
+    Options/secrets can specify a help text for click options.
     """
 
     @settings
@@ -210,15 +273,22 @@ class TestHelp(ClickTestBase):
         a: str = option(default="spam", help="Help for 'a'")
         b: str = secret(default="eggs", help="bbb")
 
-    cli = make_cli(S)
+    @click.command()
+    @click_options(S, "test")
+    def cli(settings):
+        pass
 
-    _help = [
-        "  --a TEXT  Help for 'a'  [default: spam]",
-        "  --b TEXT  bbb  [default: ***]",
-    ]
-    _defaults = S()
-    _options = ["--a", "foo", "--b=bar"]
-    _values = S("foo", "bar")
+    runner = click.testing.CliRunner()
+    result = runner.invoke(cli, ["--help"])
+    assert result.output == (
+        "Usage: cli [OPTIONS]\n"
+        "\n"
+        "Options:\n"
+        "  --a TEXT  Help for 'a'  [default: spam]\n"
+        "  --b TEXT  bbb  [default: ***]\n"
+        "  --help    Show this message and exit.\n"
+    )
+    assert result.exit_code == 0
 
 
 def test_long_name():
@@ -281,7 +351,7 @@ def test_click_default_from_settings(monkeypatch, tmp_path):
         "  --a TEXT  [default: x]\n"
         "  --b TEXT  [default: y]\n"
         "  --c TEXT  [default: z]\n"
-        "  --d TEXT\n"
+        "  --d TEXT  [required]\n"
         "  --help    Show this message and exit.\n"
     )
     assert result.exit_code == 0

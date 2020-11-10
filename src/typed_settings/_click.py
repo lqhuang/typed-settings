@@ -149,7 +149,6 @@ def _mk_option(
         "show_default": True,
         "callback": cb,
         "expose_value": False,
-        "is_eager": True,
         "help": metadata.get("help", ""),
     }
 
@@ -157,7 +156,9 @@ def _mk_option(
         kwargs["show_default"] = False
         kwargs["help"] = f"{kwargs['help']}  [default: {field.repr('')}]"
 
-    if default is not attr.NOTHING:
+    if default is attr.NOTHING:
+        kwargs["required"] = True
+    else:
         kwargs["default"] = default
 
     opt_name = path.replace(".", "-").replace("_", "-")
