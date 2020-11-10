@@ -25,7 +25,15 @@ __all__ = [
 
 def make_auto_converter(converters):
     """
-    Return a
+    Returns an auto-converter factory.
+
+    Args:
+        converters (Dict[T, Callable[[Any], T]): A dict mapping types to
+          converter functions.
+
+    Returns:
+        A function that can be passed as *field_transformer* to
+        :func:`attr.s()`/:func:`attr.define()`.
 
     """
 

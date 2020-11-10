@@ -28,8 +28,6 @@ def to_attrs(cls):
     :returns: The converter function for *cls*.
     :rtype: callable
 
-    .. versionadded:: 20.3.0
-
     """
     type_ = cls.from_dict if hasattr(cls, "from_dict") else cls
 
@@ -60,14 +58,14 @@ def to_dt(val):
     Convert an ISO formatted string to :class:`datetime.datetime`.  Leave the
     input untouched if it is already a datetime.
 
-    See: :func:`datetime.datetime.fromisoformat`
+    See: :func:`datetime.datetime.fromisoformat()`
 
-    :param Union[str, datetime.datetime] data: The input data
+    The ``Z`` suffix is also supported and will be replaced with ``+00:00``.
+
+    :param Union[str,datetime.datetime] data: The input data
     :returns: A parsed datetime object
     :rtype: datetime.datetime
     :raises TypeError: If *val* is neither a str nor a datetime.
-
-    .. versionadded:: 20.3.0
     """
     if not isinstance(val, (datetime, str)):
         raise TypeError(

@@ -47,8 +47,6 @@ def lt(val):
     with a number larger or equal to *val*.
 
     :param int val: Exclusive upper bound for values
-
-    .. versionadded:: 20.3.0
     """
     return _NumberValidator(val, "<", operator.lt)
 
@@ -59,8 +57,6 @@ def le(val):
     with a number greater than *val*.
 
     :param int val: Inclusive upper bound for values
-
-    .. versionadded:: 20.3.0
     """
     return _NumberValidator(val, "<=", operator.le)
 
@@ -71,8 +67,6 @@ def ge(val):
     with a number smaller than *val*.
 
     :param int val: Inclusive lower bound for values
-
-    .. versionadded:: 20.3.0
     """
     return _NumberValidator(val, ">=", operator.ge)
 
@@ -83,8 +77,6 @@ def gt(val):
     with a number smaller or equal to *val*.
 
     :param int val: Exclusive lower bound for values
-
-    .. versionadded:: 20.3.0
     """
     return _NumberValidator(val, ">", operator.gt)
 
@@ -114,7 +106,5 @@ def maxlen(length):
     with a string or iterable that is longer than *length*.
 
     :param int length: Maximum length of the string or iterable
-
-    .. versionadded:: 20.3.0
     """
     return _MaxLengthValidator(length)

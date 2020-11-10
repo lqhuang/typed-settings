@@ -34,6 +34,8 @@ Helpers for creating :mod:`attrs` classes and fields with sensible details for T
     - Optional[T]
     - Union[T1, T2]
 
+    See :mod:`typed_settings.attrs.converters` for details.
+
 
 .. function:: option(*, default=NOTHING, validator=None, repr=True, hash=None, init=True, metadata=None, converter=None, factory=None, kw_only=False, eq=None, order=None, on_setattr=None, help=None)
 
@@ -85,3 +87,27 @@ Decorators for using Typed Settings with and as :mod:`click` options.
 
 .. autofunction:: click_options
 .. autofunction:: pass_settings
+
+
+Validators, Converters, Hooks for ``attrs``
+===========================================
+
+These functions are here to mature and may eventually end up in attrs.
+
+Validators
+----------
+
+.. automodule:: typed_settings.attrs.validators
+   :members:
+
+Converters
+----------
+
+.. automodule:: typed_settings.attrs.converters
+   :members:
+
+Hooks
+-----
+
+.. automodule:: typed_settings.attrs.hooks
+   :members:
