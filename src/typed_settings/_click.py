@@ -8,7 +8,7 @@ import click
 
 from ._core import AUTO, T, _Auto, _load_settings
 from ._dict_utils import _deep_fields, _get_path, _merge_dicts, _set_path
-from .attrs import _SecretRepr
+from .attrs import METADATA_KEY, _SecretRepr
 
 
 AnyFunc = Callable[..., Any]
@@ -144,12 +144,19 @@ def _mk_option(
         _set_path(settings, path, value)
         return value
 
+    metadata = field.metadata.get(METADATA_KEY, {})
     kwargs = {
         "show_default": True,
         "callback": cb,
         "expose_value": False,
         "is_eager": True,
+        "help": metadata.get("help", ""),
     }
+
+    if isinstance(field.repr, _SecretRepr):
+        kwargs["show_default"] = False
+        kwargs["help"] = f"{kwargs['help']}  [default: {field.repr('')}]"
+
     if default is not attr.NOTHING:
         kwargs["default"] = default
 
@@ -166,9 +173,5 @@ def _mk_option(
                 # Convert Enum instance to string
                 kwargs["default"] = kwargs["default"].name  # type: ignore
     kwargs["type"] = option_type
-
-    if isinstance(field.repr, _SecretRepr):
-        kwargs["show_default"] = False
-        kwargs["help"] = f"[default: {field.repr('')}]"
 
     return option(param_decl, **kwargs)

@@ -122,7 +122,7 @@ class TestIntFloatStr(ClickTestBase):
         "  --c INTEGER  [default: 0]",
         "  --d FLOAT    [default: 0]",
     ]
-    _defaults = S()  # type: ignore
+    _defaults = S()
     _options = ["--a=eggs", "--b=pwd", "--c=3", "--d=3.1"]
     _values = S(a="eggs", b="pwd", c=3, d=3.1)
 
@@ -185,9 +185,9 @@ class TestNested(ClickTestBase):
         @settings
         class Nested:
             a: str = "nested"
-            b: int = option(default=0, converter=int)  # type: ignore
+            b: int = 0
 
-        n: Nested = Nested()  # type: ignore
+        n: Nested = Nested()
 
     cli = make_cli(S)
 
@@ -198,6 +198,27 @@ class TestNested(ClickTestBase):
     _defaults = S()
     _options = ["--n-a=eggs", "--n-b=3"]
     _values = S(S.Nested("eggs", 3))
+
+
+class TestHelp(ClickTestBase):
+    """
+    Tests for specifying a click help string in "option()" and "secret()".
+    """
+
+    @settings
+    class S:
+        a: str = option(default="spam", help="Help for 'a'")
+        b: str = secret(default="eggs", help="bbb")
+
+    cli = make_cli(S)
+
+    _help = [
+        "  --a TEXT  Help for 'a'  [default: spam]",
+        "  --b TEXT  bbb  [default: ***]",
+    ]
+    _defaults = S()
+    _options = ["--a", "foo", "--b=bar"]
+    _values = S("foo", "bar")
 
 
 def test_long_name():
