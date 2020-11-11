@@ -1,3 +1,4 @@
+from datetime import datetime, timezone
 from enum import Enum
 from pathlib import Path
 from typing import Any, Callable, List
@@ -164,11 +165,38 @@ class TestIntFloatStr(ClickTestBase):
     _values = S(a="eggs", b="pwd", c=3, d=3.1)
 
 
-# class TestDateTime(ClickTestBase):
-#     """
-#     Test datetime options
-#     """
-#     pass
+class TestDateTime(ClickTestBase):
+    """
+    Test datetime options.
+    """
+
+    @settings
+    class S:
+        a: datetime = datetime.fromtimestamp(0, timezone.utc)
+        b: datetime = datetime.fromtimestamp(0, timezone.utc)
+        c: datetime = datetime.fromtimestamp(0, timezone.utc)
+
+    cli = make_cli(S)
+
+    _help = [
+        "  --a [%Y-%m-%d|%Y-%m-%dT%H:%M:%S|%Y-%m-%dT%H:%M:%S%z]",
+        "                                  [default: 1970-01-01T00:00:00+00:00]",  # noqa: E501
+        "  --b [%Y-%m-%d|%Y-%m-%dT%H:%M:%S|%Y-%m-%dT%H:%M:%S%z]",
+        "                                  [default: 1970-01-01T00:00:00+00:00]",  # noqa: E501
+        "  --c [%Y-%m-%d|%Y-%m-%dT%H:%M:%S|%Y-%m-%dT%H:%M:%S%z]",
+        "                                  [default: 1970-01-01T00:00:00+00:00]",  # noqa: E501
+    ]
+    _defaults = S()
+    _options = [
+        "--a=2020-05-04",
+        "--b=2020-05-04T13:37:00",
+        "--c=2020-05-04T13:37:00+00:00",
+    ]
+    _values = S(
+        datetime(2020, 5, 4),
+        datetime(2020, 5, 4, 13, 37),
+        datetime(2020, 5, 4, 13, 37, tzinfo=timezone.utc),
+    )
 
 
 class LeEnum(Enum):

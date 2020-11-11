@@ -1,7 +1,8 @@
+from datetime import datetime
 from enum import Enum
 from functools import update_wrapper
 from pathlib import Path
-from typing import Any, Callable, Iterable, Optional, Type, Union
+from typing import Any, Callable, Dict, Iterable, Optional, Type, Union
 
 import attr
 import click
@@ -135,7 +136,9 @@ def _mk_option(
     field: attr.Attribute,
     default: Any,
 ) -> Decorator:
-    """Recursively creates click options and returns them as a list."""
+    """
+    Recursively creates click options and returns them as a list.
+    """
 
     def cb(ctx, _param, value):
         if ctx.obj is None:
@@ -146,6 +149,7 @@ def _mk_option(
 
     metadata = field.metadata.get(METADATA_KEY, {})
     kwargs = {
+        "type": field.type,
         "show_default": True,
         "callback": cb,
         "expose_value": False,
@@ -164,15 +168,35 @@ def _mk_option(
     opt_name = path.replace(".", "-").replace("_", "-")
     param_decl = f"--{opt_name}"
 
-    option_type = field.type
     if field.type:
         if field.type is bool:
             param_decl = f"{param_decl}/--no-{opt_name}"
-        elif issubclass(field.type, Enum):
-            option_type = EnumChoice(field.type)  # type: ignore
-            if "default" in kwargs:
-                # Convert Enum instance to string
-                kwargs["default"] = kwargs["default"].name  # type: ignore
-    kwargs["type"] = option_type
+        kwargs = _update_type_info(kwargs, field.type)
 
     return option(param_decl, **kwargs)
+
+
+def _update_type_info(kwargs: Dict[str, Any], ftype: type) -> Dict[str, Any]:
+    """
+    Analyses the option type and returns updated options.
+    """
+    kwargs = dict(kwargs)
+
+    if issubclass(ftype, datetime):
+        kwargs["type"] = click.DateTime(
+            [
+                "%Y-%m-%d",
+                "%Y-%m-%dT%H:%M:%S",
+                "%Y-%m-%dT%H:%M:%S%z",
+            ]
+        )
+        if "default" in kwargs:
+            kwargs["default"] = kwargs["default"].isoformat()
+
+    elif issubclass(ftype, Enum):
+        kwargs["type"] = EnumChoice(ftype)
+        if "default" in kwargs:
+            # Convert Enum instance to string
+            kwargs["default"] = kwargs["default"].name  # type: ignore
+
+    return kwargs
