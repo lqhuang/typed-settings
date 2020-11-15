@@ -10,6 +10,7 @@ import click
 from ._core import AUTO, T, _Auto, _load_settings
 from ._dict_utils import _deep_fields, _get_path, _merge_dicts, _set_path
 from .attrs import METADATA_KEY, _SecretRepr
+from .attrs._compat import get_args, get_origin
 
 
 AnyFunc = Callable[..., Any]
@@ -149,7 +150,6 @@ def _mk_option(
 
     metadata = field.metadata.get(METADATA_KEY, {})
     kwargs = {
-        "type": field.type,
         "show_default": True,
         "callback": cb,
         "expose_value": False,
@@ -158,12 +158,11 @@ def _mk_option(
 
     if isinstance(field.repr, _SecretRepr):
         kwargs["show_default"] = False
-        kwargs["help"] = f"{kwargs['help']}  [default: {field.repr('')}]"
+        if default is not attr.NOTHING:
+            kwargs["help"] = f"{kwargs['help']}  [default: {field.repr('')}]"
 
     if default is attr.NOTHING:
         kwargs["required"] = True
-    else:
-        kwargs["default"] = default
 
     opt_name = path.replace(".", "-").replace("_", "-")
     param_decl = f"--{opt_name}"
@@ -171,32 +170,63 @@ def _mk_option(
     if field.type:
         if field.type is bool:
             param_decl = f"{param_decl}/--no-{opt_name}"
-        kwargs = _update_type_info(kwargs, field.type)
+        kwargs.update(_get_type(field.type, default))
 
     return option(param_decl, **kwargs)
 
 
-def _update_type_info(kwargs: Dict[str, Any], ftype: type) -> Dict[str, Any]:
+def _get_type(otype: type, default: Any) -> Dict[str, Any]:
     """
     Analyses the option type and returns updated options.
     """
-    kwargs = dict(kwargs)
+    type_info: Dict[str, Any] = {}
+    origin = get_origin(otype)
+    args = get_args(otype)
 
-    if issubclass(ftype, datetime):
-        kwargs["type"] = click.DateTime(
+    if origin is None and issubclass(otype, (bool, int, float, str, Path)):
+        if default is attr.NOTHING:
+            type_info = {"type": otype}
+        else:
+            type_info = {"type": otype, "default": default}
+
+    elif origin is None and issubclass(otype, datetime):
+        type_info["type"] = click.DateTime(
             [
                 "%Y-%m-%d",
                 "%Y-%m-%dT%H:%M:%S",
                 "%Y-%m-%dT%H:%M:%S%z",
             ]
         )
-        if "default" in kwargs:
-            kwargs["default"] = kwargs["default"].isoformat()
+        if default is not attr.NOTHING:
+            type_info["default"] = default.isoformat()
 
-    elif issubclass(ftype, Enum):
-        kwargs["type"] = EnumChoice(ftype)
-        if "default" in kwargs:
+    elif origin is None and issubclass(otype, Enum):
+        type_info["type"] = EnumChoice(otype)
+        if default is not attr.NOTHING:
             # Convert Enum instance to string
-            kwargs["default"] = kwargs["default"].name  # type: ignore
+            type_info["default"] = default.name
 
-    return kwargs
+    elif origin in {list, set, frozenset} or (
+        origin is tuple and len(args) == 2 and args[1] == ...
+    ):
+        # lists and list-like tuple
+        type_info = _get_type(args[0], attr.NOTHING)
+        if default is not attr.NOTHING:
+            default = [_get_type(args[0], d)["default"] for d in default]
+            type_info["default"] = default
+        type_info["multiple"] = True
+
+    elif origin is tuple:
+        # "struct" variant of tuple
+
+        dicts = [_get_type(a, d) for a, d in zip(args, default)]
+        type_info = {
+            "type": tuple(d["type"] for d in dicts),
+            "default": tuple(d["default"] for d in dicts),
+            "nargs": len(dicts),
+        }
+
+    else:
+        raise TypeError(f"Cannot create click type for: {otype}")
+
+    return type_info

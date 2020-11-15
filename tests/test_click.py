@@ -1,7 +1,7 @@
 from datetime import datetime, timezone
 from enum import Enum
 from pathlib import Path
-from typing import Any, Callable, List
+from typing import Any, Callable, FrozenSet, List, Tuple
 
 import click
 import click.testing
@@ -261,6 +261,52 @@ class TestNested(ClickTestBase):
     _defaults = S()
     _options = ["--n-a=eggs", "--n-b=3"]
     _values = S(S.Nested("eggs", 3))
+
+
+class TestList(ClickTestBase):
+    """
+    Lists (and friends) use "multiple=True".
+    """
+
+    @settings
+    class S:
+        a: List[int] = []
+        b: FrozenSet[datetime] = frozenset({datetime(2020, 5, 4)})
+
+    cli = make_cli(S)
+
+    _help = [
+        "  --a INTEGER                     [default: ]",
+        "  --b [%Y-%m-%d|%Y-%m-%dT%H:%M:%S|%Y-%m-%dT%H:%M:%S%z]",
+        "                                  [default: 2020-05-04T00:00:00]",
+    ]
+    _defaults = S()
+    _options = ["--a=1", "--a=2", "--b=2020-01-01", "--b=2020-01-02"]
+    _values = S(
+        [1, 2], frozenset({datetime(2020, 1, 1), datetime(2020, 1, 2)})
+    )
+
+
+class TestTuple(ClickTestBase):
+    """
+    Tuples are handled either like the list variant with multiple=True or
+    like the struct variant with nargs=x.
+    """
+
+    @settings
+    class S:
+        a: Tuple[int, ...] = (0,)
+        b: Tuple[int, float, str] = (0, 0.0, "")
+
+    cli = make_cli(S)
+
+    _help = [
+        "  --a INTEGER                  [default: 0]",
+        "  --b <INTEGER FLOAT TEXT>...  [default: 0, 0.0, ]",
+    ]
+    _defaults = S()
+    _options = ["--a=1", "--a=2", "--b", "1", "2.3", "spam"]
+    _values = S((1, 2), (1, 2.3, "spam"))
 
 
 def test_no_default(monkeypatch):

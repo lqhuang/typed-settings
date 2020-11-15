@@ -120,7 +120,7 @@ def _handle_generic(
         converter = to_iterable(origin, item_converter)
     elif origin in tuple_types:
         if len(args) == 2 and args[1] == ...:
-            # "frozen list" variant of tuple
+            # "list" variant of tuple
             item_converter = _get_converter(args[0], converters)
             converter = to_iterable(tuple, item_converter)
         else:
