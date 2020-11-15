@@ -3,6 +3,7 @@ from enum import Enum
 from pathlib import Path
 from typing import Any, Callable, FrozenSet, List, Tuple
 
+import attr
 import click
 import click.testing
 import pytest
@@ -307,6 +308,65 @@ class TestTuple(ClickTestBase):
     _defaults = S()
     _options = ["--a=1", "--a=2", "--b", "1", "2.3", "spam"]
     _values = S((1, 2), (1, 2.3, "spam"))
+
+
+class TestNestedTuple(ClickTestBase):
+    """
+    Lists of tuples use "multiple=True" and "nargs=x".
+    """
+
+    @settings
+    class S:
+        a: List[Tuple[int, int]] = option(factory=list)
+
+    cli = make_cli(S)
+
+    _help = [
+        "  --a <INTEGER INTEGER>...  [default: ]",
+    ]
+    _defaults = S()
+    _options = ["--a", "1", "2", "--a", "3", "4"]
+    _values = S([(1, 2), (3, 4)])
+
+
+def test_default_factory():
+    """
+    An attributes "default factory" is called to generate a proper default
+    value.
+
+    If the factory "take_self", ``None`` is passed since we do not yet have
+    an instance.
+    """
+
+    def factory_a() -> str:
+        return "spam"
+
+    def factory_b(self) -> str:
+        assert self is None
+        return "eggs"
+
+    @settings
+    class S:
+
+        a: str = option(factory=factory_a)
+        b: str = option(default=attr.Factory(factory_b, takes_self=True))
+
+    @click.command()
+    @click_options(S, "test")
+    def cli(settings):
+        pass
+
+    runner = click.testing.CliRunner()
+    result = runner.invoke(cli, ["--help"])
+    assert result.output == (
+        "Usage: cli [OPTIONS]\n"
+        "\n"
+        "Options:\n"
+        "  --a TEXT  [default: spam]\n"
+        "  --b TEXT  [default: eggs]\n"
+        "  --help    Show this message and exit.\n"
+    )
+    assert result.exit_code == 0
 
 
 def test_no_default(monkeypatch):

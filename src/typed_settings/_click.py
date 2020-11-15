@@ -103,6 +103,11 @@ def click_options(
                 default = _get_path(settings, path)
             except KeyError:
                 default = field.default
+            if isinstance(default, attr.Factory):
+                if default.takes_self:
+                    default = default.factory(None)
+                else:
+                    default = default.factory()
             option = _mk_option(click.option, path, field, default)
             f = option(f)
         f = pass_settings(f)
@@ -218,13 +223,15 @@ def _get_type(otype: type, default: Any) -> Dict[str, Any]:
 
     elif origin is tuple:
         # "struct" variant of tuple
-
+        if default is attr.NOTHING:
+            default = [attr.NOTHING] * len(args)
         dicts = [_get_type(a, d) for a, d in zip(args, default)]
         type_info = {
             "type": tuple(d["type"] for d in dicts),
-            "default": tuple(d["default"] for d in dicts),
             "nargs": len(dicts),
         }
+        if all("default" in d for d in dicts):
+            type_info["default"] = tuple(d["default"] for d in dicts)
 
     else:
         raise TypeError(f"Cannot create click type for: {otype}")
