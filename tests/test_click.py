@@ -9,6 +9,7 @@ import click.testing
 import pytest
 
 from typed_settings import (
+    _click,
     click_options,
     option,
     pass_settings,
@@ -65,6 +66,37 @@ def make_cli(settings_cls: type) -> Callable[..., Any]:
         return run
 
     return cli
+
+
+@pytest.mark.parametrize(
+    "default, path, settings, expected",
+    [
+        (attr.NOTHING, "a", {"a": 3}, 3),
+        (attr.NOTHING, "a", {}, attr.NOTHING),
+        (2, "a", {}, 2),
+        (attr.Factory(list), "a", {}, []),
+    ],
+)
+def test_get_default(default, path, settings, expected):
+    field = attr.Attribute("test", default, None, None, None, None, None, None)
+    result = _click._get_default(field, path, settings)
+    assert result == expected
+
+
+def test_get_default_factory():
+    """
+    If the factory "takes self", ``None`` is passed since we do not yet have
+    an instance.
+    """
+
+    def factory(self) -> str:
+        assert self is None
+        return "eggs"
+
+    default = attr.Factory(factory, takes_self=True)
+    field = attr.Attribute("test", default, None, None, None, None, None, None)
+    result = _click._get_default(field, "a", {})
+    assert result == "eggs"
 
 
 class ClickTestBase:
@@ -327,46 +359,6 @@ class TestNestedTuple(ClickTestBase):
     _defaults = S()
     _options = ["--a", "1", "2", "--a", "3", "4"]
     _values = S([(1, 2), (3, 4)])
-
-
-def test_default_factory():
-    """
-    An attributes "default factory" is called to generate a proper default
-    value.
-
-    If the factory "take_self", ``None`` is passed since we do not yet have
-    an instance.
-    """
-
-    def factory_a() -> str:
-        return "spam"
-
-    def factory_b(self) -> str:
-        assert self is None
-        return "eggs"
-
-    @settings
-    class S:
-
-        a: str = option(factory=factory_a)
-        b: str = option(default=attr.Factory(factory_b, takes_self=True))
-
-    @click.command()
-    @click_options(S, "test")
-    def cli(settings):
-        pass
-
-    runner = click.testing.CliRunner()
-    result = runner.invoke(cli, ["--help"])
-    assert result.output == (
-        "Usage: cli [OPTIONS]\n"
-        "\n"
-        "Options:\n"
-        "  --a TEXT  [default: spam]\n"
-        "  --b TEXT  [default: eggs]\n"
-        "  --help    Show this message and exit.\n"
-    )
-    assert result.exit_code == 0
 
 
 def test_no_default(monkeypatch):

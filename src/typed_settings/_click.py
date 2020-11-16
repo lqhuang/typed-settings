@@ -98,16 +98,11 @@ def click_options(
         return update_wrapper(new_func, f)
 
     def wrap(f):
+        """
+        The wrapper that actually decorates a function with all options.
+        """
         for path, field, _cls in reversed(fields):
-            try:
-                default = _get_path(settings, path)
-            except KeyError:
-                default = field.default
-            if isinstance(default, attr.Factory):
-                if default.takes_self:
-                    default = default.factory(None)
-                else:
-                    default = default.factory()
+            default = _get_default(field, path, settings)
             option = _mk_option(click.option, path, field, default)
             f = option(f)
         f = pass_settings(f)
@@ -134,6 +129,34 @@ def pass_settings(f: AnyFunc) -> AnyFunc:
         return ctx.invoke(f, settings, *args, **kwargs)
 
     return update_wrapper(new_func, f)
+
+
+def _get_default(
+    field: attr.Attribute, path: str, settings: Dict[str, Any]
+) -> Any:
+    """
+    Returns the proper default value for an attribute.
+
+    If possible, the default is taken from loaded settings.  Else, use the
+    field's default value.
+    """
+    try:
+        # Use loaded settings value
+        default = _get_path(settings, path)
+    except KeyError:
+        # Use field's default
+        default = field.default
+
+    if isinstance(default, attr.Factory):  # type: ignore
+        if default.takes_self:
+            # There is no instance yet.  Passing ``None`` migh be more correct
+            # than passing a fake instance, because it raises an error instead
+            # of silently creating a false value. :-?
+            default = default.factory(None)
+        else:
+            default = default.factory()
+
+    return default
 
 
 def _mk_option(
