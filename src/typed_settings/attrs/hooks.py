@@ -1,6 +1,13 @@
 """
 Addtional attrs hooks
 """
+# from collections.abc import (
+#     Mapping,
+#     MutableMapping,
+#     MutableSequence,
+#     MutableSet,
+#     Sequence,
+# )
 from datetime import datetime
 from enum import Enum
 from typing import Any, TypeVar, Union, get_type_hints
@@ -58,6 +65,11 @@ def make_auto_converter(converters):
     return auto_convert
 
 
+# TODO:
+# list: list, Sequence, MutableSequence
+# tuple: tuple
+# set: set, frozenset, MutableSet
+# dict: dict, Mapping, MutableMapping
 def _get_converter(
     type_,
     converters,

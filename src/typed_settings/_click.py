@@ -1,8 +1,12 @@
+"""
+Utilities for generating Click options
+"""
+from collections.abc import MutableSequence, MutableSet, Sequence
 from datetime import datetime
 from enum import Enum
 from functools import update_wrapper
 from pathlib import Path
-from typing import Any, Callable, Dict, Iterable, Optional, Type, Union
+from typing import Any, Callable, Dict, Iterable, Optional, Tuple, Type, Union
 
 import attr
 import click
@@ -15,22 +19,7 @@ from .attrs._compat import get_args, get_origin
 
 AnyFunc = Callable[..., Any]
 Decorator = Callable[[AnyFunc], AnyFunc]
-
-
-class EnumChoice(click.Choice):
-    """*Click* parameter type for representing enums."""
-
-    def __init__(self, enum_type: Type[Enum]):
-        self.__enum = enum_type
-        super().__init__(enum_type.__members__)
-
-    def convert(
-        self,
-        value: str,
-        param: Optional[click.Parameter],
-        ctx: Optional[click.Context],
-    ) -> Enum:
-        return self.__enum[super().convert(value, param, ctx)]
+StrDict = Dict[str, Any]
 
 
 def click_options(
@@ -40,6 +29,7 @@ def click_options(
     config_file_section: Union[_Auto, str] = AUTO,
     config_files_var: Union[None, _Auto, str] = AUTO,
     env_prefix: Union[None, _Auto, str] = AUTO,
+    type_handler: "Optional[TypeHandler]" = None,
 ) -> Callable[[Callable], Callable]:
     """
     Generates :mod:`click` options for a CLI which override settins loaded via
@@ -74,6 +64,7 @@ def click_options(
         config_files_var=config_files_var,
         env_prefix=env_prefix,
     )
+    type_handler = type_handler or TypeHandler()
 
     def pass_settings(f: AnyFunc) -> Decorator:
         """
@@ -103,7 +94,9 @@ def click_options(
         """
         for path, field, _cls in reversed(fields):
             default = _get_default(field, path, settings)
-            option = _mk_option(click.option, path, field, default)
+            option = _mk_option(
+                click.option, path, field, default, type_handler
+            )
             f = option(f)
         f = pass_settings(f)
         return f
@@ -131,9 +124,185 @@ def pass_settings(f: AnyFunc) -> AnyFunc:
     return update_wrapper(new_func, f)
 
 
-def _get_default(
-    field: attr.Attribute, path: str, settings: Dict[str, Any]
-) -> Any:
+class EnumChoice(click.Choice):
+    """*Click* parameter type for representing enums."""
+
+    def __init__(self, enum_type: Type[Enum]):
+        self.__enum = enum_type
+        super().__init__(enum_type.__members__)
+
+    def convert(
+        self,
+        value: str,
+        param: Optional[click.Parameter],
+        ctx: Optional[click.Context],
+    ) -> Enum:
+        return self.__enum[super().convert(value, param, ctx)]
+
+
+def handle_datetime(type: type, default: Any) -> StrDict:
+    """
+    Use :class:`click.DateTime` as option type and convert the default value
+    to an ISO string.
+    """
+    type_info = {
+        "type": click.DateTime(
+            ["%Y-%m-%d", "%Y-%m-%dT%H:%M:%S", "%Y-%m-%dT%H:%M:%S%z"]
+        ),
+    }
+    if default is not attr.NOTHING:
+        type_info["default"] = default.isoformat()
+    return type_info
+
+
+def handle_enum(type: type, default: Any) -> StrDict:
+    """
+    Use :class:`EnumChoice` as option type and use the enum value's name as
+    default.
+    """
+    type_info = {"type": EnumChoice(type)}
+    if default is not attr.NOTHING:
+        # Convert Enum instance to string
+        type_info["default"] = default.name
+    return type_info
+
+
+#: Default handlers for click option types.
+DEFAULT_TYPES = {
+    datetime: handle_datetime,
+    Enum: handle_enum,
+}
+
+
+class TypeHandler:
+    """
+    This class derives type information for Click options from an Attrs field's
+    type.
+
+    The class differentitates between specific and generic types (e.g.,
+    :samp:`int` vs. :samp:`List[{T}]`.
+
+    Specific types:
+        Handlers for specific types can be extended and modified by passing
+        a *types* dict to the class.  By default, :data:`DEFAULT_TYPES` is
+        used.
+
+        This dict maps Python types to a handler function.  Handler functions
+        take the field type and default value and return a dict that is passed
+        as keyword arguments to :func:`click.option()`.  This dict should
+        contain a ``type`` key and, optionally, an updated ``default``.
+
+        .. code-block:: python
+
+            def handle_mytype(type: type, default: Any) -> Dict[str, Any]:
+                type_info = {
+                    "type": ClickType(...)
+                }
+                if default is not attr.NOTHING:
+                    type_info["default"] = default.stringify()
+                return type_info
+
+        You can use :func:`handle_datetime` and :func:`handle_enum` as
+        a sample.
+
+        Types without a handler get no special treatment and cause options to
+        look like this: :samp:`click.option(..., type=field_type,
+        default=field_default)`.
+
+    Generic types:
+        Handlers for generic types cannot be changed.  They either create an
+        option with :samp:`multiple=True` or :samp:`nargs={x}`.  Nested types
+        are recursively resolved.
+
+        Types that cause :samp:`multiple=True`:
+
+        - :class:`typing.List`
+        - :class:`typing.Sequence`
+        - :class:`typing.MutableSequence`
+        - :class:`typing.Set`
+        - :class:`typing.FrozenSet`
+        - :class:`typing.MutableSet`
+
+        Types that cause :samp:`nargs={x}`:
+
+        - :class:`typing.Tuple`
+        - :class:`typing.NamedTuple`
+
+        Dicts are not (yet) supported.
+    """
+
+    def __init__(self, types=None):
+        self.types = types or DEFAULT_TYPES
+        self.list_types = (
+            list,
+            Sequence,
+            MutableSequence,
+            set,
+            frozenset,
+            MutableSet,
+        )
+        self.tuple_types = frozenset({tuple})
+
+    def get_type(self, otype: type, default: Any) -> StrDict:
+        """
+        Analyses the option type and returns updated options.
+        """
+        origin = get_origin(otype)
+        args = get_args(otype)
+
+        if origin is None:
+            for target_type, get_type_info in self.types.items():
+                if issubclass(otype, target_type):
+                    return get_type_info(otype, default)
+
+            return self._handle_basic_types(otype, default)
+
+        else:
+            if origin in self.list_types:
+                return self._handle_list(otype, default, args)
+            elif origin in self.tuple_types:
+                return self._handle_tuple(otype, default, args)
+
+            raise TypeError(f"Cannot create click type for: {otype}")
+
+    def _handle_basic_types(self, type: type, default: Any):
+        if default is attr.NOTHING:
+            type_info = {"type": type}
+        else:
+            type_info = {"type": type, "default": default}
+        return type_info
+
+    def _handle_list(
+        self, type: type, default: Any, args: Tuple[Any, ...]
+    ) -> StrDict:
+        # lists and list-like tuple
+        type_info = self.get_type(args[0], attr.NOTHING)
+        if default is not attr.NOTHING:
+            default = [self.get_type(args[0], d)["default"] for d in default]
+            type_info["default"] = default
+        type_info["multiple"] = True
+        return type_info
+
+    def _handle_tuple(
+        self, type: type, default: Any, args: Tuple[Any, ...]
+    ) -> StrDict:
+        if len(args) == 2 and args[1] == ...:
+            return self._handle_list(type, default, args)
+        else:
+            # "struct" variant of tuple
+            if default is attr.NOTHING:
+                default = [attr.NOTHING] * len(args)
+            dicts = [self.get_type(a, d) for a, d in zip(args, default)]
+            type_info = {
+                "type": tuple(d["type"] for d in dicts),
+                "nargs": len(dicts),
+            }
+            if all("default" in d for d in dicts):
+                type_info["default"] = tuple(d["default"] for d in dicts)
+            return type_info
+
+
+def _get_default(field: attr.Attribute, path: str, settings: StrDict) -> Any:
     """
     Returns the proper default value for an attribute.
 
@@ -164,10 +333,13 @@ def _mk_option(
     path: str,
     field: attr.Attribute,
     default: Any,
+    type_handler: TypeHandler,
 ) -> Decorator:
     """
     Recursively creates click options and returns them as a list.
     """
+    opt_name = path.replace(".", "-").replace("_", "-")
+    param_decl = f"--{opt_name}"
 
     def cb(ctx, _param, value):
         if ctx.obj is None:
@@ -192,71 +364,9 @@ def _mk_option(
     if default is attr.NOTHING:
         kwargs["required"] = True
 
-    opt_name = path.replace(".", "-").replace("_", "-")
-    param_decl = f"--{opt_name}"
-
     if field.type:
         if field.type is bool:
             param_decl = f"{param_decl}/--no-{opt_name}"
-        kwargs.update(_get_type(field.type, default))
+        kwargs.update(type_handler.get_type(field.type, default))
 
     return option(param_decl, **kwargs)
-
-
-def _get_type(otype: type, default: Any) -> Dict[str, Any]:
-    """
-    Analyses the option type and returns updated options.
-    """
-    type_info: Dict[str, Any] = {}
-    origin = get_origin(otype)
-    args = get_args(otype)
-
-    if origin is None and issubclass(otype, (bool, int, float, str, Path)):
-        if default is attr.NOTHING:
-            type_info = {"type": otype}
-        else:
-            type_info = {"type": otype, "default": default}
-
-    elif origin is None and issubclass(otype, datetime):
-        type_info["type"] = click.DateTime(
-            [
-                "%Y-%m-%d",
-                "%Y-%m-%dT%H:%M:%S",
-                "%Y-%m-%dT%H:%M:%S%z",
-            ]
-        )
-        if default is not attr.NOTHING:
-            type_info["default"] = default.isoformat()
-
-    elif origin is None and issubclass(otype, Enum):
-        type_info["type"] = EnumChoice(otype)
-        if default is not attr.NOTHING:
-            # Convert Enum instance to string
-            type_info["default"] = default.name
-
-    elif origin in {list, set, frozenset} or (
-        origin is tuple and len(args) == 2 and args[1] == ...
-    ):
-        # lists and list-like tuple
-        type_info = _get_type(args[0], attr.NOTHING)
-        if default is not attr.NOTHING:
-            default = [_get_type(args[0], d)["default"] for d in default]
-            type_info["default"] = default
-        type_info["multiple"] = True
-
-    elif origin is tuple:
-        # "struct" variant of tuple
-        if default is attr.NOTHING:
-            default = [attr.NOTHING] * len(args)
-        dicts = [_get_type(a, d) for a, d in zip(args, default)]
-        type_info = {
-            "type": tuple(d["type"] for d in dicts),
-            "nargs": len(dicts),
-        }
-        if all("default" in d for d in dicts):
-            type_info["default"] = tuple(d["default"] for d in dicts)
-
-    else:
-        raise TypeError(f"Cannot create click type for: {otype}")
-
-    return type_info

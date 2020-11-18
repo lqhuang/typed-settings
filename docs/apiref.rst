@@ -111,3 +111,11 @@ Hooks
 
 .. automodule:: typed_settings.attrs.hooks
    :members:
+
+
+Utilities for generating Click options
+======================================
+
+.. automodule:: typed_settings.click_utils
+   :members: TypeHandler, DEFAULT_TYPES, EnumChoice, handle_datetime,
+      handle_enum
