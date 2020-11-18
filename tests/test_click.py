@@ -9,8 +9,8 @@ import click.testing
 import pytest
 
 from typed_settings import (
-    _click,
     click_options,
+    click_utils,
     option,
     pass_settings,
     secret,
@@ -79,7 +79,7 @@ def make_cli(settings_cls: type) -> Callable[..., Any]:
 )
 def test_get_default(default, path, settings, expected):
     field = attr.Attribute("test", default, None, None, None, None, None, None)
-    result = _click._get_default(field, path, settings)
+    result = click_utils._get_default(field, path, settings)
     assert result == expected
 
 
@@ -95,7 +95,7 @@ def test_get_default_factory():
 
     default = attr.Factory(factory, takes_self=True)
     field = attr.Attribute("test", default, None, None, None, None, None, None)
-    result = _click._get_default(field, "a", {})
+    result = click_utils._get_default(field, "a", {})
     assert result == "eggs"
 
 

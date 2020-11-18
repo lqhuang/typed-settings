@@ -20,11 +20,11 @@ __all__ = [
 
 def __getattr__(name: str) -> Any:
     if name == "click_options":
-        from ._click import click_options
+        from .click_utils import click_options
 
         return click_options
     if name == "pass_settings":
-        from ._click import pass_settings
+        from .click_utils import pass_settings
 
         return pass_settings
 
