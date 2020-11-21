@@ -5,7 +5,22 @@ import functools
 import json
 from datetime import datetime
 from enum import Enum
-from typing import Any, Dict, List, Optional, Set, Tuple, Type, Union
+from typing import (
+    Any,
+    Dict,
+    FrozenSet,
+    List,
+    Mapping,
+    MutableMapping,
+    MutableSequence,
+    MutableSet,
+    Optional,
+    Sequence,
+    Set,
+    Tuple,
+    Type,
+    Union,
+)
 
 import attr
 import pytest
@@ -201,25 +216,25 @@ class TestAsDictHook:
 
 
 class LeEnum(Enum):
-    spam = "Le spam"
-    eggs = "Le eggs"
+    spam = "Le Spam"
+    eggs = "Le Eggs"
 
 
 @auto_converter
 class Child:
     x: int = attr.ib()
-    y: int = attr.ib(converter=float)
+    y: int = attr.ib(converter=int)
 
 
 @auto_converter(kw_only=True)
 class Parent:
     child: Child
     a: float
-    b: float = attr.field(default=3.14, validator=le(2))
     c: LeEnum
     d: datetime
     e: "List[Child]"
     f: Set[datetime]
+    b: float = attr.field(default=3.14, validator=le(2))
 
 
 class TestAutoConvertHook:
@@ -228,7 +243,7 @@ class TestAutoConvertHook:
     DATA = {
         "a": "1",
         "b": "2",
-        "c": "Le spam",
+        "c": "Le Spam",
         "d": "2020-05-04T13:37:00",
         "e": [{"x": "23", "y": "42"}],
         "f": ["2020-05-04T13:37:00", "2020-05-04T13:37:00"],
@@ -239,10 +254,15 @@ class TestAutoConvertHook:
     def parent(self):
         return Parent(**self.DATA)
 
-    def test_convert_to_parent(self, parent):
+    def test_auto_convert_hook(self, parent):
         """
-        The auto_convert hook must convert attrs classes, datetimes, enums and
+        The auto_convert hook converts attrs classes, datetimes, enums and
         basic type as well as basic containers.
+
+        This is a basic test to assert that this generally works.
+
+        The tests "test_static_types()" and "test_generic_types()" test the
+        full list of supported types.
         """
         assert parent == Parent(
             a=1.0,
@@ -256,15 +276,17 @@ class TestAutoConvertHook:
 
     def test_serialize_from_parent(self, parent):
         """
-        The serialize_hook must be able to serialize the same types as the
-        auto_convert hook.  The set with duplicate entries of attrib "f" is
-        not the same as in the original dict!
+        The serialize_hook is able to serialize the same types as the
+        auto_convert hook.
+
+        The set with duplicate entries of attrib "f" is not the same as in the
+        original dict!
         """
         d = attr.asdict(parent, value_serializer=auto_serialize)
         assert d == {
             "a": 1.0,
             "b": 2.0,
-            "c": "Le spam",
+            "c": "Le Spam",
             "d": "2020-05-04T13:37:00",
             "e": [{"x": 23, "y": 42}],
             "f": ["2020-05-04T13:37:00"],
@@ -273,73 +295,121 @@ class TestAutoConvertHook:
 
     def test_json_roundtrip(self, parent):
         """
-        The roundtrip "inst -> JSON -> inst" must result in the same inst.
+        The roundtrip "inst -> JSON -> inst" results in the same instance.
         """
         d = attr.asdict(parent, value_serializer=auto_serialize)
         assert Parent(**json.loads(json.dumps(d))) == parent
 
-    def test_convert_to_struct_tuple(self):
+    @pytest.mark.parametrize(
+        "typ, value, expected",
+        [
+            (bool, True, True),
+            (bool, "True", True),
+            (bool, 1, True),
+            (bool, False, False),
+            (bool, "False", True),
+            (bool, "", False),
+            (bool, 0, False),
+            (int, 23, 23),
+            (int, "42", 42),
+            (float, 3.14, 3.14),
+            (float, ".815", 0.815),
+            (str, "spam", "spam"),
+            (datetime, "2020-05-04T13:37:00", datetime(2020, 5, 4, 13, 37)),
+            (LeEnum, "Le Eggs", LeEnum.eggs),
+            (Child, {"x": "2", "y": "3"}, Child(2, 3)),
+            (Any, 2, 2),
+            (Any, "2", "2"),
+            (Any, None, None),
+        ],
+    )
+    def test_static_types(self, typ, value, expected):
         """
-        Tuples can be defined like structs.
-        """
+        All oficially supported types can be converted by attrs.
 
-        @auto_converter
-        class C:
-            x: Tuple[int, float, str]
-
-        c = C(["3", "3.2", "3.2"])
-        assert c.x == (3, 3.2, "3.2")
-
-    def test_convert_to_iterable_tuple(self):
-        """
-        Tuples can be defined like (immutable) lists.
-        """
-
-        @auto_converter
-        class C:
-            x: Tuple[int, ...]
-
-        c = C(["3", "2", "1"])
-        assert c.x == (3, 2, 1)
-
-    def test_to_mapping(self):
-        """
-        Converters are applied to dict keys and values.
-        """
-
-        @auto_converter
-        class C:
-            x: Dict[int, float]
-
-        c = C({"1": "2"})
-        assert c.x == {1: 2.0}
-
-    @pytest.mark.parametrize("val, expected", [({}, None), ({"x": "2"}, 2)])
-    def test_convert_to_optional(self, val, expected):
-        """
-        Conversion to Optional works with and without a value.
+        Please create an issue if something is missing here.
         """
 
         @auto_converter
         class C:
-            x: Optional[int] = None
+            opt: typ
 
-        c = C(**val)
-        assert c.x == expected
-        assert type(c.x) is type(expected)
+        c = C(value)
+        assert c.opt == expected
+        if typ is not Any:
+            assert type(c.opt) is typ
 
-    def test_convert_to_union(self):
+    @pytest.mark.parametrize(
+        "typ, value, expected_val, expected_type",
+        [
+            (List[int], [1, 2], [1, 2], list),
+            (List[Child], [{"x": 1, "y": 2}], [Child(1, 2)], list),
+            (
+                List[Any],
+                [True, None, 23, 3.14, "spam"],
+                [True, None, 23, 3.14, "spam"],
+                list,
+            ),
+            (Sequence[int], [1, 2], [1, 2], list),
+            (MutableSequence[int], [1, 2], [1, 2], list),
+            (Set[int], [1, 2], {1, 2}, set),
+            (MutableSet[int], [1, 2], {1, 2}, set),
+            (FrozenSet[int], [1, 2], frozenset({1, 2}), frozenset),
+            (Tuple[str, ...], [1, "2", 3], ("1", "2", "3"), tuple),
+            (Tuple[int, bool, str], [0, "", 0], (0, False, "0"), tuple),
+            (Dict[str, int], {"a": 1, "b": 3.1}, {"a": 1, "b": 3}, dict),
+            (
+                Dict[str, Child],
+                {"a": {"x": "1", "y": "2"}},
+                {"a": Child(1, 2)},
+                dict,
+            ),
+            (
+                Dict[Tuple[int, int], List[Dict[int, Child]]],
+                {
+                    ("1", "2"): [
+                        {"3": {"x": "4", "y": "5"}},
+                        {"6": {"x": "7", "y": "8"}},
+                    ],
+                },
+                {(1, 2): [{3: Child(4, 5)}, {6: Child(7, 8)}]},
+                dict,
+            ),
+            (Mapping[str, int], {"a": 1, "b": 3.1}, {"a": 1, "b": 3}, dict),
+            (
+                MutableMapping[str, int],
+                {"a": 1, "b": 3.1},
+                {"a": 1, "b": 3},
+                dict,
+            ),
+            (Optional[str], 1, "1", str),
+            (Optional[Child], None, None, type(None)),
+            (Optional[Child], {"x": "1", "y": "2"}, Child(1, 2), Child),
+            (Optional[LeEnum], "Le Spam", LeEnum.spam, LeEnum),
+            (Union[None, Child, List[str]], None, None, type(None)),
+            (
+                Union[None, Child, List[str]],
+                {"x": "1", "y": "2"},
+                Child(1, 2),
+                Child,
+            ),
+            (Union[None, Child, List[str]], [1, 2], ["1", "2"], list),
+        ],
+    )
+    def test_generic_types(self, typ, value, expected_val, expected_type):
         """
-        Union values resolve to the first matching type
+        All oficially supported types can be converted by attrs.
+
+        Please create an issue if something is missing here.
         """
 
         @auto_converter
         class C:
-            x: Union[int, float]
+            opt: typ
 
-        c = C(**{"x": "3.2"})
-        assert c.x == 3.2
-        assert type(c.x) is float
+        c = C(value)
+        assert c.opt == expected_val
+        assert type(c.opt) is expected_type
 
     def test_invalid_generic_type(self):
         """
@@ -353,43 +423,3 @@ class TestAutoConvertHook:
             @auto_converter
             class C:
                 x: Type[int]
-
-    def test_nested_conversion(self):
-        """
-        Generics (like lists and dicts) can be nested and will still be
-        properly converted.
-        """
-
-        @auto_converter
-        class A:
-            x: int
-            y: int
-
-        @auto_converter
-        class C:
-            x: Dict[Tuple[int, int], List[Dict[int, A]]]
-
-        c = C(
-            {
-                ("1", "2"): [
-                    {"3": {"x": "4", "y": "5"}},
-                    {"6": {"x": "7", "y": "8"}},
-                ],
-            }
-        )
-        assert c.x == {(1, 2): [{3: A(4, 5)}, {6: A(7, 8)}]}
-
-    def test_any(self):
-        """
-        "Any" don't convert anything but also do not cause any problems.
-        """
-
-        @auto_converter
-        class C:
-            x: Any
-            y: List[Any]
-
-        o = object()
-        c = C(23, [True, None, 23, 3.14, "spam", o])
-        assert c.x == 23
-        assert c.y == [True, None, 23, 3.14, "spam", o]

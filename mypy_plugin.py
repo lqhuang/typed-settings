@@ -5,6 +5,7 @@ from mypy.plugins.attrs import attr_attrib_makers, attr_dataclass_makers
 # These work just like `attr.dataclass`.
 attr_dataclass_makers.add("attr.frozen")
 attr_dataclass_makers.add("typed_settings.attrs.settings")
+attr_dataclass_makers.add("tests.test_hooks.auto_converter")
 
 # These are our `attr.ib` makers.
 attr_attrib_makers.add("attr.field")

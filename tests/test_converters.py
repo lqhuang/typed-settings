@@ -268,3 +268,11 @@ class TestToUnion:
         result = converter(val)
         assert type(result) is expected_type
         assert result == expected_val
+
+    def test_to_union_error(self):
+        """
+        A ValueError is raised when "to_union()" cannot convert a value.
+        """
+        converter = to_union([int])
+        with pytest.raises(ValueError):
+            converter("spam")
