@@ -1,7 +1,18 @@
 from datetime import datetime, timezone
 from enum import Enum
 from pathlib import Path
-from typing import Any, Callable, FrozenSet, List, Tuple
+from typing import (
+    Any,
+    Callable,
+    Dict,
+    FrozenSet,
+    List,
+    MutableSequence,
+    MutableSet,
+    Sequence,
+    Set,
+    Tuple,
+)
 
 import attr
 import click
@@ -97,268 +108,6 @@ def test_get_default_factory():
     field = attr.Attribute("test", default, None, None, None, None, None, None)
     result = click_utils._get_default(field, "a", {})
     assert result == "eggs"
-
-
-class ClickTestBase:
-    """
-    Base class for Click tests.
-
-    Each test must define a ``cli`` fixture.  That CLI is invoked three times:
-
-    - With "--help", the result is compared to :attr:`_help`.
-    - Without arguments, the result is compared to :attr:`_defaults`.
-    - With arguments defined in :attr:`_options`, the result is compared to
-      :attr:`_values`.
-    """
-
-    _help: List[str] = []
-    _defaults: Any = None
-    _options: List[str] = []
-    _values: Any = None
-
-    def test_help(self, cli):
-        """
-        The genereated CLI has a proper help output.
-        """
-        result = cli("--help")
-
-        # fmt: off
-        assert result.output.splitlines()[:-1] == [
-            "Usage: cli [OPTIONS] COMMAND [ARGS]...",
-            "",
-            "Options:",
-        ] + self._help
-        assert result.exit_code == 0
-        # fmt: on
-
-    def test_defaults(self, cli):
-        """
-        Arguments of the generated CLI have default values.
-        """
-        result = cli()
-        assert result.output == ""
-        assert result.exit_code == 0
-        assert result.settings == self._defaults
-
-    def test_options(self, cli):
-        """
-        Default values can be overriden by passing the corresponding args.
-        """
-        result = cli(*self._options)
-        assert result.output == ""
-        assert result.exit_code == 0
-        assert result.settings == self._values
-
-
-class TestClickBool(ClickTestBase):
-    """
-    Test boolean flags.
-    """
-
-    @settings
-    class S:
-        a: bool
-        b: bool = True
-        c: bool = False
-
-    cli = make_cli(S)
-
-    _help = [
-        "  --a / --no-a  [default: False; required]",
-        "  --b / --no-b  [default: True]",
-        "  --c / --no-c  [default: False]",
-    ]
-    _defaults = S(False, True, False)
-    _options = ["--no-a", "--no-b", "--c"]
-    _values = S(False, False, True)
-
-
-class TestIntFloatStr(ClickTestBase):
-    """
-    Test int, float and str options.
-    """
-
-    @settings
-    class S:
-        a: str = option(default="spam")
-        b: str = secret(default="spam")
-        c: int = 0
-        d: float = 0
-
-    cli = make_cli(S)
-
-    _help = [
-        "  --a TEXT     [default: spam]",
-        "  --b TEXT     [default: ***]",
-        "  --c INTEGER  [default: 0]",
-        "  --d FLOAT    [default: 0]",
-    ]
-    _defaults = S()
-    _options = ["--a=eggs", "--b=pwd", "--c=3", "--d=3.1"]
-    _values = S(a="eggs", b="pwd", c=3, d=3.1)
-
-
-class TestDateTime(ClickTestBase):
-    """
-    Test datetime options.
-    """
-
-    @settings
-    class S:
-        a: datetime = datetime.fromtimestamp(0, timezone.utc)
-        b: datetime = datetime.fromtimestamp(0, timezone.utc)
-        c: datetime = datetime.fromtimestamp(0, timezone.utc)
-
-    cli = make_cli(S)
-
-    _help = [
-        "  --a [%Y-%m-%d|%Y-%m-%dT%H:%M:%S|%Y-%m-%dT%H:%M:%S%z]",
-        "                                  [default: 1970-01-01T00:00:00+00:00]",  # noqa: E501
-        "  --b [%Y-%m-%d|%Y-%m-%dT%H:%M:%S|%Y-%m-%dT%H:%M:%S%z]",
-        "                                  [default: 1970-01-01T00:00:00+00:00]",  # noqa: E501
-        "  --c [%Y-%m-%d|%Y-%m-%dT%H:%M:%S|%Y-%m-%dT%H:%M:%S%z]",
-        "                                  [default: 1970-01-01T00:00:00+00:00]",  # noqa: E501
-    ]
-    _defaults = S()
-    _options = [
-        "--a=2020-05-04",
-        "--b=2020-05-04T13:37:00",
-        "--c=2020-05-04T13:37:00+00:00",
-    ]
-    _values = S(
-        datetime(2020, 5, 4),
-        datetime(2020, 5, 4, 13, 37),
-        datetime(2020, 5, 4, 13, 37, tzinfo=timezone.utc),
-    )
-
-
-class LeEnum(Enum):
-    spam = "le spam"
-    eggs = "Le eggs"
-
-
-class TestEnum(ClickTestBase):
-    """
-    Test enum options
-    """
-
-    @settings
-    class S:
-        a: LeEnum = LeEnum.spam
-
-    cli = make_cli(S)
-
-    _help = ["  --a [spam|eggs]  [default: spam]"]
-    _defaults = S(LeEnum.spam)
-    _options = ["--a=eggs"]
-    _values = S(LeEnum.eggs)
-
-
-class TestPath(ClickTestBase):
-    """
-    Test Path options
-    """
-
-    @settings
-    class S:
-        a: Path = Path("/")
-
-    cli = make_cli(S)
-
-    _help = ["  --a PATH  [default: /]"]
-    _defaults = S()
-    _options = ["--a=/spam"]
-    _values = S(Path("/spam"))
-
-
-class TestNested(ClickTestBase):
-    """
-    Test options for nested settings
-    """
-
-    @settings
-    class S:
-        @settings
-        class Nested:
-            a: str = "nested"
-            b: int = 0
-
-        n: Nested = Nested()
-
-    cli = make_cli(S)
-
-    _help = [
-        "  --n-a TEXT     [default: nested]",
-        "  --n-b INTEGER  [default: 0]",
-    ]
-    _defaults = S()
-    _options = ["--n-a=eggs", "--n-b=3"]
-    _values = S(S.Nested("eggs", 3))
-
-
-class TestList(ClickTestBase):
-    """
-    Lists (and friends) use "multiple=True".
-    """
-
-    @settings
-    class S:
-        a: List[int] = []
-        b: FrozenSet[datetime] = frozenset({datetime(2020, 5, 4)})
-
-    cli = make_cli(S)
-
-    _help = [
-        "  --a INTEGER                     [default: ]",
-        "  --b [%Y-%m-%d|%Y-%m-%dT%H:%M:%S|%Y-%m-%dT%H:%M:%S%z]",
-        "                                  [default: 2020-05-04T00:00:00]",
-    ]
-    _defaults = S()
-    _options = ["--a=1", "--a=2", "--b=2020-01-01", "--b=2020-01-02"]
-    _values = S(
-        [1, 2], frozenset({datetime(2020, 1, 1), datetime(2020, 1, 2)})
-    )
-
-
-class TestTuple(ClickTestBase):
-    """
-    Tuples are handled either like the list variant with multiple=True or
-    like the struct variant with nargs=x.
-    """
-
-    @settings
-    class S:
-        a: Tuple[int, ...] = (0,)
-        b: Tuple[int, float, str] = (0, 0.0, "")
-
-    cli = make_cli(S)
-
-    _help = [
-        "  --a INTEGER                  [default: 0]",
-        "  --b <INTEGER FLOAT TEXT>...  [default: 0, 0.0, ]",
-    ]
-    _defaults = S()
-    _options = ["--a=1", "--a=2", "--b", "1", "2.3", "spam"]
-    _values = S((1, 2), (1, 2.3, "spam"))
-
-
-class TestNestedTuple(ClickTestBase):
-    """
-    Lists of tuples use "multiple=True" and "nargs=x".
-    """
-
-    @settings
-    class S:
-        a: List[Tuple[int, int]] = option(factory=list)
-
-    cli = make_cli(S)
-
-    _help = [
-        "  --a <INTEGER INTEGER>...  [default: ]",
-    ]
-    _defaults = S()
-    _options = ["--a", "1", "2", "--a", "3", "4"]
-    _values = S([(1, 2), (3, 4)])
 
 
 def test_no_default(monkeypatch):
@@ -483,6 +232,310 @@ def test_click_default_from_settings(monkeypatch, tmp_path):
     assert result.exit_code == 0
 
 
+def test_unsupported_generic():
+    @settings
+    class S:
+        opt: Dict[int, int]
+
+    with pytest.raises(TypeError, match="Cannot create click type"):
+
+        @click.command()
+        @click_options(S, "test")
+        def cli(settings):
+            pass
+
+
+class ClickTestBase:
+    """
+    Base class for Click tests.
+
+    Each test must define a ``cli`` fixture.  That CLI is invoked three times:
+
+    - With "--help", the result is compared to :attr:`_help`.
+    - Without arguments, the result is compared to :attr:`_defaults`.
+    - With arguments defined in :attr:`_options`, the result is compared to
+      :attr:`_values`.
+    """
+
+    _help: List[str] = []
+    _default_options: List[str] = []
+    _defaults: Any = None
+    _options: List[str] = []
+    _values: Any = None
+
+    def test_help(self, cli):
+        """
+        The genereated CLI has a proper help output.
+        """
+        result = cli("--help")
+
+        # fmt: off
+        assert result.output.splitlines()[:-1] == [
+            "Usage: cli [OPTIONS] COMMAND [ARGS]...",
+            "",
+            "Options:",
+        ] + self._help
+        assert result.exit_code == 0
+        # fmt: on
+
+    def test_defaults(self, cli):
+        """
+        Arguments of the generated CLI have default values.
+        """
+        result = cli(*self._default_options)
+        assert result.output == ""
+        assert result.exit_code == 0
+        assert result.settings == self._defaults
+
+    def test_options(self, cli):
+        """
+        Default values can be overriden by passing the corresponding args.
+        """
+        result = cli(*self._options)
+        assert result.output == ""
+        assert result.exit_code == 0
+        assert result.settings == self._values
+
+
+class TestClickBool(ClickTestBase):
+    """
+    Test boolean flags.
+    """
+
+    @settings
+    class S:
+        a: bool
+        b: bool = True
+        c: bool = False
+
+    cli = make_cli(S)
+
+    _help = [
+        "  --a / --no-a  [default: False; required]",
+        "  --b / --no-b  [default: True]",
+        "  --c / --no-c  [default: False]",
+    ]
+    _defaults = S(False, True, False)
+    _options = ["--no-a", "--no-b", "--c"]
+    _values = S(False, False, True)
+
+
+class TestIntFloatStr(ClickTestBase):
+    """
+    Test int, float and str options.
+    """
+
+    @settings
+    class S:
+        a: str = option(default="spam")
+        b: str = secret(default="spam")
+        c: int = 0
+        d: float = 0
+
+    cli = make_cli(S)
+
+    _help = [
+        "  --a TEXT     [default: spam]",
+        "  --b TEXT     [default: ***]",
+        "  --c INTEGER  [default: 0]",
+        "  --d FLOAT    [default: 0]",
+    ]
+    _defaults = S()
+    _options = ["--a=eggs", "--b=pwd", "--c=3", "--d=3.1"]
+    _values = S(a="eggs", b="pwd", c=3, d=3.1)
+
+
+class TestDateTime(ClickTestBase):
+    """
+    Test datetime options.
+    """
+
+    @settings
+    class S:
+        a: datetime = datetime.fromtimestamp(0, timezone.utc)
+        b: datetime = datetime.fromtimestamp(0, timezone.utc)
+        c: datetime = datetime.fromtimestamp(0, timezone.utc)
+
+    cli = make_cli(S)
+
+    _help = [
+        "  --a [%Y-%m-%d|%Y-%m-%dT%H:%M:%S|%Y-%m-%dT%H:%M:%S%z]",
+        "                                  [default: 1970-01-01T00:00:00+00:00]",  # noqa: E501
+        "  --b [%Y-%m-%d|%Y-%m-%dT%H:%M:%S|%Y-%m-%dT%H:%M:%S%z]",
+        "                                  [default: 1970-01-01T00:00:00+00:00]",  # noqa: E501
+        "  --c [%Y-%m-%d|%Y-%m-%dT%H:%M:%S|%Y-%m-%dT%H:%M:%S%z]",
+        "                                  [default: 1970-01-01T00:00:00+00:00]",  # noqa: E501
+    ]
+    _defaults = S()
+    _options = [
+        "--a=2020-05-04",
+        "--b=2020-05-04T13:37:00",
+        "--c=2020-05-04T13:37:00+00:00",
+    ]
+    _values = S(
+        datetime(2020, 5, 4),
+        datetime(2020, 5, 4, 13, 37),
+        datetime(2020, 5, 4, 13, 37, tzinfo=timezone.utc),
+    )
+
+
+class LeEnum(Enum):
+    spam = "le spam"
+    eggs = "Le eggs"
+
+
+class TestEnum(ClickTestBase):
+    """
+    Test enum options
+    """
+
+    @settings
+    class S:
+        a: LeEnum
+        b: LeEnum = LeEnum.spam
+
+    cli = make_cli(S)
+
+    _help = [
+        "  --a [spam|eggs]  [required]",
+        "  --b [spam|eggs]  [default: spam]",
+    ]
+    _default_options = ["--a=spam"]
+    _defaults = S(a=LeEnum.spam)
+    _options = ["--a=spam", "--b=eggs"]
+    _values = S(LeEnum.spam, LeEnum.eggs)
+
+
+class TestPath(ClickTestBase):
+    """
+    Test Path options
+    """
+
+    @settings
+    class S:
+        a: Path = Path("/")
+
+    cli = make_cli(S)
+
+    _help = ["  --a PATH  [default: /]"]
+    _defaults = S()
+    _options = ["--a=/spam"]
+    _values = S(Path("/spam"))
+
+
+class TestNested(ClickTestBase):
+    """
+    Test options for nested settings
+    """
+
+    @settings
+    class S:
+        @settings
+        class Nested:
+            a: str = "nested"
+            b: int = 0
+
+        n: Nested = Nested()
+
+    cli = make_cli(S)
+
+    _help = [
+        "  --n-a TEXT     [default: nested]",
+        "  --n-b INTEGER  [default: 0]",
+    ]
+    _defaults = S()
+    _options = ["--n-a=eggs", "--n-b=3"]
+    _values = S(S.Nested("eggs", 3))
+
+
+class TestList(ClickTestBase):
+    """
+    Lists (and friends) use "multiple=True".
+    """
+
+    @settings
+    class S:
+        a: List[int]
+        b: Sequence[datetime] = [datetime(2020, 5, 4)]
+        c: MutableSequence[int] = []
+        d: Set[int] = set()
+        e: MutableSet[int] = set()
+        f: FrozenSet[int] = frozenset()
+
+    cli = make_cli(S)
+
+    _help = [
+        "  --a INTEGER                     [required]",
+        "  --b [%Y-%m-%d|%Y-%m-%dT%H:%M:%S|%Y-%m-%dT%H:%M:%S%z]",
+        "                                  [default: 2020-05-04T00:00:00]",
+        "  --c INTEGER                     [default: ]",
+        "  --d INTEGER                     [default: ]",
+        "  --e INTEGER                     [default: ]",
+        "  --f INTEGER                     [default: ]",
+    ]
+    _default_options = ["--a=1"]
+    _defaults = S(a=[1])
+    _options = [
+        "--a=1",
+        "--a=2",
+        "--b=2020-01-01",
+        "--b=2020-01-02",
+        "--c=3",
+        "--d=4",
+        "--e=5",
+        "--f=6",
+    ]
+    _values = S(
+        [1, 2],
+        [datetime(2020, 1, 1), datetime(2020, 1, 2)],
+        [3],
+        {4},
+        {5},
+        frozenset({6}),
+    )
+
+
+class TestTuple(ClickTestBase):
+    """
+    Tuples are handled either like the list variant with multiple=True or
+    like the struct variant with nargs=x.
+    """
+
+    @settings
+    class S:
+        a: Tuple[int, ...] = (0,)
+        b: Tuple[int, float, str] = (0, 0.0, "")
+
+    cli = make_cli(S)
+
+    _help = [
+        "  --a INTEGER                  [default: 0]",
+        "  --b <INTEGER FLOAT TEXT>...  [default: 0, 0.0, ]",
+    ]
+    _defaults = S()
+    _options = ["--a=1", "--a=2", "--b", "1", "2.3", "spam"]
+    _values = S((1, 2), (1, 2.3, "spam"))
+
+
+class TestNestedTuple(ClickTestBase):
+    """
+    Lists of tuples use "multiple=True" and "nargs=x".
+    """
+
+    @settings
+    class S:
+        a: List[Tuple[int, int]] = option(factory=list)
+
+    cli = make_cli(S)
+
+    _help = [
+        "  --a <INTEGER INTEGER>...  [default: ]",
+    ]
+    _defaults = S()
+    _options = ["--a", "1", "2", "--a", "3", "4"]
+    _values = S([(1, 2), (3, 4)])
+
+
 class TestPassSettings:
     """Tests for pass_settings()."""
 
@@ -530,4 +583,21 @@ class TestPassSettings:
         runner = click.testing.CliRunner()
         result = runner.invoke(cli, ["cmd"])
         assert result.output == "None\n"
+        assert result.exit_code == 0
+
+    def test_pass_in_parent_context(self):
+        """
+        The decorator can be used in the same context as "click_options()".
+        This makes no sense, but works.
+        """
+
+        @click.command()
+        @click_options(self.Settings, "test")
+        @pass_settings
+        def cli(s1, s2):
+            click.echo(s1 == s2)
+
+        runner = click.testing.CliRunner()
+        result = runner.invoke(cli, ["--opt=spam"])
+        assert result.output == "True\n"
         assert result.exit_code == 0

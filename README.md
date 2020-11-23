@@ -4,8 +4,8 @@
 [![PyPI - License](https://img.shields.io/pypi/l/typed-settings)](https://pypi.org/project/typed-settings/)
 [![PyPI - Python Version](https://img.shields.io/pypi/pyversions/typed-settings)](https://pypi.org/project/typed-settings/)
 [![Documentation Status](https://readthedocs.org/projects/typed-settings/badge/?version=latest)](https://typed-settings.readthedocs.io/en/latest/?badge=latest)
-[![Gitlab pipeline status](https://img.shields.io/gitlab/pipeline/sscherfke/typed-settings/main)](https://gitlab.com/sscherfke/typed-settings/-/commits/main)
-[![Gitlab code coverage](https://img.shields.io/gitlab/coverage/sscherfke/typed-settings/main)](https://gitlab.com/sscherfke/typed-settings/-/commits/main)
+[![Gitlab pipeline status](https://img.shields.io/gitlab/pipeline/sscherfke/typed-settings/main)](https://gitlab.com/sscherfke/typed-settings/-/pipelines/charts)
+[![Gitlab code coverage](https://img.shields.io/gitlab/coverage/sscherfke/typed-settings/main)](https://gitlab.com/sscherfke/typed-settings/-/graphs/main/charts)
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 
 

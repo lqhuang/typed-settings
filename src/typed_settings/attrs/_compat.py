@@ -11,7 +11,7 @@ else:
         # Backported from py38
         if isinstance(tp, _GenericAlias):
             return tp.__origin__
-        if tp is Generic:
+        if tp is Generic:  # pragma: no cover
             return Generic
         return None
 
@@ -19,11 +19,11 @@ else:
         # Backported from py38
         if isinstance(tp, _GenericAlias) and not tp._special:
             res = tp.__args__
-            if (
+            if (  # pragma: no cover
                 get_origin(tp) is collections.abc.Callable
                 and res[0] is not Ellipsis  # noqa: W503
             ):
-                res = (list(res[:-1]), res[-1])
+                res = (list(res[:-1]), res[-1])  # pragma: no cover
             return res
         return ()
 

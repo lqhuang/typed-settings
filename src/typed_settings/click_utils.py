@@ -74,16 +74,8 @@ def click_options(
 
         def new_func(*args, **kwargs):
             ctx = click.get_current_context()
-            try:
-                _merge_dicts(settings, ctx.obj.get("settings"))
-                ctx.obj["settings"] = cls(**settings)
-            except (
-                AttributeError,
-                FileNotFoundError,
-                TypeError,
-                ValueError,
-            ) as e:
-                raise click.ClickException(e)
+            _merge_dicts(settings, ctx.obj.get("settings"))
+            ctx.obj["settings"] = cls(**settings)
             return f(ctx.obj["settings"], *args, **kwargs)
 
         return update_wrapper(new_func, f)
@@ -258,6 +250,7 @@ class TypeHandler:
             return self._handle_basic_types(otype, default)
 
         else:
+            print(origin)
             if origin in self.list_types:
                 return self._handle_list(otype, default, args)
             elif origin in self.tuple_types:
@@ -358,13 +351,13 @@ def _mk_option(
 
     if isinstance(field.repr, _SecretRepr):
         kwargs["show_default"] = False
-        if default is not attr.NOTHING:
+        if default is not attr.NOTHING:  # pragma: no cover
             kwargs["help"] = f"{kwargs['help']}  [default: {field.repr('')}]"
 
     if default is attr.NOTHING:
         kwargs["required"] = True
 
-    if field.type:
+    if field.type:  # pragma: no cover
         if field.type is bool:
             param_decl = f"{param_decl}/--no-{opt_name}"
         kwargs.update(type_handler.get_type(field.type, default))

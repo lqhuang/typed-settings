@@ -37,7 +37,6 @@ SECRET = _SecretRepr()
 
 
 auto_convert = make_auto_converter({bool: to_bool, datetime: to_dt})
-"""Auto-convert supported types."""
 
 settings = partial(attr.frozen, field_transformer=auto_convert)
 """An alias to :func:`attr.frozen()`"""

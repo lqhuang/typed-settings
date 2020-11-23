@@ -29,6 +29,7 @@ Changelog
 - 🐛 Fix loaded settings not being used as option defaults with click.
 - 📝 Add API reference to docs.
 
+
 0.6 (2020-10-11)
 ================
 
@@ -36,11 +37,13 @@ Changelog
 - 📝 Initialize documentaion at https://typed-settings.readthedocs.io
 - 📝 Improve README and automatically test examples
 
+
 0.5 (2020-09-30)
 ================
 
 - ✨ Click options for basic data types (``bool``, ``int``, ``str``, ``Enum``) can be generated now.
 - 🐛 Fix bug that prevented nested settings classes from automatically being instantiated when no settings for them were loaded.
+
 
 0.4 (2020-09-25)
 ================
