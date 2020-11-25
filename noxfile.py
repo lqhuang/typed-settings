@@ -14,9 +14,10 @@ LOCATIONS = [
 
 @nox.session
 def build(session):
-    session.install("build")
+    session.install("build", "check-wheel-contents")
     session.run("rm", "-rf", "build", "dist", external=True)
     session.run("python", "-m", "build", "--sdist", "--wheel", ".")
+    session.run("check-wheel-contents", *glob.glob("dist/*.whl"))
 
 
 @nox.session(python=["3.7", "3.8", "3.9"])
