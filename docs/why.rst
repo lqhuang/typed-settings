@@ -6,57 +6,112 @@ Comprehensive List of Features
 ==============================
 
 
-- Default settings are defined by app and can be overridden by config files, environment variables and click options.
+- Default settings are defined by your app and can be overridden by config files, environment variables and click options.
 
-- Settings are defined as attrs classes with types, converters and validators.
+- Settings are defined as attrs classes with types, (automatically generated) converters and validators.
 
-- Options can be basic data types (bool, int, float, str), Enums, lists of basic types, or nested settings classes.
+  - Secrets are hidden when a settings instance is printed.
+
+- Options can be basic data types (bool, int, float, str), Enums, lists of basic types, or nested settings classes (:ref:`full list <func-settings>`).
 
   - An error is raised if options have an unsupported type
 
 - Settings can be loaded from multiple config files.
 
   - Settings files can be optional or mandatory.
+
   - Config files are allowed to contain settings for multiple apps (like ``pyproject.toml``)
-  - Paths to config files have to be explicitly named.  There are no implicit defauls search paths.
-  - Additional paths for config files can be specified via an environment variable.  As in ``PATH``, multiple paths are separated by a ``:``.  The last file in the list has the highest priority.
-  - Extra options in config files (that do not map to an attribute in the settings class) are errors
+
+  - Paths to config files have to be explicitly named.
+    There are no implicit defauls search paths.
+
+  - Additional paths for config files can be specified via an environment variable.
+    As in ``PATH``, multiple paths are separated by a ``:``.
+    The last file in the list has the highest priority.
+
+  - Extra options in config files (that do not map to an attribute in the settings class) are errors.
 
 - Environment variables with a defined prefix override settings from config files.
+  This can optionally be disabled.
 
-  - This can optionally be disabled.
-  - Allowed values for booleans: ``1``, ``True``, ``true``, ``yes`` and ``0``, ``False``, ``false``, ``no``
+- Click_ options for a settings class can be generated.
+  They are passed to the cli function as a single object (instead of individually).
 
-- Click_ options for some or all settings can be generated.  They are passed to the cli function as a single object (instead of individually).
+  - Click options support the same types as normal options.
 
-  - Click options support the same types as normal options
-  - Options can define a help-string for Click options (and mybe other usefull arguments)
+  - Options can define a help-string for Click options.
 
 - Settings must be explicitly loaded, either via ``typed_settings.load_settings()`` or via ``typed_settings.click_options()``.
 
   - Both functions allow you to customize config file paths, prefixes et cetera.
 
-- Use logging for
-
-  - Config files that are being loaded
-  - Not found config files (warn for optional, error for mandtory files (in addition to an exception))
-  - Name of settings files env var
-  - Names of env vars loaded
+.. - Use logging for
+..
+..   - Config files that are being loaded
+..   - Not found config files (warn for optional, error for mandtory files (in addition to an exception))
+..   - Name of settings files env var
+..   - Names of env vars loaded
 
 .. _click: https://click.palletsprojects.com/
-
-
-Why TOML and not …?
-===================
 
 
 What about Dynaconf?
 ====================
 
+Dynaconf_ seems quite similar to :program:`TS` on a first glance, but follows a different philosophy.
 
-What about Environconfig?
-=========================
+Settings can be loaded from multiple config files and overridden by environment variables,
+but you don't predefine the structure of your settings in advance.
+This makes defining defaults and validators for options a bit more tedious, but it is possible nonetheless.
+
+Environment variables use the prefix :code:`DYNACONF_` by default which may lead to conflicts with other apps.
+
+:program:`Dynaconf` supports a lot more file formats than :program:`TS` and can read secrets from :program:`HashiCorp Vault` and :program:`Redis`.
+:program:`TS` may add support for these, though.
+
+Settings can contain template vars (for Python format strings or Jinja_) which are replaced with the values of loaded settings.
+Supported for this in :program:`TS` is planned_.
+
+:program:`Dynaconf` allows you to place the settings for all deployment environments (e.g., *production* and *testing)* into a single config file.
+I like to put these into different files since your configuration may consist of additional files (like SSH keys) that also differ between environments.
+
+It seems like it is also not intended to share config files with other applications, e.g. in :file:`pyproject.toml`.
+
+:program:`Dynaconf` can easily integrate with :program:`Flask` and :program:`Django`, but not with :program:`click`.
+
+
+.. _dynaconf: https://www.dynaconf.com
+.. _jinja: https://jinja.palletsprojects.com
+.. _planned: https://gitlab.com/sscherfke/typed-settings/-/issues/2
+
+
+What about environ-config?
+==========================
+
+`Environ-config`_ stems from the author of :program:`attrs` and uses :program:`attrs` classes to define the structure of your settings.
+
+Settings can only be loaded from environment variables.
+Secrets can also be read from :program:`HashiCorp Vault`, :program:`envconsul` and ``ini`` files.
+
+Additional config files are not supported which `may lead to problems`_ if your app needs more complex configuration.
+
+:program:`Click` is not supported.
+
+It provides helpful debug logging and built-in dynamic docstring generation for the settings class.
+
+
+.. _environ-config: https://github.com/hynek/environ-config
+.. _may lead to problems: https://hitchdev.com/strictyaml/why-not/environment-variables-as-config/
 
 
 What about Pydantic?
 ====================
+
+Pydantic_ is more comparable to :program:`attrs` but also offers integrated settings loading (amongst many other features).
+
+Settings classes are, as in :program:`TS` and :program:`environ-config`, predefined.
+Option values are automatically converted and can easily be validated.
+
+Settings can only be loaded from environment variables (and :file:`.env` files), though.
+
+.. _pydantic: https://pydantic-docs.helpmanual.io/

@@ -12,6 +12,7 @@ Attrs Helpers
 
 Helpers for creating :mod:`attrs` classes and fields with sensible details for Typed Settings.
 
+.. _func-settings:
 
 .. function:: settings(maybe_cls=None, *, these=None, repr=None, hash=None, init=None, slots=True, frozen=True, weakref_slot=True, str=False, auto_attribs=None, kw_only=False, cache_hash=False, auto_exc=True, eq=None, order=False, auto_detect=True, getstate_setstate=None, on_setattr=None, field_transformer=<function auto_convert>)
 
