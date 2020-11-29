@@ -23,7 +23,7 @@ Comprehensive List of Features
   - Config files are allowed to contain settings for multiple apps (like ``pyproject.toml``)
 
   - Paths to config files have to be explicitly named.
-    There are no implicit defauls search paths.
+    There are no implicit default search paths.
 
   - Additional paths for config files can be specified via an environment variable.
     As in ``PATH``, multiple paths are separated by a ``:``.
@@ -45,12 +45,10 @@ Comprehensive List of Features
 
   - Both functions allow you to customize config file paths, prefixes et cetera.
 
-.. - Use logging for
-..
-..   - Config files that are being loaded
-..   - Not found config files (warn for optional, error for mandtory files (in addition to an exception))
-..   - Name of settings files env var
-..   - Names of env vars loaded
+- Uses debug logging:
+
+  - Config files that are being loaded or that cannot be found
+  - Looked up env vars
 
 .. _click: https://click.palletsprojects.com/
 

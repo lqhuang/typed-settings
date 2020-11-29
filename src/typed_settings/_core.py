@@ -1,6 +1,7 @@
 """
 Core functionality for loading settings.
 """
+import logging
 import os
 from pathlib import Path
 from typing import (
@@ -19,6 +20,10 @@ import attr
 import toml
 
 from ._dict_utils import FieldList, _deep_fields, _merge_dicts, _set_path
+from .attrs import METADATA_KEY
+
+
+LOGGER = logging.getLogger(METADATA_KEY)
 
 
 class _Auto:
@@ -253,20 +258,37 @@ def _get_config_filenames(
         A list of paths to existing config files.  Paths of files that don't
         exist are stripped from the input.
     """
-    candidates = [str(f) for f in config_files]
+    candidates = [(False, str(f)) for f in config_files]
     if config_files_var:
-        candidates += os.getenv(config_files_var, "").split(":")
+        LOGGER.debug(f"Env var for config files: {config_files_var}")
+        candidates += [
+            (True, fname)
+            for fname in os.getenv(config_files_var, "").split(":")
+        ]
+    else:
+        LOGGER.debug("Env var for config files not set")
 
     paths = []
-    for f in candidates:
-        if f and f[0] == "!":
-            # Always add mandatory files
-            paths.append(Path(f[1:]))
+    for from_envvar, fname in candidates:
+        _, flag, fname = fname.rpartition("!")
+        if not fname:
+            continue
+        is_mandatory = flag == "!"
+        try:
+            path = Path(fname).resolve(strict=True)
+        except FileNotFoundError:
+            if is_mandatory:
+                LOGGER.error(f"Mandatory config file not found: {fname}")
+                raise
+            elif from_envvar:
+                LOGGER.warning(
+                    f"Config file from {config_files_var} not found: {fname}"
+                )
+            else:
+                LOGGER.info(f"Config file not found: {fname}")
         else:
-            # Add optional files only if they exist
-            p = Path(f)
-            if p.is_file():
-                paths.append(p)
+            LOGGER.debug(f"Loading settings from: {path}")
+            paths.append(Path(fname))
 
     return paths
 
@@ -369,14 +391,19 @@ def _from_env(
         A dict with the loaded settings.
     """
     if prefix is None:
+        LOGGER.debug("Loading settings from env vars is disabled.")
         return {}
     prefix = f"{appname.upper()}_" if isinstance(prefix, _Auto) else prefix
+    LOGGER.debug(f"Looking for env vars with prefix: {prefix}")
 
     env = os.environ
     values: Dict[str, Any] = {}
     for path, _field, _cls in fields:
         varname = f"{prefix}{path.upper().replace('.', '_')}"
         if varname in env:
+            LOGGER.debug(f"Env var found: {varname}")
             _set_path(values, path, env[varname])
+        else:
+            LOGGER.debug(f"Env var not found: {varname}")
 
     return values

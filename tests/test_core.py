@@ -1,3 +1,4 @@
+import logging
 import os
 from itertools import product
 from pathlib import Path
@@ -482,3 +483,114 @@ class TestFromEnv:
 
         settings = _core._from_env(_deep_fields(Settings), "example", None)
         assert settings == {}
+
+
+class TestLogging:
+    """
+    Test emitted log messages.
+    """
+
+    def test_successfull_loading(self, caplog, tmp_path, monkeypatch):
+        """
+        In case of success, only DEBUG messages are emitted.
+        """
+
+        @settings
+        class S:
+            opt: str
+
+        sf1 = tmp_path.joinpath("sf1.toml")
+        sf1.write_text('[test]\nopt = "spam"\n')
+        sf2 = tmp_path.joinpath("sf2.toml")
+        sf2.write_text('[test]\nopt = "eggs"\n')
+        monkeypatch.setenv("TEST_SETTINGS", str(sf2))
+        monkeypatch.setenv("TEST_OPT", "bacon")
+
+        caplog.set_level(logging.DEBUG)
+
+        _core.load_settings(S, "test", [sf1])
+
+        assert caplog.record_tuples == [
+            (
+                "typed_settings",
+                logging.DEBUG,
+                "Env var for config files: TEST_SETTINGS",
+            ),
+            ("typed_settings", logging.DEBUG, f"Loading settings from: {sf1}"),
+            ("typed_settings", logging.DEBUG, f"Loading settings from: {sf2}"),
+            (
+                "typed_settings",
+                logging.DEBUG,
+                "Looking for env vars with prefix: TEST_",
+            ),
+            ("typed_settings", logging.DEBUG, "Env var found: TEST_OPT"),
+        ]
+
+    def test_optional_files_not_found(self, caplog, tmp_path, monkeypatch):
+        """
+        Non-existing optional files emit an INFO message if file was specified
+        by the app (passed to "load_settings()") an a WARNING message if the
+        file was specified via an environment variable.
+        """
+
+        @settings
+        class S:
+            opt: str = ""
+
+        sf1 = tmp_path.joinpath("sf1.toml")
+        sf2 = tmp_path.joinpath("sf2.toml")
+        monkeypatch.setenv("TEST_SETTINGS", str(sf2))
+
+        caplog.set_level(logging.DEBUG)
+
+        _core.load_settings(S, "test", [sf1])
+
+        assert caplog.record_tuples == [
+            (
+                "typed_settings",
+                logging.DEBUG,
+                "Env var for config files: TEST_SETTINGS",
+            ),
+            ("typed_settings", logging.INFO, f"Config file not found: {sf1}"),
+            (
+                "typed_settings",
+                logging.WARNING,
+                f"Config file from TEST_SETTINGS not found: {sf2}",
+            ),
+            (
+                "typed_settings",
+                logging.DEBUG,
+                "Looking for env vars with prefix: TEST_",
+            ),
+            ("typed_settings", logging.DEBUG, "Env var not found: TEST_OPT"),
+        ]
+
+    def test_mandatory_files_not_found(self, caplog, tmp_path, monkeypatch):
+        """
+        In case of success, only ``debug`` messages are emitted.
+        """
+
+        @settings
+        class S:
+            opt: str = ""
+
+        sf1 = tmp_path.joinpath("sf1.toml")
+        monkeypatch.setenv("TEST_SETTINGS", f"!{sf1}")
+
+        caplog.set_level(logging.DEBUG)
+
+        with pytest.raises(FileNotFoundError):
+            _core.load_settings(S, "test")
+
+        assert caplog.record_tuples == [
+            (
+                "typed_settings",
+                logging.DEBUG,
+                "Env var for config files: TEST_SETTINGS",
+            ),
+            (
+                "typed_settings",
+                logging.ERROR,
+                f"Mandatory config file not found: {sf1}",
+            ),
+        ]
