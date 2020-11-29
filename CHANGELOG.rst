@@ -2,6 +2,37 @@
 Changelog
 =========
 
+0.9 (2020-11-29)
+================
+
+- 💥 A ``ValueError`` is now raised when a config file contains invalid
+  options.
+
+- 💥 Click options without a default (or loaded value) are now marked
+  as ``required=True``.
+
+- ✨ Click options support more types (datetimes, lists, tuples, ...)
+
+  - List like types use ``multiple=True``
+  - Tuple uses ``nargs=X``
+
+  Click types can also be exteded by users now.
+
+- ✨ Options can specify a help string for Click options via the
+  ``click_help`` parameter.
+
+- ✨ Improve handling of container types (like ``set``) in the attrs
+  auto-converter.
+
+- 🐛 Click help strings no longer show values of secret options.
+
+- 📝 Improve *Why Typed Settings* docs.
+
+- 📝 Improve docs for attrs converters/validators/hooks.
+
+- ✅ Increase test coverage to 100%.
+
+
 0.8 (2020-11-05)
 ================
 
