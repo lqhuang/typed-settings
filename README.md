@@ -13,7 +13,7 @@ Typed Settings allows you to cleanly structure your settings with [attrs](https:
 Type annotations will be used to automatically convert values to the proper type.
 You can currently load settings from these sources:
 
-- TOML files (multiple, if you want to).  Paths can statically specified or dynamically set via a environment variable.
+- TOML files (multiple, if you want to).  Paths can be statically specified or dynamically set via an environment variable.
 - Environment variables
 - [click](https://click.palletsprojects.com) command line options
 
@@ -22,6 +22,8 @@ You can use Typed settings, e.g., for
 - server processes
 - containerized apps
 - command line applications
+
+The documentation contains a [full list](https://typed-settings.readthedocs.io/en/latest/why.html#comprehensive-list-of-features) of all features.
 
 
 ## Installation
