@@ -15,7 +15,7 @@ Typed Settings allows you to cleanly structure your settings with `attrs <https:
 Type annotations will be used to automatically convert values to the proper type.
 You can currently load settings from these sources:
 
-- TOML files (multiple, if you want to).  Paths can statically specified or dynamically set via a environment variable.
+- TOML files (multiple, if you want to).  Paths can be statically specified or dynamically set via an environment variable.
 - Environment variables
 - `click <https://click.palletsprojects.com>`_ command line options
 
