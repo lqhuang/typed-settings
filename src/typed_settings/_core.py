@@ -179,8 +179,11 @@ def _load_settings(
     # Populate dict with default settings.  This avoids problems with nested
     # settings classes for which no settings are loaded.
     for path, field, _cls in fields:
-        if field.default is not attr.NOTHING:
-            _set_path(settings, path, field.default)
+        if field.default is attr.NOTHING:
+            continue
+        if isinstance(field.default, attr.Factory):  # type: ignore
+            continue
+        _set_path(settings, path, field.default)
 
     loaded_settings = [
         _from_toml(

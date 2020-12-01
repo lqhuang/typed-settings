@@ -115,6 +115,21 @@ class TestLoadSettings:
         s = _core.load_settings(Settings, "test")
         assert s == Settings(Nested())
 
+    def test_default_factories(self):
+        """
+        The default value "attr.Factory" is handle as if "attr.NOTHING" was
+        set.
+
+        See: https://gitlab.com/sscherfke/typed-settings/-/issues/6
+        """
+
+        @settings
+        class S:
+            opt: List[int] = option(factory=list)
+
+        result = _core.load_settings(S, "t")
+        assert result == S()
+
 
 class TestUpdateSettings:
     """Tests for update_settings()."""
