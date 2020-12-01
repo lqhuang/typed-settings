@@ -2,6 +2,14 @@
 Changelog
 =========
 
+0.9.1 (2020-12-01)
+==================
+
+- 🐛 Fixed `#6`_: Properly handle attrs default factories in options.
+
+.. _#6: https://gitlab.com/sscherfke/typed-settings/-/issues/6
+
+
 0.9 (2020-11-29)
 ================
 
