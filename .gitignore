@@ -2,8 +2,10 @@
 .DS_Store
 .corerage.*
 .coverage
+.mypy_cache/
+.pytest_cache/
 __pycache__/
-docs/_build
 build/
 coverage.xml
 dist/
+docs/_build

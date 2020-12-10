@@ -43,7 +43,7 @@ test:
   stage: test
   parallel:
     matrix:
-      - PY: ["3.7", "3.8", "3.9-rc"]
+      - PY: ["3.7", "3.8", "3.9"]
         PKG_FORMAT: ["src", "whl"]
   image: python:$PY
   script:
