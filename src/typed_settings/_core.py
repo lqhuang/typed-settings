@@ -323,7 +323,7 @@ def _load_toml(fields: FieldList, path: Path, section: str) -> Dict[str, Any]:
 
 
 def _clean_settings(
-    fields: FieldList, settings: Dict[str, Any], path: Path
+    fields: FieldList, settings: Mapping[str, Any], path: Path
 ) -> Dict[str, Any]:
     """
     Recursively check settings for invalid entries and raise an error.
@@ -337,9 +337,9 @@ def _clean_settings(
     """
     invalid_paths = []
     valid_paths = {path for path, _field, _cls in fields}
-    cleaned = {}
+    cleaned: Dict[str, Any] = {}
 
-    def _iter_dict(d: Dict[str, Any], prefix: str) -> None:
+    def _iter_dict(d: Mapping[str, Any], prefix: str) -> None:
         for key, val in d.items():
             key = key.replace("-", "_")
             path = f"{prefix}{key}"
