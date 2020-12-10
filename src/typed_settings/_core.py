@@ -318,32 +318,13 @@ def _load_toml(fields: FieldList, path: Path, section: str) -> Dict[str, Any]:
             settings = settings[s]
         except KeyError:
             return {}
-    settings = _rename_dict_keys(settings)
-    _check_settings(fields, settings, path)
+    settings = _clean_settings(fields, settings, path)
     return settings
 
 
-def _rename_dict_keys(d: Mapping[str, Any]) -> Dict[str, Any]:
-    """
-    Recursively replaces "-" in dict keys with "_".
-
-    Args:
-        d: The input dict.
-
-    Returns:
-        A newly created dict with the renamed keys.
-    """
-    result = {}
-    for k, v in d.items():
-        if isinstance(v, dict):
-            v = _rename_dict_keys(v)
-        result[k.replace("-", "_")] = v
-    return result
-
-
-def _check_settings(
+def _clean_settings(
     fields: FieldList, settings: Dict[str, Any], path: Path
-) -> None:
+) -> Dict[str, Any]:
     """
     Recursively check settings for invalid entries and raise an error.
 
@@ -356,14 +337,15 @@ def _check_settings(
     """
     invalid_paths = []
     valid_paths = {path for path, _field, _cls in fields}
+    cleaned = {}
 
     def _iter_dict(d: Dict[str, Any], prefix: str) -> None:
         for key, val in d.items():
+            key = key.replace("-", "_")
             path = f"{prefix}{key}"
 
-            # This check prevents us from iterating dicts that are not nested
-            # classes but actual dict values:
             if path in valid_paths:
+                _set_path(cleaned, path, val)
                 continue
 
             if isinstance(val, dict):
@@ -376,6 +358,8 @@ def _check_settings(
     if invalid_paths:
         joined_paths = ", ".join(sorted(invalid_paths))
         raise ValueError(f"Invalid settings found in {path}: {joined_paths}")
+
+    return cleaned
 
 
 def _from_env(

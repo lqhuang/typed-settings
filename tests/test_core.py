@@ -335,7 +335,7 @@ class TestFromToml:
             "spam": 23,
         }
         with pytest.raises(ValueError) as exc_info:
-            _core._check_settings(_deep_fields(Settings), settings, Path("p"))
+            _core._clean_settings(_deep_fields(Settings), settings, Path("p"))
         assert str(exc_info.value) == (
             "Invalid settings found in p: host.eggs, spam"
         )
@@ -355,7 +355,7 @@ class TestFromToml:
 
         settings = {"host": {"port": 23, "eggs": 42}}
         with pytest.raises(ValueError) as exc_info:
-            _core._check_settings(_deep_fields(Settings), settings, Path("p"))
+            _core._clean_settings(_deep_fields(Settings), settings, Path("p"))
         assert str(exc_info.value) == "Invalid settings found in p: host.eggs"
 
     def test_clean_settings_dict_values(self):
@@ -369,7 +369,34 @@ class TestFromToml:
             option: Dict[str, Any]
 
         settings = {"option": {"a": 1, "b": 2}}
-        _core._check_settings(_deep_fields(Settings), settings, Path("p"))
+        _core._clean_settings(_deep_fields(Settings), settings, Path("p"))
+
+    def test_no_replace_dash_in_dict_keys(self, tmp_path):
+        """
+        "-" in TOML keys are replaced with "_" for sections and options, but
+        "-" in actuall dict keys are left alone.
+
+        See: https://gitlab.com/sscherfke/typed-settings/-/issues/3
+        """
+
+        @frozen
+        class Settings:
+            option_1: Dict[str, Any]
+            option_2: Dict[str, Any]
+
+        cf = tmp_path.joinpath("settings.toml")
+        cf.write_text(
+            "[my-config]\n"
+            'option-1 = {my-key = "val1"}\n'
+            "[my-config.option-2]\n"
+            "another-key = 23\n"
+        )
+
+        settings = _core._load_toml(_deep_fields(Settings), cf, "my-config")
+        assert settings == {
+            "option_1": {"my-key": "val1"},
+            "option_2": {"another-key": 23},
+        }
 
     def test_load_settings_explicit_config(self, tmp_path, monkeypatch):
         """
