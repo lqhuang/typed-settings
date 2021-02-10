@@ -250,7 +250,6 @@ class TypeHandler:
             return self._handle_basic_types(otype, default)
 
         else:
-            print(origin)
             if origin in self.list_types:
                 return self._handle_list(otype, default, args)
             elif origin in self.tuple_types:
