@@ -4,11 +4,13 @@ Typed settings
 from typing import Any, List
 
 from ._core import load_settings, update_settings
+from ._file_utils import find
 from .attrs import option, secret, settings
 
 
 __all__ = [
     "click_options",
+    "find",
     "load_settings",
     "option",
     "pass_settings",
