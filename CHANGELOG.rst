@@ -2,6 +2,13 @@
 Changelog
 =========
 
+0.9.2 (2021-02-10)
+==================
+
+- 🐛 Fixed `#3`_: Only replace `-` with `_` for sections and option names, but not for dict keys.
+- 🐛 Remove debug printa.
+
+
 0.9.1 (2020-12-01)
 ==================
 
