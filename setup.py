@@ -2,7 +2,7 @@ from setuptools import find_packages, setup
 
 
 DEPS = ["attrs>=20.3", "toml"]
-DEPS_CLICK = ["click"]
+DEPS_CLICK = ["click>=7,<8"]
 DEPS_TEST = DEPS_CLICK + ["pytest>=6", "pytest-cov", "coverage[toml]>=5.0.2"]
 DEPS_LINT = DEPS_CLICK + [
     "flake8",
