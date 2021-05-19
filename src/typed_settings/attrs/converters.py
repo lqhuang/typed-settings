@@ -6,6 +6,7 @@ from datetime import datetime
 
 __all__ = [
     "to_attrs",
+    "to_bool",
     "to_dt",
     "to_iterable",
     "to_mapping",
@@ -86,25 +87,27 @@ def to_bool(val):
     Values mapping to :code:`True`:
 
     - :code:`True`
-    - :code:`"True"`
-    - :code:`"true"`
-    - :code:`"yes"`
+    - :code:`"true"` / :code:`"t"`
+    - :code:`"yes"` / :code:`"y"`
+    - :code:`"on"`
     - :code:`"1"`
     - :code:`1`
 
     Values mapping to :code:`False`:
 
     - :code:`False`
-    - :code:`"False"`
-    - :code:`"false"`
-    - :code:`"no"`
+    - :code:`"false"` / :code:`"f"`
+    - :code:`"no"` / :code:`"n"`
+    - :code:`"off"`
     - :code:`"0"`
     - :code:`0`
 
     Raise :exc:`ValueError` for any other value.
     """
-    truthy = {True, "True", "true", "yes", "1", 1}
-    falsy = {False, "False", "false", "no", "0", 0}
+    if isinstance(val, str):
+        val = val.lower()
+    truthy = {True, "true", "t", "yes", "y", "on", "1", 1}
+    falsy = {False, "false", "f", "no", "n", "off", "0", 0}
     try:
         if val in truthy:
             return True
