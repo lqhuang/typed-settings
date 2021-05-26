@@ -8,6 +8,8 @@ Changelog
 - 🐛 Fixed `#3`_: Only replace `-` with `_` for sections and option names, but not for dict keys.
 - 🐛 Remove debug printa.
 
+.. _#3: https://gitlab.com/sscherfke/typed-settings/-/issues/3
+
 
 0.9.1 (2020-12-01)
 ==================

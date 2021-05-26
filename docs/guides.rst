@@ -18,9 +18,3 @@ Using ``pyproject.toml``
 
 Settings from Environment Variables
 ===================================
-
-
-.. _guide-updating-settings:
-
-Updating and Modifying Settings
-===============================

@@ -38,8 +38,8 @@ SECRET = _SecretRepr()
 
 auto_convert = make_auto_converter({bool: to_bool, datetime: to_dt})
 
-settings = partial(attr.frozen, field_transformer=auto_convert)
-"""An alias to :func:`attr.frozen()`"""
+settings = partial(attr.define, field_transformer=auto_convert)
+"""An alias to :func:`attr.field()`"""
 
 
 @overload

@@ -27,7 +27,7 @@ Basic Settings Definition and Loading
 
 Settings are defined as `attrs classes`_.
 You can either use the decorators provided by attrs or the :func:`settings` decorator that comes with Typed Settings.
-This decorator is an alias to :func:`attr.frozen()`, but it additionally defines an auto-converter for option values:
+This decorator is an alias to :func:`attr.define()`, but it additionally defines an auto-converter for option values:
 
 .. code-block:: python
 
@@ -177,46 +177,47 @@ Your CLI function receives all options as the single instance of your settings c
 .. _click: https://click.palletsprojects.com
 
 
-Updating Settings
-=================
+Frozen Settings and Updating Them
+=================================
 
-Loaded settings are frozen (read-only) by default.
-This is usually desirable because it prevents you and your users from (accidentally) changing settings while the app is running,
-which in turn might result in undefined or unpredictable behavior of your app (a.k.a. *bugs*).
-
-Especially for testing, you may want to modify your settings, though.
-You can either
-
-- create an updated *copy* of your settings via :func:`update_settings()` (this is the pure way) or
-- let your settings be mutable in the first place by passing :code:`frozen=False` to the class decorator (this is the pragmatic way):
+Settings are mutable by default but can optionally be made immutable:
 
 .. code-block:: python
 
-   >>> settings = Settings()
-   >>> updated = ts.update_settings(settings, "host", "updated.com")
+   >>> @ts.settings(frozen=True)
+   ... class FrozenSettings:
+   ...     x: int
+   ...     y: list
+   ...
+   >>> settings = FrozenSettings(3, [])
+   >>> settings.x = 4
+   Traceback (most recent call last):
+     ...
+   attr.exceptions.FrozenInstanceError
+
+However, this does not extend to mutable option values:
+
+.. code-block:: python
+
+   >>> settings.y.append(4)
    >>> print(settings)
-   Settings(host='', port=0)
+   FrozenSettings(x=3, y=[4])
+
+Immutable settings can be desirable because they prevent you or your users from (accidentally) changing them while the app is running.
+
+But especially when you are testing your app, you may still want to modify your settings.
+You can create an updated copy of your settings via :func:`attr.evolve()`
+
+.. code-block:: python
+
+   >>> from attr import evolve
+   >>> updated = evolve(settings, x=7)
+   >>> print(settings)
+   FrozenSettings(x=3, y=[4])
    >>> print(updated)
-   Settings(host='updated.com', port=0)
+   FrozenSettings(x=7, y=[4])
    >>> settings is updated
    False
-   >>>
-   >>> @ts.settings(frozen=False)
-   ... class MutableSettings:
-   ...     option: str = ""
-   ...
-   >>> settings = MutableSettings()
-   >>> settings.option = "spam"
-   >>> print(settings)
-   MutableSettings(option='spam')
-
-The function :func:`update_settings()` has a similar interface as :code:`setattr()`.
-The main differences:
-
-- It returns an updated copy of the passed object instead of modifying it in-place.
-- The attribute name may be a dot-separated path to update nested settings.
-
-Please see :ref:`guide-updating-settings` for details.
 
 
 How to Proceed

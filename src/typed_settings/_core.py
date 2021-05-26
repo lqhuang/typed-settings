@@ -129,34 +129,6 @@ def load_settings(
     return cls(**settings)  # type: ignore
 
 
-def update_settings(settings: T, path: str, value: Any) -> T:
-    """Returns a copy of *settings* with an updated *value* at *path*.
-
-    Args:
-        settings: An instance of a settings class.
-        path: A dot-separated path to the setting to update.
-        value: The new value to set to the attribute at *path*.
-
-    Returns:
-        A copy of *settings* with the updated value.
-
-    Raises:
-        AttributeError: *path* does not point to an existing attribute.
-    """
-    current = settings
-    for name in path.split("."):
-        try:
-            current = getattr(current, name)
-        except AttributeError:
-            raise AttributeError(
-                f"'{type(settings).__name__}' object has no setting '{path}'"
-            ) from None
-
-    settings_dict = attr.asdict(settings)
-    _set_path(settings_dict, path, value)
-    return type(settings)(**settings_dict)  # type: ignore
-
-
 def _load_settings(
     *,
     fields: FieldList,
@@ -170,7 +142,7 @@ def _load_settings(
     Loads settings for *fields* and returns them as dict.
 
     This function makes it easier to extend settings since it returns a dict
-    that can easily be updated (as compared to of frozen settings instances).
+    that can easily be updated (as compared to frozen settings instances).
 
     See :func:`load_settings() for details on the arguments.
     """

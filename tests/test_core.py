@@ -12,13 +12,15 @@ from typed_settings._dict_utils import _deep_fields
 from typed_settings.attrs import option, settings
 
 
-@settings
+# Test with frozen settings.  If it works this way, it will also work with
+# mutable settings but not necessarily the other way around.
+@settings(frozen=True)
 class Host:
     name: str
     port: int = option(converter=int)
 
 
-@settings
+@settings(frozen=True)
 class Settings:
     host: Host
     url: str
@@ -129,51 +131,6 @@ class TestLoadSettings:
 
         result = _core.load_settings(S, "t")
         assert result == S()
-
-
-class TestUpdateSettings:
-    """Tests for update_settings()."""
-
-    settings = Settings(url="a", host=Host("h", 3))
-
-    def test_update_top_level(self):
-        """Top level attributes can be updated."""
-        updated = _core.update_settings(self.settings, "default", 4)
-        assert updated.default == 4
-        assert updated.host == self.settings.host
-
-    def test_update_nested_scalar(self):
-        """Nested scalar attributes can be updated."""
-        updated = _core.update_settings(self.settings, "host.name", "x")
-        assert updated.host.name == "x"
-
-    def test_update_nested_settings(self):
-        """Nested scalar attributes can be updated."""
-        updated = _core.update_settings(
-            self.settings, "host", Host("spam", 23)
-        )
-        assert updated.host.name == "spam"
-        assert updated.host.port == 23
-
-    def test_copied(self):
-        """
-        Top level and nested settings classes are copied, even if unchanged.
-        """
-        updated = _core.update_settings(self.settings, "url", "x")
-        assert updated is not self.settings
-        assert updated.host is not self.settings.host
-
-    @pytest.mark.parametrize("path", ["x", "host.x", "host.name.x"])
-    def test_invalid_path(self, path):
-        """
-        Raise AttributeError if path points to non existing attribute.
-        Improve default error message.
-        """
-        with pytest.raises(
-            AttributeError,
-            match=(f"'Settings' object has no setting '{path}'"),
-        ):
-            _core.update_settings(self.settings, path, "x")
 
 
 class TestFromToml:

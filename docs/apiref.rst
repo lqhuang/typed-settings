@@ -81,7 +81,6 @@ Core Functions
 Core functions for loading and working with settings.
 
 .. autofunction:: load_settings
-.. autofunction:: update_settings
 
 
 Click Options

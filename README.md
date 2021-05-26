@@ -143,7 +143,7 @@ Settings(a_str='spam', an_int=1)
 
 - Settings are defined as type-hinted `attrs` classes.
 
-- Typed Settings’ `settings` decorator adds automatic type converstion for option values and makes your settings class frozen (immutable) by default.
+- Typed Settings’ `settings` decorator adds automatic type converstion for option values and can optionally make your settings frozen (immutable).
 
 - Settings can currently be loaded from:
 
