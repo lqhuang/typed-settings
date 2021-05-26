@@ -20,7 +20,7 @@ def build(session):
     session.run("check-wheel-contents", *glob.glob("dist/*.whl"))
 
 
-@nox.session(python=["3.7", "3.8", "3.9"])
+@nox.session(python=["3.7", "3.8", "3.9", "3.10.0b1"])
 @nox.parametrize("pkg_format", [".", "tar.gz", "whl"], [".", "src", "whl"])
 def test(session, pkg_format):
     if pkg_format == ".":
