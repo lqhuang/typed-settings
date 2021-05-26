@@ -311,9 +311,9 @@ class TestClickBool(ClickTestBase):
     cli = make_cli(S)
 
     _help = [
-        "  --a / --no-a  [default: False; required]",
-        "  --b / --no-b  [default: True]",
-        "  --c / --no-c  [default: False]",
+        "  --a / --no-a  [default: no-a;required]",
+        "  --b / --no-b  [default: b]",
+        "  --c / --no-c  [default: no-c]",
     ]
     _defaults = S(False, True, False)
     _options = ["--no-a", "--no-b", "--c"]
@@ -338,7 +338,7 @@ class TestIntFloatStr(ClickTestBase):
         "  --a TEXT     [default: spam]",
         "  --b TEXT     [default: ***]",
         "  --c INTEGER  [default: 0]",
-        "  --d FLOAT    [default: 0]",
+        "  --d FLOAT    [default: 0.0]",
     ]
     _defaults = S()
     _options = ["--a=eggs", "--b=pwd", "--c=3", "--d=3.1"]
@@ -360,11 +360,11 @@ class TestDateTime(ClickTestBase):
 
     _help = [
         "  --a [%Y-%m-%d|%Y-%m-%dT%H:%M:%S|%Y-%m-%dT%H:%M:%S%z]",
-        "                                  [default: 1970-01-01T00:00:00+00:00]",  # noqa: E501
+        "                                  [default: 1970-01-01 00:00:00+00:00]",  # noqa: E501
         "  --b [%Y-%m-%d|%Y-%m-%dT%H:%M:%S|%Y-%m-%dT%H:%M:%S%z]",
-        "                                  [default: 1970-01-01T00:00:00+00:00]",  # noqa: E501
+        "                                  [default: 1970-01-01 00:00:00+00:00]",  # noqa: E501
         "  --c [%Y-%m-%d|%Y-%m-%dT%H:%M:%S|%Y-%m-%dT%H:%M:%S%z]",
-        "                                  [default: 1970-01-01T00:00:00+00:00]",  # noqa: E501
+        "                                  [default: 1970-01-01 00:00:00+00:00]",  # noqa: E501
     ]
     _defaults = S()
     _options = [
@@ -465,9 +465,9 @@ class TestList(ClickTestBase):
     cli = make_cli(S)
 
     _help = [
-        "  --a INTEGER                     [required]",
+        "  --a INTEGER                     [default: ;required]",
         "  --b [%Y-%m-%d|%Y-%m-%dT%H:%M:%S|%Y-%m-%dT%H:%M:%S%z]",
-        "                                  [default: 2020-05-04T00:00:00]",
+        "                                  [default: 2020-05-04 00:00:00]",
         "  --c INTEGER                     [default: ]",
         "  --d INTEGER                     [default: ]",
         "  --e INTEGER                     [default: ]",

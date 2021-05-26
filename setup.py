@@ -1,9 +1,9 @@
 from setuptools import find_packages, setup
 
 
-DEPS = ["attrs>=20.3", "toml"]
-DEPS_CLICK = ["click>=7,<8"]
-DEPS_TEST = DEPS_CLICK + ["pytest>=6", "pytest-cov", "coverage[toml]>=5.0.2"]
+DEPS = ["attrs>=20.3", "toml>=0.10"]
+DEPS_CLICK = ["click>=7,<9"]
+DEPS_TEST = DEPS_CLICK + ["pytest>=6", "pytest-cov", "coverage[toml]>=5.3"]
 DEPS_LINT = DEPS_CLICK + [
     "flake8",
     "flake8-bandit",

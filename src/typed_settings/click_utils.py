@@ -121,7 +121,19 @@ class EnumChoice(click.Choice):
 
     def __init__(self, enum_type: Type[Enum]):
         self.__enum = enum_type
-        super().__init__(enum_type.__members__)
+        super().__init__(list(enum_type.__members__))
+
+    # def __call__(
+    #     self,
+    #     value,
+    #     param,
+    #     ctx,
+    # ):
+    #     breakpoint()
+    #     return value
+
+    def __repr__(self) -> str:
+        return f"{self.__class__.__name__}({self.__enum})"
 
     def convert(
         self,
@@ -147,15 +159,16 @@ def handle_datetime(type: type, default: Any) -> StrDict:
     return type_info
 
 
-def handle_enum(type: type, default: Any) -> StrDict:
+def handle_enum(type: Type[Enum], default: Any) -> StrDict:
     """
     Use :class:`EnumChoice` as option type and use the enum value's name as
     default.
     """
-    type_info = {"type": EnumChoice(type)}
+    type_info = {"type": click.Choice(list(type.__members__))}
     if default is not attr.NOTHING:
         # Convert Enum instance to string
         type_info["default"] = default.name
+
     return type_info
 
 

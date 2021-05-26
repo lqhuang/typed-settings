@@ -119,6 +119,27 @@ def to_bool(val):
     raise ValueError(f"Cannot convert value to bool: {val}")
 
 
+def to_enum(cls):
+    """
+    Return a converter that creates an instance of the :class:`.Enum` *cls*.
+
+    If the to be converted value is not already an enum, the converter will
+    first try to create one by name (``MyEnum[val]``) and, if that fails, by
+    value (``MyEnum(val)``).
+
+    """
+
+    def convert(val):
+        if isinstance(val, cls):
+            return val
+        try:
+            return cls[val]
+        except KeyError:
+            return cls(val)
+
+    return convert
+
+
 def to_iterable(cls, converter):
     """
     A converter that creates a *cls* iterable (e.g., ``list``) and calls

@@ -16,6 +16,7 @@ from ._compat import get_args, get_origin
 from .converters import (
     to_attrs,
     to_dt,
+    to_enum,
     to_iterable,
     to_mapping,
     to_tuple,
@@ -118,6 +119,8 @@ def _handle_concrete(typ, converters):
     elif getattr(typ, "__attrs_attrs__", None) is not None:
         # Attrs classes
         converter = to_attrs(typ)
+    elif issubclass(typ, Enum):
+        converter = to_enum(typ)
     else:
         # Check if type is in converters dict
         for convert_type, convert_func in converters.items():

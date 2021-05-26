@@ -4,7 +4,7 @@ Usage: black.py [OPTIONS]
 Options:
   --line-length INTEGER           [default: 79]
   --skip-string-normalization / --no-skip-string-normalization
-                                  [default: False]
+                                  [default: no-skip-string-normalization]
   --target-version [py37|py38|py39]
                                   [default: py37]
   --help                          Show this message and exit.
