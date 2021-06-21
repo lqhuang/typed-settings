@@ -11,10 +11,10 @@ def mkattr(name: str, typ: type) -> attr.Attribute:
     )
 
 
-class TestDeepFields:
-    """Tests for _deep_fields()."""
+class TestDeepOptions:
+    """Tests for _deep_options()."""
 
-    def test_deep_fields(self):
+    def test_deep_options(self):
         @attr.dataclass
         class GrandChild:
             x: int
@@ -30,8 +30,8 @@ class TestDeepFields:
             y: Child
             z: str
 
-        fields = du._deep_fields(Parent)
-        assert fields == [
+        options = du._deep_options(Parent)
+        assert options == [
             ("x", mkattr("x", str), Parent),
             ("y.x", mkattr("x", float), Child),
             ("y.y.x", mkattr("x", int), GrandChild),
@@ -47,7 +47,7 @@ class TestDeepFields:
             x: "X"  # type: ignore  # noqa: F821
 
         with pytest.raises(NameError, match="name 'X' is not defined"):
-            du._deep_fields(C)
+            du._deep_options(C)
 
     def test_direct_recursion(self):
         """
@@ -61,7 +61,7 @@ class TestDeepFields:
             child: "Node"
 
         with pytest.raises(NameError, match="name 'Node' is not defined"):
-            du._deep_fields(Node)
+            du._deep_options(Node)
 
     def test_indirect_recursion(self):
         """
@@ -80,7 +80,7 @@ class TestDeepFields:
             child: "Child"
 
         with pytest.raises(NameError, match="name 'Child' is not defined"):
-            du._deep_fields(Parent)
+            du._deep_options(Parent)
 
 
 @pytest.mark.parametrize(

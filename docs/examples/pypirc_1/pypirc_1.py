@@ -18,6 +18,6 @@ class Settings:
     repos: Dict[str, RepoServer]
 
 
-settings = ts.load_settings(Settings, "distutils", ["pypirc.toml"])
+settings = ts.load(Settings, "distutils", ["pypirc.toml"])
 REPO_NAME = sys.argv[1]
 print(settings.repos[REPO_NAME])

@@ -12,7 +12,7 @@ import attr
 import click
 
 from ._core import AUTO, T, _Auto, _load_settings
-from ._dict_utils import _deep_fields, _get_path, _merge_dicts, _set_path
+from ._dict_utils import _deep_options, _get_path, _merge_dicts, _set_path
 from .attrs import METADATA_KEY, _SecretRepr
 from .attrs._compat import get_args, get_origin
 
@@ -55,9 +55,9 @@ def click_options(
     See :func:`.load_settings()` for argument descriptions.
     """
     cls = attr.resolve_types(cls)
-    fields = _deep_fields(cls)
+    options = _deep_options(cls)
     settings = _load_settings(
-        fields=fields,
+        options=options,
         appname=appname,
         config_files=config_files,
         config_file_section=config_file_section,
@@ -84,7 +84,7 @@ def click_options(
         """
         The wrapper that actually decorates a function with all options.
         """
-        for path, field, _cls in reversed(fields):
+        for path, field, _cls in reversed(options):
             default = _get_default(field, path, settings)
             option = _mk_option(
                 click.option, path, field, default, type_handler

@@ -8,7 +8,7 @@ import pytest
 from attr import field, frozen
 
 from typed_settings import _core
-from typed_settings._dict_utils import _deep_fields
+from typed_settings._dict_utils import _deep_options
 from typed_settings.attrs import option, settings
 
 
@@ -54,7 +54,7 @@ class TestLoadSettings:
         config_file = tmp_path.joinpath("settings.toml")
         config_file.write_text(self.config)
 
-        settings = _core.load_settings(
+        settings = _core.load(
             cls=Settings,
             appname="example",
             config_files=[config_file],
@@ -70,7 +70,7 @@ class TestLoadSettings:
 
     def test__load_settings(self, tmp_path, monkeypatch):
         """
-        The _load_settings() can be easier reused.  It takes the fields lists
+        The _load_settings() can be easier reused.  It takes the options lists
         and returns the settings as dict that can still be updated.
         """
         monkeypatch.setenv("EXAMPLE_HOST_PORT", "42")
@@ -79,7 +79,7 @@ class TestLoadSettings:
         config_file.write_text(self.config)
 
         settings = _core._load_settings(
-            fields=_deep_fields(Settings),
+            options=_deep_options(Settings),
             appname="example",
             config_files=[config_file],
             config_file_section=_core.AUTO,
@@ -114,7 +114,7 @@ class TestLoadSettings:
         class Settings:
             nested: Nested
 
-        s = _core.load_settings(Settings, "test")
+        s = _core.load(Settings, "test")
         assert s == Settings(Nested())
 
     def test_default_factories(self):
@@ -129,7 +129,7 @@ class TestLoadSettings:
         class S:
             opt: List[int] = option(factory=list)
 
-        result = _core.load_settings(S, "t")
+        result = _core.load(S, "t")
         assert result == S()
 
 
@@ -194,7 +194,7 @@ class TestFromToml:
         """
         )
         results = _core._load_toml(
-            _deep_fields(Settings), config_file, "example"
+            _deep_options(Settings), config_file, "example"
         )
         assert results == {
             "a": "spam",
@@ -224,7 +224,7 @@ class TestFromToml:
         """
         )
         results = _core._load_toml(
-            _deep_fields(Settings), config_file, "tool.example"
+            _deep_options(Settings), config_file, "tool.example"
         )
         assert results == {
             "a": "spam",
@@ -274,7 +274,7 @@ class TestFromToml:
         """
         )
         results = _core._load_toml(
-            _deep_fields(Settings), config_file, "example"
+            _deep_options(Settings), config_file, "example"
         )
         assert results == {
             "a_1": "spam",
@@ -292,7 +292,7 @@ class TestFromToml:
             "spam": 23,
         }
         with pytest.raises(ValueError) as exc_info:
-            _core._clean_settings(_deep_fields(Settings), settings, Path("p"))
+            _core._clean_settings(_deep_options(Settings), settings, Path("p"))
         assert str(exc_info.value) == (
             "Invalid settings found in p: host.eggs, spam"
         )
@@ -312,7 +312,7 @@ class TestFromToml:
 
         settings = {"host": {"port": 23, "eggs": 42}}
         with pytest.raises(ValueError) as exc_info:
-            _core._clean_settings(_deep_fields(Settings), settings, Path("p"))
+            _core._clean_settings(_deep_options(Settings), settings, Path("p"))
         assert str(exc_info.value) == "Invalid settings found in p: host.eggs"
 
     def test_clean_settings_dict_values(self):
@@ -326,7 +326,7 @@ class TestFromToml:
             option: Dict[str, Any]
 
         settings = {"option": {"a": 1, "b": 2}}
-        _core._clean_settings(_deep_fields(Settings), settings, Path("p"))
+        _core._clean_settings(_deep_options(Settings), settings, Path("p"))
 
     def test_no_replace_dash_in_dict_keys(self, tmp_path):
         """
@@ -349,7 +349,7 @@ class TestFromToml:
             "another-key = 23\n"
         )
 
-        settings = _core._load_toml(_deep_fields(Settings), cf, "my-config")
+        settings = _core._load_toml(_deep_options(Settings), cf, "my-config")
         assert settings == {
             "option_1": {"my-key": "val1"},
             "option_2": {"another-key": 23},
@@ -374,7 +374,7 @@ class TestFromToml:
             spam: str = ""
 
         settings = _core._from_toml(
-            _deep_fields(Settings),
+            _deep_options(Settings),
             appname="example",
             files=[],
             section="le-section",
@@ -431,7 +431,7 @@ class TestFromToml:
         sf.write_text("[a-b]\noption = false\n")
         monkeypatch.setenv("A_B_SETTINGS", str(sf))
 
-        result = _core.load_settings(Settings, appname="a-b")
+        result = _core.load(Settings, appname="a-b")
         assert result == Settings(option=False)
 
 
@@ -441,7 +441,7 @@ class TestFromEnv:
     @pytest.mark.parametrize("prefix", ["T_", _core.AUTO])
     def test_from_env(self, prefix, monkeypatch):
         """Ignore env vars for which no settings attrib exis_core."""
-        fields = _deep_fields(Settings)
+        options = _deep_options(Settings)
         monkeypatch.setattr(
             os,
             "environ",
@@ -451,7 +451,7 @@ class TestFromEnv:
                 "T_HOST_PORT": "25",
             },
         )
-        settings = _core._from_env(fields, "t", prefix)
+        settings = _core._from_env(options, "t", prefix)
         assert settings == {
             "url": "foo",
             "host": {
@@ -470,7 +470,7 @@ class TestFromEnv:
         class Settings:
             config_val: str
 
-        settings = _core._from_env(_deep_fields(Settings), "example", "")
+        settings = _core._from_env(_deep_options(Settings), "example", "")
         assert settings == {"config_val": "42"}
 
     def test_disable_environ(self):
@@ -480,7 +480,7 @@ class TestFromEnv:
         class Settings:
             x: str = "spam"
 
-        settings = _core._from_env(_deep_fields(Settings), "example", None)
+        settings = _core._from_env(_deep_options(Settings), "example", None)
         assert settings == {}
 
 
@@ -507,7 +507,7 @@ class TestLogging:
 
         caplog.set_level(logging.DEBUG)
 
-        _core.load_settings(S, "test", [sf1])
+        _core.load(S, "test", [sf1])
 
         assert caplog.record_tuples == [
             (
@@ -542,7 +542,7 @@ class TestLogging:
 
         caplog.set_level(logging.DEBUG)
 
-        _core.load_settings(S, "test", [sf1])
+        _core.load(S, "test", [sf1])
 
         assert caplog.record_tuples == [
             (
@@ -579,7 +579,7 @@ class TestLogging:
         caplog.set_level(logging.DEBUG)
 
         with pytest.raises(FileNotFoundError):
-            _core.load_settings(S, "test")
+            _core.load(S, "test")
 
         assert caplog.record_tuples == [
             (

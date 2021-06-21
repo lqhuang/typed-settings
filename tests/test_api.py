@@ -35,5 +35,5 @@ def test_load_settings(cls, tmp_path):
     """We can load settings with a class decorated with our decorator."""
     f = tmp_path.joinpath("cfg.toml")
     f.write_text('[test]\nu = "spam"\np = "eggs"\n')
-    settings = ts.load_settings(cls, "test", [f])
+    settings = ts.load(cls, "test", [f])
     assert settings == cls("spam", "eggs")

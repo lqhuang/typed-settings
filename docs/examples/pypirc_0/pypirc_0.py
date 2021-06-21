@@ -19,5 +19,5 @@ class Settings:
 
 
 REPO_NAME = sys.argv[1]
-repo_server = ts.load_settings(RepoServer, REPO_NAME, ["pypirc.toml"])
+repo_server = ts.load(RepoServer, REPO_NAME, ["pypirc.toml"])
 print(repo_server)
