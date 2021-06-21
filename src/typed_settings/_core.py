@@ -17,7 +17,7 @@ from typing import (
 )
 
 import attr
-import toml
+import toml  # type: ignore
 
 from ._dict_utils import FieldList, _deep_fields, _merge_dicts, _set_path
 from .attrs import METADATA_KEY
