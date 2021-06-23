@@ -80,6 +80,8 @@ Core Functions
 
 Core functions for loading and working with settings.
 
+.. autofunction:: find
+
 .. autofunction:: load
 
 .. function:: load_settings(...)

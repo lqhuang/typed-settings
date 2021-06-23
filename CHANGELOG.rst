@@ -2,6 +2,30 @@
 Changelog
 =========
 
+0.10.0 (2021-06-23)
+===================
+
+- 💥 Settings classes are now mutable by default.
+  This makes especially testing and monkeypatching a lot easier.
+  Since settings classes are normal **attrs** classes, you can make your settings immutable again by passing ``frozen=True`` to the class decorator.
+
+- ✨ ``load()`` is now the new main function for loading settings.
+  It has the same signature as ``load_settings()`` (See: `#8`_).
+
+- ✨ ``find()`` searches for a given config file from the current working dir upwards.
+
+- ✨ The ``to_bool()`` converter converts bools from addional values.
+
+- 🗑 The signature of ``load_settings()`` will change in a backwar sincompatible way in the next release.
+  Please use ``load()``  instead (See: `#8`_).
+
+- 🐍 Add support for **Python 3.10**.
+
+- 🏗  Add support for **click 8**.
+
+.. _#8: https://gitlab.com/sscherfke/typed-settings/-/issues/8
+
+
 0.9.2 (2021-02-10)
 ==================
 
@@ -22,11 +46,9 @@ Changelog
 0.9 (2020-11-29)
 ================
 
-- 💥 A ``ValueError`` is now raised when a config file contains invalid
-  options.
+- 💥 A ``ValueError`` is now raised when a config file contains invalid options.
 
-- 💥 Click options without a default (or loaded value) are now marked
-  as ``required=True``.
+- 💥 Click options without a default (or loaded value) are now marked as ``required=True``.
 
 - ✨ Click options support more types (datetimes, lists, tuples, ...)
 
@@ -35,11 +57,9 @@ Changelog
 
   Click types can also be exteded by users now.
 
-- ✨ Options can specify a help string for Click options via the
-  ``click_help`` parameter.
+- ✨ Options can specify a help string for Click options via the ``click_help`` parameter.
 
-- ✨ Improve handling of container types (like ``set``) in the attrs
-  auto-converter.
+- ✨ Improve handling of container types (like ``set``) in the attrs auto-converter.
 
 - 🐛 Click help strings no longer show values of secret options.
 
