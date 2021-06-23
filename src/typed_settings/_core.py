@@ -52,7 +52,7 @@ Sentinel to indicate the lack of a value when ``None`` is ambiguous.
 T = TypeVar("T")
 
 
-def load_settings(
+def load(
     cls: Type[T],
     appname: str,
     config_files: Iterable[Union[str, Path]] = (),
@@ -127,6 +127,19 @@ def load_settings(
         env_prefix=env_prefix,
     )
     return cls(**settings)  # type: ignore
+
+
+def load_settings(*args, **kwargs):
+    import warnings
+
+    warnings.warn(
+        (
+            'The signature of "load_settings()" will introduce breaking '
+            'changes in v0.11 or v1.0.  Please use "load()" instead.'
+        ),
+        DeprecationWarning,
+    )
+    return load(*args, **kwargs)
 
 
 def _load_settings(

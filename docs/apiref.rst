@@ -80,7 +80,15 @@ Core Functions
 
 Core functions for loading and working with settings.
 
-.. autofunction:: load_settings
+.. autofunction:: load
+
+.. function:: load_settings(...)
+
+   This is now an alias to :func:`load()`.  The next release (v0.11 or
+   v1.0) will introduce breaking changes to the signature of this
+   function.  Please use :func:`load()` instead.
+
+   .. deprecated:: 0.10
 
 
 Click Options
