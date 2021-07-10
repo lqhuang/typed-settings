@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Any, Dict, Iterable, List, Type, Union
 
 import attr
+import cattr
 
 from ._dict_utils import _deep_options, _merge_dicts, _set_path
 from .attrs import METADATA_KEY
@@ -81,9 +82,20 @@ def load(
         ValueError: If config values don't meet their requirements.
         ValueError: If a config file contains an invalid option.
     """
-    options = _deep_options(cls)
+        # section = appname if isinstance(section, _Auto) else section
+        # var_name = (
+        #     f"{appname.upper()}_SETTINGS".replace("-", "_")
+        #     if isinstance(var_name, _Auto)
+        #     else var_name
+        # )
+
+        # prefix = self._prefix
+        # if prefix is None:
+        #     LOGGER.debug("Loading settings from env vars is disabled.")
+        #     return {}
+        # prefix = f"{appname.upper()}_" if isinstance(prefix, _Auto) else prefix
     settings = _load_settings(
-        options=options,
+        options=_deep_options(cls),
         appname=appname,
         loaders=[
             FileLoader(
@@ -98,17 +110,17 @@ def load(
     return cls(**settings)  # type: ignore
 
 
-def load_settings(*args, **kwargs):
-    import warnings
-
-    warnings.warn(
-        (
-            'The signature of "load_settings()" will introduce breaking '
-            'changes in v0.11 or v1.0.  Please use "load()" instead.'
-        ),
-        DeprecationWarning,
+def load_settings(
+    cls: Type[T],
+    appname: str,
+    loaders: List[Loader],
+) -> T:
+    settings = _load_settings(
+        options=_deep_options(cls),
+        appname=appname,
+        loaders=loaders,
     )
-    return load(*args, **kwargs)
+    return cls(**settings)  # type: ignore
 
 
 def _load_settings(
@@ -116,10 +128,6 @@ def _load_settings(
     options: OptionList,
     appname: str,
     loaders: List[Loader],
-    # config_files: Iterable[Union[str, Path]],
-    # config_file_section: Union[str, _Auto],
-    # config_files_var: Union[None, str, _Auto],
-    # env_prefix: Union[None, str, _Auto],
 ) -> Dict[str, Any]:
     """
     Loads settings for *options* and returns them as dict.

@@ -13,38 +13,49 @@ from typing import (
     Union,
 )
 
-from ._dict_utils import _deep_options, _merge_dicts, _set_path
-from .types import OptionList, SettingsDict, _Auto
+import toml
+
+from ._dict_utils import _merge_dicts, _set_path
+from .exceptions import (
+    ConfigFileLoadError,
+    ConfigFileNotFoundError,
+    InvalidOptionsError,
+    UnknownFormatError,
+)
+from .types import OptionList, SettingsDict
 
 
 LOGGER = logging.getLogger(__name__)
 
 
 class Loader(Protocol):
-    def load(self, options: OptionList, appname: str) -> SettingsDict:
+    """
+    Protocol for settings loaders.
+    """
+
+    def load(self, options: OptionList) -> SettingsDict:
+        """
+        Load settings for the given options.
+
+        Args:
+            options: The list of available settings.
+
+        Return:
+            A dict with the loaded settings.
+        """
         ...
 
 
 class FileFormat(Protocol):
-    def load_file(
-        self, options: OptionList, path: Path, section: str
-    ) -> SettingsDict:
-        ...
+    """
+    Protocol for file format loaders for the :class:`FileLoader`.
+    """
 
-
-class PythonFormat:
-    def load_file(
-        self, options: OptionList, path: Path, section: str
-    ) -> SettingsDict:
-        return {}
-
-
-class TomlFormat:
     def load_file(
         self, options: OptionList, path: Path, section: str
     ) -> SettingsDict:
         """
-        Loads settings from a TOML file and returns them.
+        Loads settings from a given file and return them as a dict.
 
         Args:
             options: The list of available settings.
@@ -55,116 +66,113 @@ class TomlFormat:
             A dict with the loaded settings.
 
         Raises:
-            FileNotFoundError: If *path* does not exist.
+            ConfigFileNotFoundError: If *path* does not exist.
+            ConfigFileLoadError: If *path* cannot be read/loaded/decoded.
+        """
+        ...
+
+
+class PythonFormat:
+    def load_file(
+        self, path: Path, section: str
+    ) -> SettingsDict:
+        return {}
+
+
+class TomlFormat:
+    def load_file(
+        self, path: Path, section: str
+    ) -> SettingsDict:
+        """
+        Load settings from a TOML file and return them as a dict.
+
+        Args:
+            options: The list of available settings.
+            path: The path to the config file.
+            section: The config file section to load settings from.
+
+        Returns:
+            A dict with the loaded settings.
+
+        Raises:
+            ConfigFileNotFoundError: If *path* does not exist.
+            ConfigFileLoadError: If *path* cannot be read/loaded/decoded.
         """
         sections = section.split(".")
-        settings = toml.load(path.open())
+        try:
+            settings = toml.load(path.open())
+        except FileNotFoundError as e:
+            raise ConfigFileNotFoundError(str(e)) from e
+        except (PermissionError, toml.TomlDecodeError) as e:
+            raise ConfigFileLoadError(str(e)) from e
         for s in sections:
             try:
                 settings = settings[s]
             except KeyError:
                 return {}
-        settings = _clean_settings(options, settings, path)
         return settings
-
-    @staticmethod
-    def _clean_settings(
-        options: OptionList, settings: Mapping[str, Any], path: Path
-    ) -> Dict[str, Any]:
-        """
-        Recursively check settings for invalid entries and raise an error.
-
-        Args:
-            options: The list of available settings.
-            settings: The settings to be cleaned.
-
-        Raises:
-            ValueError: if invalid settings are found
-        """
-        invalid_paths = []
-        valid_paths = {path for path, _field, _cls in options}
-        cleaned: Dict[str, Any] = {}
-
-        def _iter_dict(d: Mapping[str, Any], prefix: str) -> None:
-            for key, val in d.items():
-                key = key.replace("-", "_")
-                path = f"{prefix}{key}"
-
-                if path in valid_paths:
-                    _set_path(cleaned, path, val)
-                    continue
-
-                if isinstance(val, dict):
-                    _iter_dict(val, f"{path}.")
-                else:
-                    invalid_paths.append(path)
-
-        _iter_dict(settings, "")
-
-        if invalid_paths:
-            joined_paths = ", ".join(sorted(invalid_paths))
-            raise ValueError(
-                f"Invalid settings found in {path}: {joined_paths}"
-            )
-
-        return cleaned
 
 
 class FileLoader:
+    """
+    Load settings from config files.
+
+    Settings of multiple files will be merged.  The last file has the highest
+    precedence.  Files specified via an environment variable are loaded after
+    the files passed to this class.
+
+    Mandatory files can be prefixed with ``!``.  Optional files will be ignored
+    if they don't exist.
+
+    Args:
+        formats: A dict mapping glob patterns to :class:`FileFormat` instances.
+        files: A list of filenames to try to load.
+        section: The name of the config file section to load data from.
+        env_var: Name of the environment variable that may hold additional
+            file paths.  If it is ``None``, only files from *files* will be
+            loaded.
+    """
+
     def __init__(
         self,
-        files: Iterable[Union[str, Path]],
-        section: Union[str, _Auto],
-        env_var: Union[None, str, _Auto],
         formats: Dict[str, FileFormat],
+        files: Iterable[Union[str, Path]],
+        section: str,
+        env_var: Optional[str],
     ):
         self.files = files
         self.section = section
         self.env_var = env_var
         self.formats = formats
 
-    def load(self, options: OptionList, appname: str) -> SettingsDict:
+    def load(self, options: OptionList) -> SettingsDict:
         """
-        Loads settings from toml files.
-
-        Settings of multiple files will be merged.  The last file has the highest
-        precedence.
+        Load settings for the given options.
 
         Args:
             options: The list of available settings.
-            appname: Appname to derive *section* and *var_name* from.
-            files: A list of filenames to try to load.
-            section: The name of the TOML file section to load data from.  Will be
-            :code:`{appname}` if it is :data:`AUTO`.
-            var_name: Name of the environment variable that may hold additional
-            file paths.  Will be :code:`{APPNAME}_SETTINGS` if it is
-            :data:`AUTO`.
 
-        Returns:
+        Return:
             A dict with the loaded settings.
-        """
-        files = self.files
-        section = self.section
-        var_name = self.env_var
-        formats = self.formats
-        section = appname if isinstance(section, _Auto) else section
-        var_name = (
-            f"{appname.upper()}_SETTINGS".replace("-", "_")
-            if isinstance(var_name, _Auto)
-            else var_name
-        )
 
-        paths = self._get_config_filenames(files, var_name)
-        settings: Dict[str, Any] = {}
+        Raise:
+            UnknownFormat: When no :class:`FileFormat` is configured for a
+                loaded file.
+            ConfigFileNotFoundError: If *path* does not exist.
+            ConfigFileLoadError: If *path* cannot be read/loaded/decoded.
+        """
+        paths = self._get_config_filenames(self.files, self.env_var)
+        merged_settings: Dict[str, Any] = {}
         for path in paths:
-            for pattern, parser in formats.items():
+            for pattern, parser in self.formats.items():
                 if fnmatch(path.name, pattern):
-                    loaded_settings = parser.load(options, path, section)
-                    _merge_dicts(settings, loaded_settings)
+                    settings = parser.load_file(options, path, self.section)
+                    settings = clean_settings(settings, options, path)
+                    _merge_dicts(merged_settings, settings)
                     break
             else:
-                raise RuntimeError(f"Nor parser configured for: {path}")
-        return settings
+                raise UnknownFormatError(f"Nor loader configured for: {path}")
+        return merged_settings
 
     @staticmethod
     def _get_config_filenames(
@@ -172,19 +180,24 @@ class FileLoader:
         config_files_var: Optional[str],
     ) -> List[Path]:
         """
-        Concatenates *config_files* and files from env var *config_files_var*.
+        Concatenate *config_files* and files from env var *config_files_var*.
 
         Mandatory files can be prefixed with ``!``.  Optional files will be
         stripped from the result if they don't exist.
 
         Args:
             config_files: A list of paths to settings files.
-            config_files_var: The name of the environment variable that may held
-            additional settings file names.
+            config_files_var: The name of the environment variable that may
+            hold additional config file names.
 
-        Returns:
-            A list of paths to existing config files.  Paths of files that don't
-            exist are stripped from the input.
+        Return:
+            A list of paths to existing config files.  Paths of files that
+            don't exist are stripped from the input.
+
+        Raise:
+            ConfigFileNotFound: When a mandatory file does not exist.
+            ConfigFileNotReadable: When a config file exists but cannot be
+                read.
         """
         candidates = [(False, str(f)) for f in config_files]
         if config_files_var:
@@ -222,38 +235,84 @@ class FileLoader:
 
 
 class EnvLoader:
-    def __init__(self, prefix: Union[None, str, _Auto]):
-        self._prefix = prefix
+    """
+    Loads settings from environment variables.
 
-    def load(self, options: OptionList, appname: str) -> SettingsDict:
+    Args:
+        prefix: Prefix for environment variables, e.g., ``MYAPP_``.
+    """
+
+    def __init__(self, prefix: str):
+        self.prefix = prefix
+
+    def load(self, options: OptionList) -> SettingsDict:
         """
-        Loads settings from environment variables.
+        Load settings for the given options.
 
         Args:
             options: The list of available settings.
-            appname: Appname to derive *prefix* from.
-            prefix: Prefix for environment variables.  Will be
-              :code:`{APPNAME_}` if it is :data:`Auto`.  If it is ``None``,
-              no vars will be loaed.
 
-        Returns:
+        Return:
             A dict with the loaded settings.
         """
-        prefix = self._prefix
-        if prefix is None:
-            LOGGER.debug("Loading settings from env vars is disabled.")
-            return {}
-        prefix = f"{appname.upper()}_" if isinstance(prefix, _Auto) else prefix
+        prefix = self.prefix
         LOGGER.debug(f"Looking for env vars with prefix: {prefix}")
 
         env = os.environ
         values: Dict[str, Any] = {}
-        for path, _field, _cls in options:
-            varname = f"{prefix}{path.upper().replace('.', '_')}"
+        for o in options:
+            varname = f"{prefix}{o.path.upper().replace('.', '_')}"
             if varname in env:
                 LOGGER.debug(f"Env var found: {varname}")
-                _set_path(values, path, env[varname])
+                _set_path(values, o.path, env[varname])
             else:
                 LOGGER.debug(f"Env var not found: {varname}")
 
         return values
+
+
+def clean_settings(
+    settings: SettingsDict, options: OptionList, source: Any
+) -> Dict[str, Any]:
+    """
+    Recursively check settings for invalid entries and raise an error.
+
+    An error is not raised until all options have been checked.  It then lists
+    all invalid options that have been found.
+
+    Args:
+        settings: The settings to be cleaned.
+        options: The list of available settings.
+        source: Source of the settings (e.g., path to a config file).
+                It should have a useful string representation.
+
+    Raises:
+        InvalidOptionError: If invalid settings have been found.
+    """
+    invalid_paths = []
+    valid_paths = {o.path for o in options}
+    cleaned: Dict[str, Any] = {}
+
+    def _iter_dict(d: Mapping[str, Any], prefix: str) -> None:
+        for key, val in d.items():
+            key = key.replace("-", "_")
+            path = f"{prefix}{key}"
+
+            if path in valid_paths:
+                _set_path(cleaned, path, val)
+                continue
+
+            if isinstance(val, dict):
+                _iter_dict(val, f"{path}.")
+            else:
+                invalid_paths.append(path)
+
+    _iter_dict(settings, "")
+
+    if invalid_paths:
+        joined_paths = ", ".join(sorted(invalid_paths))
+        raise InvalidOptionsError(
+            f"Invalid options found in {source}: {joined_paths}"
+        )
+
+    return cleaned

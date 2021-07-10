@@ -1,10 +1,10 @@
-from typing import Any, Dict, List, Tuple, TypeVar
+from typing import Any, List, MutableMapping, TypeVar
 
 from attr import Attribute, frozen
 
 
 T = TypeVar("T")
-SettingsDict = Dict[str, Any]
+SettingsDict = MutableMapping[str, Any]
 
 
 class _Auto:

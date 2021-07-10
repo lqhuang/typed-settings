@@ -16,13 +16,13 @@ class GlobalSettings:
     ssl_verify: bool = True
 
 
-global_settings = ts.load_settings(
+global_settings = ts.load(
     GlobalSettings,
     appname="gitlab",
     config_files=["python-gitlab.toml"],
     config_file_section="global",
 )
-gitlab_settings = ts.load_settings(
+gitlab_settings = ts.load(
     GitlabSettings,
     appname="gitlab",
     config_files=["python-gitlab.toml"],
