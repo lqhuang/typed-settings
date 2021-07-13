@@ -10,7 +10,7 @@
 
 
 Typed Settings allows you to cleanly structure your settings with [attrs](https://www.attrs.org) classes.
-Type annotations will be used to automatically convert values to the proper type.
+Type annotations will be used to automatically convert values to the proper type (using [cattrs](https://cattrs.readthedocs.io)).
 You can currently load settings from these sources:
 
 - TOML files (multiple, if you want to).  Paths can be statically specified or dynamically set via an environment variable.
@@ -48,7 +48,7 @@ import typed_settings as ts
 class Settings:
     option: str
 
-settings = ts.load_settings(cls=Settings, appname="example")
+settings = ts.load(cls=Settings, appname="example")
 print(settings)
 ```
 
@@ -72,7 +72,7 @@ import typed_settings as ts
 @ts.settings
 class Host:
     name: str
-    port: int = ts.option(converter=int)
+    port: int
 
 @ts.settings(kw_only=True)
 class Settings:
@@ -80,7 +80,7 @@ class Settings:
     endpoint: str
     retries: int = 3
 
-settings = ts.load_settings(
+settings = ts.load(
     cls=Settings, appname='example', config_files=['settings.toml']
 )
 print(settings)
@@ -143,15 +143,23 @@ Settings(a_str='spam', an_int=1)
 
 - Settings are defined as type-hinted `attrs` classes.
 
-- Typed Settings’ `settings` decorator adds automatic type converstion for option values and can optionally make your settings frozen (immutable).
+- Typed Settings’ `settings` decorator is an alias to `attr.define` and can optionally make your settings frozen (immutable).
+
+- `option()` and `secret()` are wrappers around `attr.field()` and add meta data handling for click options.
+
+- `secret()` attributes have string representation that masks the actual value, so that you can safely print or log settings instances.
 
 - Settings can currently be loaded from:
 
   - TOML files
   - Environment variables
-  - click Commaoptions
+  - *click* command line options
 
-- Paths to settings files can be “hard-coded” into your code or specified via an environment variable.
+- Paths to settings files can be
+
+  - “hard-coded” into your code,
+  - dynamically searched from the CWD upwards via `find(filename)`, or
+  - specified via an environment variable.
 
 - Order of precedence:
 

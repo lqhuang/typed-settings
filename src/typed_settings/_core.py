@@ -20,7 +20,7 @@ import attr
 import toml  # type: ignore
 
 from ._dict_utils import FieldList, _deep_fields, _merge_dicts, _set_path
-from .attrs import METADATA_KEY
+from .attrs import METADATA_KEY, converter
 
 
 LOGGER = logging.getLogger(METADATA_KEY)
@@ -126,7 +126,7 @@ def load(
         config_files_var=config_files_var,
         env_prefix=env_prefix,
     )
-    return cls(**settings)  # type: ignore
+    return converter.structure_attrs_fromdict(settings, cls)
 
 
 def load_settings(*args, **kwargs):

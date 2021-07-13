@@ -12,7 +12,7 @@ Typed Settings
 ----
 
 Typed Settings allows you to cleanly structure your settings with `attrs <https://www.attrs.org>`_ classes.
-Type annotations will be used to automatically convert values to the proper type.
+Type annotations will be used to automatically convert values to the proper type (using `cattrs <https://cattrs.readthedocs.io>`_).
 You can currently load settings from these sources:
 
 - TOML files (multiple, if you want to).  Paths can be statically specified or dynamically set via an environment variable.
@@ -51,10 +51,10 @@ This is a very simple example that demonstrates how you can load settings from e
        option_one: str
        option_two: int
 
-   settings = ts.load_settings(
+   settings = ts.load(
        cls=Settings,
        appname="example",
-       config_files=["settings.py"],  # Paths can also be set via env var
+       config_files=ts.find("settings.toml"),  # Paths can also be set via env var
    )
    print(settings)
 

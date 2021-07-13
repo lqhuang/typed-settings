@@ -218,12 +218,15 @@ Generic Types:
 .. _field transformer: https://www.attrs.org/en/stable/extending.html
                        #automatic-field-transformation-and-modification
 
+*Deprecated:* Use ``cattr.structure()`` instead.
 """
 
 
 def auto_serialize(_inst, _attrib, value):
     """
     Inverse hook to :func:`auto_convert` for use with :func:`attrs.asdict()`.
+
+    *Deprecated:* Use ``cattr.unstructure()`` instead.
     """
     if isinstance(value, datetime):
         return datetime.isoformat(value)

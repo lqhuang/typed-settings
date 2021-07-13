@@ -1,10 +1,10 @@
 from datetime import datetime
 from enum import Enum
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any, Dict, List, Optional, Tuple
 
 import pytest
 
-from typed_settings.attrs import option, secret, settings
+from typed_settings.attrs import fromdict, option, secret, settings
 
 
 class LeEnum(Enum):
@@ -74,9 +74,6 @@ class TestAttrExtensions:
         (Optional[S], None, None),
         (Optional[S], {"u": "u", "p": "p"}, S("u", "p")),
         (Optional[LeEnum], "Le Spam", LeEnum.spam),
-        (Union[None, S, List[str]], None, None),
-        (Union[None, S, List[str]], {"u": "u", "p": "p"}, S("u", "p")),
-        (Union[None, S, List[str]], [1, 2], ["1", "2"]),
     ],
 )
 def test_supported_types(typ, value, expected):
@@ -90,4 +87,5 @@ def test_supported_types(typ, value, expected):
     class S:
         opt: typ
 
-    assert S(value).opt == expected
+    inst = fromdict({"opt": value}, S)
+    assert inst.opt == expected

@@ -13,7 +13,7 @@ import click
 
 from ._core import AUTO, T, _Auto, _load_settings
 from ._dict_utils import _deep_fields, _get_path, _merge_dicts, _set_path
-from .attrs import METADATA_KEY, _SecretRepr
+from .attrs import METADATA_KEY, _SecretRepr, fromdict
 from .attrs._compat import get_args, get_origin
 
 
@@ -75,7 +75,7 @@ def click_options(
         def new_func(*args, **kwargs):
             ctx = click.get_current_context()
             _merge_dicts(settings, ctx.obj.get("settings"))
-            ctx.obj["settings"] = cls(**settings)
+            ctx.obj["settings"] = fromdict(settings, cls)
             return f(ctx.obj["settings"], *args, **kwargs)
 
         return update_wrapper(new_func, f)

@@ -2,11 +2,13 @@
 Helpers for and additions to attrs.
 """
 from datetime import datetime
-from functools import partial
+from enum import Enum
+from pathlib import Path
 from typing import TYPE_CHECKING, Any, Callable, Dict, Optional, overload
 
 import attr
 import attr._make
+import cattr
 
 
 if TYPE_CHECKING:
@@ -18,11 +20,19 @@ if TYPE_CHECKING:
         _ValidatorArgType,
     )
 
-from .converters import to_bool, to_dt
+from .converters import to_bool, to_dt, to_enum
 from .hooks import make_auto_converter
 
 
 METADATA_KEY = "typed_settings"
+
+
+converter = cattr.GenConverter()
+converter.register_structure_hook(bool, lambda v, t: to_bool(v))
+converter.register_structure_hook(datetime, lambda v, t: to_dt(v))
+converter.register_structure_hook(Enum, lambda v, t: to_enum(t)(v))
+converter.register_structure_hook(Path, lambda v, t: Path(v))
+fromdict = converter.structure_attrs_fromdict
 
 
 class _SecretRepr:
@@ -38,8 +48,8 @@ SECRET = _SecretRepr()
 
 auto_convert = make_auto_converter({bool: to_bool, datetime: to_dt})
 
-settings = partial(attr.define, field_transformer=auto_convert)
-"""An alias to :func:`attr.field()`"""
+settings = attr.define
+"""An alias to :func:`attr.define()`"""
 
 
 @overload

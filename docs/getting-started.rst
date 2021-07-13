@@ -35,11 +35,11 @@ This decorator is an alias to :func:`attr.define()`, but it additionally defines
    >>>
    >>> @ts.settings
    ... class Settings:
-   ...     host: str = ""
-   ...     port: int = 0
+   ...     username: str = ""
+   ...     password: str = ts.secret(default="")
    ...
-   >>> Settings("example.com", "433")
-   Settings(host='example.com', port=433)
+   >>> Settings("monty", "S3cr3t!")
+   Settings(username='monty', password=***)
 
 As you can see, the string ``"433"`` has automatically been converted into an int when we created the instance.
 
@@ -47,12 +47,12 @@ Settings should (but are not required to) define defaults for all options.
 If an option has no default and no config value can be found for it, attrs will raise an error.
 
 In real life, you don't manually instantiate your settings.
-Instead, you call the function :func:`load_settings()`:
+Instead, you call the function :func:`load()`:
 
 .. code-block:: python
 
-   >>> ts.load_settings(Settings, appname="myapp")
-   Settings(host='', port=0)
+   >>> ts.load(Settings, appname="myapp")
+   Settings(username='', password=***)
 
 The first argument of that function is your settings class and an instance of that class is returned by it.
 The second argument is your *appname*.
@@ -75,10 +75,10 @@ Typed Settings will automatically look for environment variables matching :samp:
    >>>
    >>> # Temporarily set some environment variables:
    >>> monkeypatch = getfixture("monkeypatch")
-   >>> monkeypatch.setattr(os, "environ", {"MYAPP_HOST": "env-host", "MYAPP_PORT": "443"})
+   >>> monkeypatch.setattr(os, "environ", {"MYAPP_USERNAME": "monty", "MYAPP_PASSWORD": "S3cr3t!"})
    >>>
-   >>> ts.load_settings(Settings, appname="myapp")
-   Settings(host='env-host', port=443)
+   >>> ts.load(Settings, appname="myapp")
+   Settings(username='monty', password=***)
    >>>
    >>> monkeypatch.undo()
 
@@ -101,17 +101,37 @@ Typed Settings uses TOML files for this (`Why?`_) and looks for the *appname* se
    >>> settings_file = tmp_path.joinpath("settings.toml")
    >>> settings_file.write_text("""
    ... [myapp]
-   ... host = "file-host"
-   ... port = 22
+   ... username = "monty"
+   ... password = "S3cr3t!"
    ... """)
-   38
-   >>> ts.load_settings(Settings, appname="myapp", config_files=[settings_file])
-   Settings(host='file-host', port=22)
+   49
+   >>> ts.load(Settings, appname="myapp", config_files=[settings_file])
+   Settings(username='monty', password=***)
 
 You can also load settings from multiple files.
 Subsequent files override the settings of their predecessors.
 
 .. _why?: https://www.python.org/dev/peps/pep-0518/#other-file-formats
+
+
+Dynamically Finding Config Files
+================================
+
+Sometimes, tools do not know the location of their config file in advance.
+Take `black <https://black.readthedocs.io>`_, for example, which searches for :file:`pyproject.toml` from the current working dir upwards until it reaches the project or file system root.
+
+You can do the same with Typed Settings:
+
+.. code-block:: python
+
+   >>> monkeypatch.chdir(tmp_path)
+   >>>
+   >>> ts.load(Settings, appname="myapp", config_files=[ts.find("settings.toml")])
+   Settings(username='monty', password=***)
+   >>>
+   >>> monkeypatch.undo()
+
+:func:`~typed_settings.find()` returns a single path, so you can combine its result with a static list of files as shown in the section above.
 
 
 Dynamically Specifying Config Files
@@ -126,8 +146,8 @@ The variable can contain one ore more paths separated by a colon (``:``):
 
    >>> monkeypatch.setenv("MYAPP_SETTINGS", str(settings_file))
    >>>
-   >>> ts.load_settings(Settings, appname="myapp")
-   Settings(host='file-host', port=22)
+   >>> ts.load(Settings, appname="myapp")
+   Settings(username='monty', password=***)
    >>>
    >>> monkeypatch.undo()
 
@@ -155,6 +175,11 @@ Your CLI function receives all options as the single instance of your settings c
    >>> import click
    >>> import click.testing
    >>>
+   >>> @ts.settings
+   ... class Settings:
+   ...     username: str = ts.option(help="Your username")
+   ...     password: str = ts.secret(default="", help="Your password")
+   >>>
    >>> @click.command()
    ... @ts.click_options(Settings, "myapp")
    ... def cli(settings):
@@ -166,12 +191,12 @@ Your CLI function receives all options as the single instance of your settings c
    Usage: cli [OPTIONS]
    <BLANKLINE>
    Options:
-     --host TEXT     [default: ]
-     --port INTEGER  [default: 0]
-     --help          Show this message and exit.
+     --username TEXT  Your username  [required]
+     --password TEXT  Your password  [default: ***]
+     --help           Show this message and exit.
    <BLANKLINE>
-   >>> print(runner.invoke(cli, ["--host=cli-host", "--port=23"]).output)
-   Settings(host='cli-host', port=23)
+   >>> print(runner.invoke(cli, ["--username=guido", "--password=1234"]).output)
+   Settings(username='guido', password=***)
    <BLANKLINE>
 
 .. _click: https://click.palletsprojects.com
