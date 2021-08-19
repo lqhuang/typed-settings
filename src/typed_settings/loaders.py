@@ -51,14 +51,11 @@ class FileFormat(Protocol):
     Protocol for file format loaders for the :class:`FileLoader`.
     """
 
-    def load_file(
-        self, options: OptionList, path: Path, section: str
-    ) -> SettingsDict:
+    def load_file(self, path: Path, section: str) -> SettingsDict:
         """
         Loads settings from a given file and return them as a dict.
 
         Args:
-            options: The list of available settings.
             path: The path to the config file.
             section: The config file section to load settings from.
 
@@ -73,16 +70,12 @@ class FileFormat(Protocol):
 
 
 class PythonFormat:
-    def load_file(
-        self, path: Path, section: str
-    ) -> SettingsDict:
+    def load_file(self, path: Path, section: str) -> SettingsDict:
         return {}
 
 
 class TomlFormat:
-    def load_file(
-        self, path: Path, section: str
-    ) -> SettingsDict:
+    def load_file(self, path: Path, section: str) -> SettingsDict:
         """
         Load settings from a TOML file and return them as a dict.
 
@@ -138,7 +131,7 @@ class FileLoader:
         formats: Dict[str, FileFormat],
         files: Iterable[Union[str, Path]],
         section: str,
-        env_var: Optional[str],
+        env_var: Optional[str] = None,
     ):
         self.files = files
         self.section = section
@@ -160,19 +153,43 @@ class FileLoader:
                 loaded file.
             ConfigFileNotFoundError: If *path* does not exist.
             ConfigFileLoadError: If *path* cannot be read/loaded/decoded.
+            InvalidOptionError: If invalid settings have been found.
         """
         paths = self._get_config_filenames(self.files, self.env_var)
         merged_settings: Dict[str, Any] = {}
         for path in paths:
-            for pattern, parser in self.formats.items():
-                if fnmatch(path.name, pattern):
-                    settings = parser.load_file(options, path, self.section)
-                    settings = clean_settings(settings, options, path)
-                    _merge_dicts(merged_settings, settings)
-                    break
-            else:
-                raise UnknownFormatError(f"Nor loader configured for: {path}")
+            settings = self._load_file(path, options)
+            _merge_dicts(merged_settings, settings)
         return merged_settings
+
+    def _load_file(self, path: Path, options: OptionList) -> Dict[str, Any]:
+        """
+        Load a file and return its cleaned contents
+
+        Args:
+            path: Path to the config file
+            options: The list of available settings.
+
+        Return:
+            A dict with the cleaned settings.
+
+        Raise:
+            UnknownFormat: When no :class:`FileFormat` is configured for
+                *path*.
+            ConfigFileNotFoundError: If *path* does not exist.
+            ConfigFileLoadError: If *path* cannot be read/loaded/decoded.
+            InvalidOptionError: If invalid settings have been found.
+        """
+        # "clean_settings()" must be called for each loaded file individually
+        # because of the "-"/"_" normalization.  This also allows us to tell
+        # the user the exact file that contains errors.
+        for pattern, parser in self.formats.items():
+            if fnmatch(path.name, pattern):
+                settings = parser.load_file(path, self.section)
+                settings = clean_settings(settings, options, path)
+                return settings
+
+        raise UnknownFormatError(f"Nor loader configured for: {path}")
 
     @staticmethod
     def _get_config_filenames(
@@ -221,9 +238,10 @@ class FileLoader:
                 if is_mandatory:
                     LOGGER.error(f"Mandatory config file not found: {fname}")
                     raise
-                elif from_envvar:
+                if from_envvar:
                     LOGGER.warning(
-                        f"Config file from {config_files_var} not found: {fname}"
+                        f"Config file from {config_files_var} not found: "
+                        f"{fname}"
                     )
                 else:
                     LOGGER.info(f"Config file not found: {fname}")

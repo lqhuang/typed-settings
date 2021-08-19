@@ -11,6 +11,19 @@ from typed_settings._dict_utils import _deep_options
 from typed_settings.attrs import option, settings
 
 
+@settings(frozen=True)
+class Host:
+    name: str
+    port: int = option(converter=int)
+
+
+@settings(frozen=True)
+class Settings:
+    host: Host
+    url: str
+    default: int = 3
+
+
 class TestAuto:
     """Tests for the AUTO sentinel."""
 
