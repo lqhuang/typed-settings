@@ -9,6 +9,7 @@ from attr import field, frozen
 from typed_settings import _core
 from typed_settings._dict_utils import _deep_options
 from typed_settings.attrs import option, settings
+from typed_settings.loaders import Loader, EnvLoader, FileLoader, TomlFormat
 
 
 @settings(frozen=True)
@@ -24,16 +25,6 @@ class Settings:
     default: int = 3
 
 
-class TestAuto:
-    """Tests for the AUTO sentinel."""
-
-    def test_is_singleton(self):
-        assert _core.AUTO is _core._Auto()
-
-    def test_str(self):
-        assert str(_core.AUTO) == "AUTO"
-
-
 class TestLoadSettings:
     """Tests for load_settings()."""
 
@@ -43,30 +34,55 @@ class TestLoadSettings:
         name = "example.com"
         port = 443
     """
+
     @pytest.fixture
-    def config_file(self, tmp_path: Path) -> Path:
+    def config_files(self, tmp_path: Path) -> List[Path]:
         config_file = tmp_path.joinpath("settings.toml")
         config_file.write_text(self.config)
-        return config_file
+        return [config_file]
 
     @pytest.fixture
-    def loaders(self, config_file: Path) -> List[Loader]:
-        loaders=[
-            FileLoader(
-                files=[config_file],
-                formats={"*.toml": TomlFormat()},
-            ),
-            EnvLoader(prefix=env_prefix),
-        ],
-
-    def test_load_settings(self, tmp_path, monkeypatch):
-        """Test basic functionality."""
+    def env_vars(self, monkeypatch: pytest.MonkeyPatch) -> None:
         monkeypatch.setenv("EXAMPLE_HOST_PORT", "42")
 
-        settings = _core.load(
+    @pytest.fixture
+    def loaders(self, config_files: List[Path], env_vars: None) -> List[Loader]:
+        return [
+            FileLoader(
+                formats={"*.toml": TomlFormat()},
+                files=config_files,
+                section="example",
+            ),
+            EnvLoader(prefix="EXAMPLE_"),
+        ]
+
+    def test__load_settings(self, loaders: List[Loader]):
+        """
+        "_load_settings()" is the internal core loader and takes a list of
+        options instead of a normal settings class.  It returns a dict and
+        not a settings instance.
+        """
+        settings = _core._load_settings(
+            options=_deep_options(Settings),
+            loaders=loaders,
+        )
+        assert settings == {
+            "url": "https://example.com",
+            "default": 3,  # This is from the cls
+            "host": {
+                "name": "example.com",
+                "port": "42",  # Value not yet converted
+            },
+        }
+
+    def test_load_settings(self, loaders: List[Loader]):
+        """
+        The "load_settings()" works like "_load_settings" but takes a settings
+        class and returns an instance of it.
+        """
+        settings = _core.load_settings(
             cls=Settings,
-            appname="example",
-            config_files=[config_file],
+            loaders=loaders,
         )
         assert settings == Settings(
             url="https://example.com",
@@ -77,32 +93,67 @@ class TestLoadSettings:
             ),
         )
 
-    def test__load_settings(self, tmp_path, monkeypatch):
+    def test_load(self, config_files: List[Path], env_vars: None):
         """
-        The _load_settings() can be easier reused.  It takes the options lists
-        and returns the settings as dict that can still be updated.
+        The "load()" shortcut automaticaly defines a file loader and an
+        env loader.  Section and env var names are derived from the app name.
         """
-        monkeypatch.setenv("EXAMPLE_HOST_PORT", "42")
-
-        config_file = tmp_path.joinpath("settings.toml")
-        config_file.write_text(self.config)
-
-        settings = _core._load_settings(
-            options=_deep_options(Settings),
+        settings = _core.load(
+            cls=Settings,
             appname="example",
-            config_files=[config_file],
-            config_file_section=_core.AUTO,
-            config_files_var=_core.AUTO,
-            env_prefix=_core.AUTO,
+            config_files=config_files,
         )
-        assert settings == {
-            "url": "https://example.com",
-            "default": 3,  # This is from the cls
-            "host": {
-                "name": "example.com",
-                "port": "42",  # Value not yet converted
-            },
-        }
+        assert settings == Settings(
+            url="https://example.com",
+            default=3,
+            host=Host(
+                name="example.com",
+                port=42,
+            ),
+        )
+
+    #     def test_load_settings_explicit_config(self, tmp_path, monkeypatch):
+    #         """
+    #         The automatically derived config section name and settings files var
+    #         name can be overriden.
+    #         """
+    #         config_file = tmp_path.joinpath("settings.toml")
+    #         config_file.write_text(
+    #             """[le-section]
+    #             spam = "eggs"
+    #         """
+    #         )
+    #
+    #         monkeypatch.setenv("LE_SETTINGS", str(config_file))
+    #
+    #         @settings(frozen=True)
+    #         class Settings:
+    #             spam: str = ""
+    #
+    #         settings = _core._from_toml(
+    #             _deep_options(Settings),
+    #             files=[],
+    #             section="le-section",
+    #             var_name="LE_SETTINGS",
+    #         )
+    #         assert settings == {"spam": "eggs"}
+    #
+    #     def test_env_var_dash_underscore(self, monkeypatch, tmp_path):
+    #         """
+    #         Dashes in the appname get replaced with underscores for the settings
+    #         fiels var name.
+    #         """
+    #
+    #         @settings(frozen=True)
+    #         class Settings:
+    #             option: bool = True
+    #
+    #         sf = tmp_path.joinpath("settings.py")
+    #         sf.write_text("[a-b]\noption = false\n")
+    #         monkeypatch.setenv("A_B_SETTINGS", str(sf))
+    #
+    #         result = _core.load(Settings, appname="a-b")
+    #         assert result == Settings(option=False)
 
     def test_load_nested_settings_by_default(self):
         """

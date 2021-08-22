@@ -25,7 +25,7 @@ from .exceptions import (
 from .types import OptionList, SettingsDict
 
 
-LOGGER = logging.getLogger(__name__)
+LOGGER = logging.getLogger("typed_settings")
 
 
 class Loader(Protocol):

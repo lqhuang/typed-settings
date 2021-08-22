@@ -6,12 +6,11 @@ from pathlib import Path
 from typing import Any, Dict, Iterable, List, Type, Union
 
 import attr
-import cattr
 
 from ._dict_utils import _deep_options, _merge_dicts, _set_path
 from .attrs import METADATA_KEY
 from .loaders import EnvLoader, FileLoader, Loader, TomlFormat
-from .types import AUTO, OptionList, SettingsDict, T, _Auto
+from .types import AUTO, OptionList, T, _Auto
 
 
 LOGGER = logging.getLogger(METADATA_KEY)
@@ -82,42 +81,50 @@ def load(
         ValueError: If config values don't meet their requirements.
         ValueError: If a config file contains an invalid option.
     """
-        # section = appname if isinstance(section, _Auto) else section
-        # var_name = (
-        #     f"{appname.upper()}_SETTINGS".replace("-", "_")
-        #     if isinstance(var_name, _Auto)
-        #     else var_name
-        # )
+    loaders: List[Loader] = []
 
-        # prefix = self._prefix
-        # if prefix is None:
-        #     LOGGER.debug("Loading settings from env vars is disabled.")
-        #     return {}
-        # prefix = f"{appname.upper()}_" if isinstance(prefix, _Auto) else prefix
+    section = (
+        appname
+        if isinstance(config_file_section, _Auto)
+        else config_file_section
+    )
+    var_name = (
+        f"{appname.upper()}_SETTINGS".replace("-", "_")
+        if isinstance(config_files_var, _Auto)
+        else config_files_var
+    )
+    loaders.append(
+        FileLoader(
+            files=config_files,
+            env_var=var_name,
+            section=section,
+            formats={"*.toml": TomlFormat()},
+        )
+    )
+
+    if env_prefix is None:
+        LOGGER.debug("Loading settings from env vars is disabled.")
+    else:
+        prefix = (
+            f"{appname.upper()}_"
+            if isinstance(env_prefix, _Auto)
+            else env_prefix
+        )
+        loaders.append(EnvLoader(prefix=prefix))
+
     settings = _load_settings(
         options=_deep_options(cls),
-        appname=appname,
-        loaders=[
-            FileLoader(
-                files=config_files,
-                env_var=config_files_var,
-                section=config_file_section,
-                formats={"*.toml": TomlFormat()},
-            ),
-            EnvLoader(prefix=env_prefix),
-        ],
+        loaders=loaders,
     )
     return cls(**settings)  # type: ignore
 
 
 def load_settings(
     cls: Type[T],
-    appname: str,
     loaders: List[Loader],
 ) -> T:
     settings = _load_settings(
         options=_deep_options(cls),
-        appname=appname,
         loaders=loaders,
     )
     return cls(**settings)  # type: ignore
@@ -126,7 +133,6 @@ def load_settings(
 def _load_settings(
     *,
     options: OptionList,
-    appname: str,
     loaders: List[Loader],
 ) -> Dict[str, Any]:
     """
@@ -148,7 +154,7 @@ def _load_settings(
             continue
         _set_path(settings, opt.path, opt.field.default)
 
-    loaded_settings = [loader.load(options, appname) for loader in loaders]
+    loaded_settings = [loader.load(options) for loader in loaders]
 
     for ls in loaded_settings:
         _merge_dicts(settings, ls)
