@@ -1,21 +1,19 @@
 import logging
-from itertools import product
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import List
 
 import pytest
-from attr import field, frozen
 
 from typed_settings import _core
 from typed_settings._dict_utils import _deep_options
 from typed_settings.attrs import option, settings
-from typed_settings.loaders import Loader, EnvLoader, FileLoader, TomlFormat
+from typed_settings.loaders import EnvLoader, FileLoader, Loader, TomlFormat
 
 
 @settings(frozen=True)
 class Host:
     name: str
-    port: int = option(converter=int)
+    port: int
 
 
 @settings(frozen=True)
@@ -46,7 +44,9 @@ class TestLoadSettings:
         monkeypatch.setenv("EXAMPLE_HOST_PORT", "42")
 
     @pytest.fixture
-    def loaders(self, config_files: List[Path], env_vars: None) -> List[Loader]:
+    def loaders(
+        self, config_files: List[Path], env_vars: None
+    ) -> List[Loader]:
         return [
             FileLoader(
                 formats={"*.toml": TomlFormat()},
@@ -108,52 +108,127 @@ class TestLoadSettings:
             default=3,
             host=Host(
                 name="example.com",
-                port=42,
+                port=42,  # Loaded from env var
             ),
         )
 
-    #     def test_load_settings_explicit_config(self, tmp_path, monkeypatch):
-    #         """
-    #         The automatically derived config section name and settings files var
-    #         name can be overriden.
-    #         """
-    #         config_file = tmp_path.joinpath("settings.toml")
-    #         config_file.write_text(
-    #             """[le-section]
-    #             spam = "eggs"
-    #         """
-    #         )
-    #
-    #         monkeypatch.setenv("LE_SETTINGS", str(config_file))
-    #
-    #         @settings(frozen=True)
-    #         class Settings:
-    #             spam: str = ""
-    #
-    #         settings = _core._from_toml(
-    #             _deep_options(Settings),
-    #             files=[],
-    #             section="le-section",
-    #             var_name="LE_SETTINGS",
-    #         )
-    #         assert settings == {"spam": "eggs"}
-    #
-    #     def test_env_var_dash_underscore(self, monkeypatch, tmp_path):
-    #         """
-    #         Dashes in the appname get replaced with underscores for the settings
-    #         fiels var name.
-    #         """
-    #
-    #         @settings(frozen=True)
-    #         class Settings:
-    #             option: bool = True
-    #
-    #         sf = tmp_path.joinpath("settings.py")
-    #         sf.write_text("[a-b]\noption = false\n")
-    #         monkeypatch.setenv("A_B_SETTINGS", str(sf))
-    #
-    #         result = _core.load(Settings, appname="a-b")
-    #         assert result == Settings(option=False)
+    def test_explicit_section(self, tmp_path: Path):
+        """
+        The automatically derived config section name name can be overriden.
+        """
+        config_file = tmp_path.joinpath("settings.toml")
+        config_file.write_text(
+            """[le-section]
+            spam = "eggs"
+        """
+        )
+
+        @settings(frozen=True)
+        class Settings:
+            spam: str = ""
+
+        result = _core.load(
+            cls=Settings,
+            appname="example",
+            config_files=[config_file],
+            config_file_section="le-section",
+        )
+        assert result == Settings(spam="eggs")
+
+    def test_explicit_files_var(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ):
+        """
+        The automatically derived settings files var name can be overriden.
+        """
+        config_file = tmp_path.joinpath("settings.toml")
+        config_file.write_text(
+            """[example]
+            spam = "eggs"
+        """
+        )
+
+        monkeypatch.setenv("LE_SETTINGS", str(config_file))
+
+        @settings(frozen=True)
+        class Settings:
+            spam: str = ""
+
+        result = _core.load(
+            cls=Settings,
+            appname="example",
+            config_files=[],
+            config_files_var="LE_SETTINGS",
+        )
+        assert result == Settings(spam="eggs")
+
+    def test_no_files_var(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ):
+        """
+        Setting config files via an env var can be disabled.
+        """
+        config_file = tmp_path.joinpath("settings.toml")
+        config_file.write_text(
+            """[example]
+            spam = "eggs"
+        """
+        )
+
+        monkeypatch.setenv("EXAMPLE_SETTINGS", str(config_file))
+
+        @settings(frozen=True)
+        class Settings:
+            spam: str = ""
+
+        result = _core.load(
+            cls=Settings,
+            appname="example",
+            config_files=[],
+            config_files_var=None,
+        )
+        assert result == Settings(spam="")
+
+    def test_env_var_dash_underscore(self, monkeypatch, tmp_path):
+        """
+        Dashes in the appname get replaced with underscores for the settings
+        fiels var name.
+        """
+
+        @settings(frozen=True)
+        class Settings:
+            option: bool = True
+
+        sf = tmp_path.joinpath("settings.toml")
+        sf.write_text("[a-b]\noption = false\n")
+        monkeypatch.setenv("A_B_SETTINGS", str(sf))
+
+        result = _core.load(Settings, appname="a-b")
+        assert result == Settings(option=False)
+
+    def test_explicit_env_prefix(self, monkeypatch: pytest.MonkeyPatch):
+        monkeypatch.setenv("P_SPAM", "spam")
+
+        @settings(frozen=True)
+        class Settings:
+            spam: str = ""
+
+        result = _core.load(
+            cls=Settings, appname="example", config_files=[], env_prefix="P_"
+        )
+        assert result == Settings(spam="spam")
+
+    def test_disable_env_vars(self, monkeypatch):
+        monkeypatch.setenv("EXAMPLE_SPAM", "spam")
+
+        @settings(frozen=True)
+        class Settings:
+            spam: str = ""
+
+        result = _core.load(
+            cls=Settings, appname="example", config_files=[], env_prefix=None
+        )
+        assert result == Settings(spam="")
 
     def test_load_nested_settings_by_default(self):
         """

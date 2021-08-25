@@ -189,7 +189,7 @@ class FileLoader:
                 settings = clean_settings(settings, options, path)
                 return settings
 
-        raise UnknownFormatError(f"Nor loader configured for: {path}")
+        raise UnknownFormatError(f"No loader configured for: {path}")
 
     @staticmethod
     def _get_config_filenames(
