@@ -3,6 +3,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 import pytest
+import toml
 from pytest import MonkeyPatch
 
 from typed_settings._dict_utils import _deep_options
@@ -198,23 +199,40 @@ class TestTomlFormat:
         assert result == {}
 
     def test_file_not_found(self):
+        """
+        "ConfigFileNotFoundError" is raised when a file does not exist.
+        """
         pytest.raises(
             ConfigFileNotFoundError, TomlFormat().load_file, Path("x"), ""
         )
 
-    def test_file_not_allowed(self, tmp_path: Path):
+    def test_file_not_allowed(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ):
+        """
+        "ConfigFileLoadError" is raised when a file cannot be accessed.
+        """
+
+        def toml_load(path: Path):
+            raise PermissionError()
+
+        monkeypatch.setattr(toml, "load", toml_load)
+
         config_file = tmp_path.joinpath("settings.toml")
         config_file.write_text(
             """[tool]
             a = "spam"
         """
         )
-        config_file.chmod(0o200)  # -w-,---,---
+
         pytest.raises(
             ConfigFileLoadError, TomlFormat().load_file, config_file, ""
         )
 
     def test_file_invalid(self, tmp_path: Path):
+        """
+        "ConfigFileLoadError" is raised when a file contains invalid TOML.
+        """
         config_file = tmp_path.joinpath("settings.toml")
         config_file.write_text("spam")
         pytest.raises(
