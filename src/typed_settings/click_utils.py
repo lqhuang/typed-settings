@@ -5,16 +5,16 @@ from collections.abc import MutableSequence, MutableSet, Sequence
 from datetime import datetime
 from enum import Enum
 from functools import update_wrapper
-from pathlib import Path
-from typing import Any, Callable, Dict, Iterable, Optional, Tuple, Type, Union
+from typing import Any, Callable, Dict, List, Optional, Tuple, Type
 
 import attr
 import click
 
-from ._core import AUTO, T, _Auto, _load_settings
-from ._dict_utils import _deep_fields, _get_path, _merge_dicts, _set_path
+from ._core import T, _load_settings
+from ._dict_utils import _deep_options, _get_path, _merge_dicts, _set_path
 from .attrs import METADATA_KEY, _SecretRepr, fromdict
 from .attrs._compat import get_args, get_origin
+from .loaders import Loader
 
 
 AnyFunc = Callable[..., Any]
@@ -24,11 +24,7 @@ StrDict = Dict[str, Any]
 
 def click_options(
     cls: Type[T],
-    appname: str,
-    config_files: Iterable[Union[str, Path]] = (),
-    config_file_section: Union[_Auto, str] = AUTO,
-    config_files_var: Union[None, _Auto, str] = AUTO,
-    env_prefix: Union[None, _Auto, str] = AUTO,
+    loaders: List[Loader],
     type_handler: "Optional[TypeHandler]" = None,
 ) -> Callable[[Callable], Callable]:
     """
@@ -48,22 +44,15 @@ def click_options(
          ... class Settings: ...
          ...
          >>> @click.command()
-         ... @ts.click_options(Settings, "example")
+         ... @ts.click_options(Settings, ts.default_loaders("example"))
          ... def cli(settings):
          ...     print(settings)
 
     See :func:`.load_settings()` for argument descriptions.
     """
     cls = attr.resolve_types(cls)
-    fields = _deep_fields(cls)
-    settings = _load_settings(
-        fields=fields,
-        appname=appname,
-        config_files=config_files,
-        config_file_section=config_file_section,
-        config_files_var=config_files_var,
-        env_prefix=env_prefix,
-    )
+    options = _deep_options(cls)
+    settings = _load_settings(options, loaders)
     type_handler = type_handler or TypeHandler()
 
     def pass_settings(f: AnyFunc) -> Decorator:
@@ -84,10 +73,10 @@ def click_options(
         """
         The wrapper that actually decorates a function with all options.
         """
-        for path, field, _cls in reversed(fields):
-            default = _get_default(field, path, settings)
+        for oinfo in reversed(options):
+            default = _get_default(oinfo.field, oinfo.path, settings)
             option = _mk_option(
-                click.option, path, field, default, type_handler
+                click.option, oinfo.path, oinfo.field, default, type_handler
             )
             f = option(f)
         f = pass_settings(f)

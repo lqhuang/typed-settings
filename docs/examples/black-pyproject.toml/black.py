@@ -22,10 +22,12 @@ class Settings:
 @click.command()
 @ts.click_options(
     Settings,
-    appname="black",
-    config_files=["pyproject.toml"],
-    config_file_section="tool.black",
-    env_prefix=None,
+    ts.default_loaders(
+        appname="black",
+        config_files=[ts.find("pyproject.toml")],
+        config_file_section="tool.black",
+        env_prefix=None,
+    ),
 )
 def cli(settings):
     print(settings)

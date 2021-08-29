@@ -181,7 +181,7 @@ Your CLI function receives all options as the single instance of your settings c
    ...     password: str = ts.secret(default="", help="Your password")
    >>>
    >>> @click.command()
-   ... @ts.click_options(Settings, "myapp")
+   ... @ts.click_options(Settings, ts.default_loaders("myapp"))
    ... def cli(settings):
    ...     print(settings)
    ...

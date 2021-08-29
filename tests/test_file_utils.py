@@ -7,19 +7,65 @@ from typed_settings import _file_utils as fu
     "args, start, expected",
     [
         # File found
-        (["s.toml"], ".", "s.toml"),
-        (["s.toml"], "src", "s.toml"),
-        (["s.toml"], "src/a/x", "s.toml"),
-        (["s.toml", "."], "src/a/x", "s.toml"),
-        (["s.toml", fu.ROOT_DIR, ["setup.py"]], "src/a/x", "s.toml"),
-        (["s.toml", fu.ROOT_DIR, ["spam"]], "src/a/x", "s.toml"),
-        (["s.toml", "x"], "src/a/x", "s.toml"),
-        (["s.toml", "x", ["spam"]], "src/a/x", "s.toml"),
+        pytest.param(["s.toml"], ".", "s.toml", id="found-from-pwd"),
+        pytest.param(["s.toml"], "src", "s.toml", id="found-from-subdir"),
+        pytest.param(["s.toml"], "src/a/x", "s.toml", id="found-from-subdirs"),
+        pytest.param(
+            ["s.toml", "."],
+            "src/a/x",
+            "s.toml",
+            id="found-from-subdirs-stop-project",
+        ),
+        pytest.param(
+            ["s.toml", fu.ROOT_DIR, ["setup.py"]],
+            "src/a/x",
+            "s.toml",
+            id="found-from-subdirs-stop-existing-file",
+        ),
+        pytest.param(
+            ["s.toml", fu.ROOT_DIR, ["spam"]],
+            "src/a/x",
+            "s.toml",
+            id="found-from-subdirs-found-stop-nonexisting-file",
+        ),
+        pytest.param(
+            ["s.toml", "x"],
+            "src/a/x",
+            "s.toml",
+            id="found-from-subdirs-stop-nonexisting-rootdir",
+        ),
+        pytest.param(
+            ["s.toml", "x", ["spam"]],
+            "src/a/x",
+            "s.toml",
+            id="found-from-subdirs-stop-nonexisting-rootdir-and-file",
+        ),
         # File not found
-        (["s.toml", "src/a"], "src/a/x", "src/a/x/s.toml"),
-        (["s.toml", fu.ROOT_DIR, ["stop"]], "src/a/x", "src/a/x/s.toml"),
-        (["spam"], ".", "spam"),
-        (["spam"], "src", "src/spam"),
+        pytest.param(
+            ["s.toml", "src/a"],
+            "src/a/x",
+            "src/a/x/s.toml",
+            id="not-found-stop-at-subdir",
+        ),
+        pytest.param(
+            ["s.toml", fu.ROOT_DIR, ["stop"]],
+            "src/a/x",
+            "src/a/x/s.toml",
+            id="not-found-stop-at-stop-file",
+        ),
+        pytest.param(["spam"], ".", "spam", id="not-found-not-exists"),
+        pytest.param(
+            ["spam"],
+            "src",
+            "src/spam",
+            id="not-found-not-exists-start-from-subdir",
+        ),
+        pytest.param(
+            ["spam", "xxx", []],
+            ".",
+            "spam",
+            id="not-found-non-existing-rootdir-and-stopfile",
+        ),
     ],
 )
 def test_find(args, start, expected, tmp_path, monkeypatch):

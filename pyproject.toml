@@ -9,7 +9,8 @@ line-length = 79
 source = ["src", ".nox/*/site-packages"]
 
 [tool.coverage.report]
-exclude_lines = ["pragma: no cover", "...", "if TYPE_CHECKING"]
+# exclude_lines = ["pragma: no cover", "...", "if TYPE_CHECKING"]
+exclude_lines = ["pragma: no cover", "\\.\\.\\.", "if TYPE_CHECKING"]
 show_missing = true
 
 [tool.coverage.run]

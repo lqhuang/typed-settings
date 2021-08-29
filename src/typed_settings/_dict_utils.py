@@ -1,12 +1,11 @@
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict
 
-from attr import Attribute, fields, has, resolve_types
+from attr import fields, has, resolve_types
+
+from .types import OptionInfo, OptionList, SettingsDict
 
 
-FieldList = List[Tuple[str, Attribute, type]]
-
-
-def _deep_fields(cls: type) -> FieldList:
+def _deep_options(cls: type) -> OptionList:
     """
     Recursively iterates *cls* and nested attrs classes and returns a flat
     list of *(path, Attribute, type)* tuples.
@@ -31,7 +30,9 @@ def _deep_fields(cls: type) -> FieldList:
             if field.type is not None and has(field.type):
                 iter_attribs(field.type, f"{prefix}{field.name}.")
             else:
-                result.append((f"{prefix}{field.name}", field, r_cls))
+                result.append(
+                    OptionInfo(f"{prefix}{field.name}", field, r_cls)
+                )
 
     iter_attribs(cls, "")
     return result
@@ -78,7 +79,7 @@ def _set_path(dct: Dict[str, Any], path: str, val: Any) -> None:
     dct[key] = val
 
 
-def _merge_dicts(d1: Dict[str, Any], d2: Dict[str, Any]) -> None:
+def _merge_dicts(d1: SettingsDict, d2: SettingsDict) -> None:
     """
     Recursively merges *d2* into *d1*.  *d1* is modified in place.
 

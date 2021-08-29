@@ -81,7 +81,7 @@ class Settings:
     retries: int = 3
 
 settings = ts.load(
-    cls=Settings, appname='example', config_files=['settings.toml']
+    cls=Settings, appname="example", config_files=["settings.toml"]
 )
 print(settings)
 ```
@@ -118,11 +118,11 @@ class Settings:
     an_int: int = 3
 
 @click.command()
-@ts.click_options(Settings, 'example')
+@ts.click_options(Settings, ts.default_loaders("example"))
 def main(settings):
     print(settings)
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
 ```
 
