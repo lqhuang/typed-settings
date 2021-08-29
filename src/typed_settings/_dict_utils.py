@@ -2,7 +2,7 @@ from typing import Any, Dict
 
 from attr import fields, has, resolve_types
 
-from .types import OptionInfo, OptionList
+from .types import OptionInfo, OptionList, SettingsDict
 
 
 def _deep_options(cls: type) -> OptionList:
@@ -79,7 +79,7 @@ def _set_path(dct: Dict[str, Any], path: str, val: Any) -> None:
     dct[key] = val
 
 
-def _merge_dicts(d1: Dict[str, Any], d2: Dict[str, Any]) -> None:
+def _merge_dicts(d1: SettingsDict, d2: SettingsDict) -> None:
     """
     Recursively merges *d2* into *d1*.  *d1* is modified in place.
 

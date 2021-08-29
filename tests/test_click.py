@@ -22,6 +22,7 @@ import pytest
 from typed_settings import (
     click_options,
     click_utils,
+    default_loaders,
     option,
     pass_settings,
     secret,
@@ -66,7 +67,8 @@ def make_cli(settings_cls: type) -> Callable[..., Any]:
 
         @click.group(invoke_without_command=True)
         @click_options(
-            settings_cls, "test", [tmp_path.joinpath("settings.toml")]
+            settings_cls,
+            default_loaders("test", [tmp_path.joinpath("settings.toml")]),
         )
         def cli(settings):
             runner.settings = settings
@@ -123,7 +125,7 @@ def test_no_default(monkeypatch):
     monkeypatch.setenv("TEST_A", "spam")  # This makes only "S.b" mandatory!
 
     @click.command()
-    @click_options(S, "test")
+    @click_options(S, default_loaders("test"))
     def cli(settings):
         pass
 
@@ -149,7 +151,7 @@ def test_help_text():
         b: str = secret(default="eggs", help="bbb")
 
     @click.command()
-    @click_options(S, "test")
+    @click_options(S, default_loaders("test"))
     def cli(settings):
         pass
 
@@ -176,7 +178,7 @@ def test_long_name():
         long_name: str = "val"
 
     @click.command()
-    @click_options(S, "test")
+    @click_options(S, default_loaders("test"))
     def cli(settings):
         pass
 
@@ -213,7 +215,9 @@ def test_click_default_from_settings(monkeypatch, tmp_path):
         d: str
 
     @click.command()
-    @click_options(Settings, "test", [tmp_path.joinpath("settings.toml")])
+    @click_options(
+        Settings, default_loaders("test", [tmp_path.joinpath("settings.toml")])
+    )
     def cli(settings):
         print(settings)
 
@@ -240,7 +244,7 @@ def test_unsupported_generic():
     with pytest.raises(TypeError, match="Cannot create click type"):
 
         @click.command()
-        @click_options(S, "test")
+        @click_options(S, default_loaders("test"))
         def cli(settings):
             pass
 
@@ -550,7 +554,7 @@ class TestPassSettings:
         """
 
         @click.group()
-        @click_options(self.Settings, "test")
+        @click_options(self.Settings, default_loaders("test"))
         def cli(settings):
             pass
 
@@ -592,7 +596,7 @@ class TestPassSettings:
         """
 
         @click.command()
-        @click_options(self.Settings, "test")
+        @click_options(self.Settings, default_loaders("test"))
         @pass_settings
         def cli(s1, s2):
             click.echo(s1 == s2)

@@ -11,6 +11,7 @@ DEPS_LINT = DEPS_CLICK + [
     "flake8-bugbear",
     "flake8-isort",
     "mypy",
+    "types-toml",
 ]
 DEPS_DOCS = DEPS_CLICK + ["furo", "sphinx", "sphinx-autodoc-typehints"]
 DEPS_DEV = DEPS_TEST + DEPS_LINT + DEPS_DOCS + ["nox", "safety"]

@@ -48,7 +48,7 @@ import typed_settings as ts
 class Settings:
     option: str
 
-settings = ts.load_settings(cls=Settings, appname="example")
+settings = ts.load(cls=Settings, appname="example")
 print(settings)
 ```
 
@@ -80,8 +80,8 @@ class Settings:
     endpoint: str
     retries: int = 3
 
-settings = ts.load_settings(
-    cls=Settings, appname='example', config_files=['settings.toml']
+settings = ts.load(
+    cls=Settings, appname="example", config_files=["settings.toml"]
 )
 print(settings)
 ```
@@ -118,11 +118,11 @@ class Settings:
     an_int: int = 3
 
 @click.command()
-@ts.click_options(Settings, 'example')
+@ts.click_options(Settings, ts.default_loaders("example"))
 def main(settings):
     print(settings)
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
 ```
 

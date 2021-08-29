@@ -16,6 +16,48 @@ from .types import AUTO, OptionList, T, _Auto
 LOGGER = logging.getLogger(METADATA_KEY)
 
 
+def default_loaders(
+    appname: str,
+    config_files: Iterable[Union[str, Path]] = (),
+    *,
+    config_file_section: Union[str, _Auto] = AUTO,
+    config_files_var: Union[None, str, _Auto] = AUTO,
+    env_prefix: Union[None, str, _Auto] = AUTO,
+) -> List[Loader]:
+    loaders: List[Loader] = []
+
+    section = (
+        appname
+        if isinstance(config_file_section, _Auto)
+        else config_file_section
+    )
+    var_name = (
+        f"{appname.upper()}_SETTINGS".replace("-", "_")
+        if isinstance(config_files_var, _Auto)
+        else config_files_var
+    )
+    loaders.append(
+        FileLoader(
+            files=config_files,
+            env_var=var_name,
+            section=section,
+            formats={"*.toml": TomlFormat()},
+        )
+    )
+
+    if env_prefix is None:
+        LOGGER.debug("Loading settings from env vars is disabled.")
+    else:
+        prefix = (
+            f"{appname.upper()}_"
+            if isinstance(env_prefix, _Auto)
+            else env_prefix
+        )
+        loaders.append(EnvLoader(prefix=prefix))
+
+    return loaders
+
+
 def load(
     cls: Type[T],
     appname: str,
@@ -81,36 +123,13 @@ def load(
         ValueError: If config values don't meet their requirements.
         ValueError: If a config file contains an invalid option.
     """
-    loaders: List[Loader] = []
-
-    section = (
-        appname
-        if isinstance(config_file_section, _Auto)
-        else config_file_section
+    loaders = default_loaders(
+        appname=appname,
+        config_files=config_files,
+        config_file_section=config_file_section,
+        config_files_var=config_files_var,
+        env_prefix=env_prefix,
     )
-    var_name = (
-        f"{appname.upper()}_SETTINGS".replace("-", "_")
-        if isinstance(config_files_var, _Auto)
-        else config_files_var
-    )
-    loaders.append(
-        FileLoader(
-            files=config_files,
-            env_var=var_name,
-            section=section,
-            formats={"*.toml": TomlFormat()},
-        )
-    )
-
-    if env_prefix is None:
-        LOGGER.debug("Loading settings from env vars is disabled.")
-    else:
-        prefix = (
-            f"{appname.upper()}_"
-            if isinstance(env_prefix, _Auto)
-            else env_prefix
-        )
-        loaders.append(EnvLoader(prefix=prefix))
 
     settings = _load_settings(
         options=_deep_options(cls),
@@ -131,7 +150,6 @@ def load_settings(
 
 
 def _load_settings(
-    *,
     options: OptionList,
     loaders: List[Loader],
 ) -> Dict[str, Any]:

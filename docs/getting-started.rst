@@ -47,11 +47,11 @@ Settings should (but are not required to) define defaults for all options.
 If an option has no default and no config value can be found for it, attrs will raise an error.
 
 In real life, you don't manually instantiate your settings.
-Instead, you call the function :func:`load_settings()`:
+Instead, you call the function :func:`load()`:
 
 .. code-block:: python
 
-   >>> ts.load_settings(Settings, appname="myapp")
+   >>> ts.load(Settings, appname="myapp")
    Settings(host='', port=0)
 
 The first argument of that function is your settings class and an instance of that class is returned by it.
@@ -77,7 +77,7 @@ Typed Settings will automatically look for environment variables matching :samp:
    >>> monkeypatch = getfixture("monkeypatch")
    >>> monkeypatch.setattr(os, "environ", {"MYAPP_HOST": "env-host", "MYAPP_PORT": "443"})
    >>>
-   >>> ts.load_settings(Settings, appname="myapp")
+   >>> ts.load(Settings, appname="myapp")
    Settings(host='env-host', port=443)
    >>>
    >>> monkeypatch.undo()
@@ -105,7 +105,7 @@ Typed Settings uses TOML files for this (`Why?`_) and looks for the *appname* se
    ... port = 22
    ... """)
    38
-   >>> ts.load_settings(Settings, appname="myapp", config_files=[settings_file])
+   >>> ts.load(Settings, appname="myapp", config_files=[settings_file])
    Settings(host='file-host', port=22)
 
 You can also load settings from multiple files.
@@ -126,7 +126,7 @@ The variable can contain one ore more paths separated by a colon (``:``):
 
    >>> monkeypatch.setenv("MYAPP_SETTINGS", str(settings_file))
    >>>
-   >>> ts.load_settings(Settings, appname="myapp")
+   >>> ts.load(Settings, appname="myapp")
    Settings(host='file-host', port=22)
    >>>
    >>> monkeypatch.undo()
@@ -156,7 +156,7 @@ Your CLI function receives all options as the single instance of your settings c
    >>> import click.testing
    >>>
    >>> @click.command()
-   ... @ts.click_options(Settings, "myapp")
+   ... @ts.click_options(Settings, ts.default_loaders("myapp"))
    ... def cli(settings):
    ...     print(settings)
    ...

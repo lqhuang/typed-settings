@@ -2,6 +2,7 @@ import attr
 import pytest
 
 from typed_settings import _dict_utils as du
+from typed_settings.types import OptionInfo
 
 
 def mkattr(name: str, typ: type) -> attr.Attribute:
@@ -32,10 +33,10 @@ class TestDeepOptions:
 
         options = du._deep_options(Parent)
         assert options == [
-            ("x", mkattr("x", str), Parent),
-            ("y.x", mkattr("x", float), Child),
-            ("y.y.x", mkattr("x", int), GrandChild),
-            ("z", mkattr("z", str), Parent),
+            OptionInfo("x", mkattr("x", str), Parent),
+            OptionInfo("y.x", mkattr("x", float), Child),
+            OptionInfo("y.y.x", mkattr("x", int), GrandChild),
+            OptionInfo("z", mkattr("z", str), Parent),
         ]
 
     def test_unresolved_types(self):

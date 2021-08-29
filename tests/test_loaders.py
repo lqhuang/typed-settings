@@ -1,6 +1,6 @@
 from itertools import product
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 import pytest
 from pytest import MonkeyPatch
@@ -251,7 +251,7 @@ class TestFileLoader:
     def test_get_config_filenames(
         self,
         cfn: List[int],
-        env: List[int],
+        env: Optional[List[int]],
         expected: List[int],
         fnames: List[Path],
         monkeypatch: MonkeyPatch,
@@ -260,11 +260,14 @@ class TestFileLoader:
         Config files names (cfn) can be specified explicitly or via an env var.
         It's no problem if a files does not exist.
         """
+        var: Optional[str]
         if env is not None:
             monkeypatch.setenv("CF", ":".join(str(fnames[i]) for i in env))
-            env = "CF"
+            var = "CF"
+        else:
+            var = None
 
-        paths = FileLoader._get_config_filenames([fnames[i] for i in cfn], env)
+        paths = FileLoader._get_config_filenames([fnames[i] for i in cfn], var)
         assert paths == [fnames[i] for i in expected]
 
     def test_get_config_filenames_empty_fn(

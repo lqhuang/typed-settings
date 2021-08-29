@@ -3,13 +3,14 @@ Typed settings
 """
 from typing import Any, List
 
-from ._core import load, load_settings
+from ._core import default_loaders, load, load_settings
 from ._file_utils import find
 from .attrs import option, secret, settings
 
 
 __all__ = [
     "click_options",
+    "default_loaders",
     "find",
     "load",
     "load_settings",

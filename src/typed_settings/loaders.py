@@ -2,16 +2,14 @@ import logging
 import os
 from fnmatch import fnmatch
 from pathlib import Path
-from typing import (
-    Any,
-    Dict,
-    Iterable,
-    List,
-    Mapping,
-    Optional,
-    Protocol,
-    Union,
-)
+from typing import Any, Dict, Iterable, List, Mapping, Optional, Union
+
+
+try:
+    from typing import Protocol
+except ImportError:
+    # Python 3.7
+    from typing import _Protocol as Protocol  # type: ignore
 
 import toml
 
@@ -156,7 +154,7 @@ class FileLoader:
             InvalidOptionError: If invalid settings have been found.
         """
         paths = self._get_config_filenames(self.files, self.env_var)
-        merged_settings: Dict[str, Any] = {}
+        merged_settings: SettingsDict = {}
         for path in paths:
             settings = self._load_file(path, options)
             _merge_dicts(merged_settings, settings)
