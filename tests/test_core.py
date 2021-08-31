@@ -2,6 +2,7 @@ import logging
 from pathlib import Path
 from typing import List
 
+import cattr
 import pytest
 
 from typed_settings import _core
@@ -266,6 +267,30 @@ class TestLoadSettings:
 
         result = _core.load(S, "t")
         assert result == S()
+
+    def test_custom_converter(self, monkeypatch: pytest.MonkeyPatch):
+        """
+        A custom cattr converter can be used in "load_settings()".
+        """
+
+        class Test:
+            def __init__(self, x: int):
+                self.attr = x
+
+            def __eq__(self, other):
+                return self.attr == other.attr
+
+        @settings
+        class Settings:
+            opt: Test
+
+        monkeypatch.setenv("TEST_OPT", "42")
+
+        converter = cattr.GenConverter()
+        converter.register_structure_hook(Test, lambda v, t: Test(int(v)))
+
+        result = _core.load_settings(Settings, [EnvLoader("TEST_")], converter)
+        assert result == Settings(Test(42))
 
 
 class TestLogging:

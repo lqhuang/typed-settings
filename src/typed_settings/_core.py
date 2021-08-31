@@ -1,4 +1,6 @@
 """
+if converter is None:
+converter = default_converter
 Core functionality for loading settings.
 """
 import logging
@@ -6,9 +8,11 @@ from pathlib import Path
 from typing import Any, Dict, Iterable, List, Type, Union
 
 import attr
+import cattr
 
 from ._dict_utils import _deep_options, _merge_dicts, _set_path
-from .attrs import METADATA_KEY, converter
+from .attrs import METADATA_KEY
+from .attrs import converter as default_converter
 from .loaders import EnvLoader, FileLoader, Loader, TomlFormat
 from .types import AUTO, OptionList, T, _Auto
 
@@ -134,13 +138,16 @@ def load(
         options=_deep_options(cls),
         loaders=loaders,
     )
-    return converter.structure_attrs_fromdict(settings, cls)
+    return default_converter.structure_attrs_fromdict(settings, cls)
 
 
 def load_settings(
     cls: Type[T],
     loaders: List[Loader],
+    converter: cattr.Converter = None,
 ) -> T:
+    if converter is None:
+        converter = default_converter
     settings = _load_settings(
         options=_deep_options(cls),
         loaders=loaders,
