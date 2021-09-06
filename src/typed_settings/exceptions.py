@@ -1,6 +1,11 @@
+"""
+Exceptions raised by Typed Settings.
+"""
+
+
 class TsError(Exception):
     """
-    Basse class for all typed settings exceptions.
+    **Basse class** for all typed settings exceptions.
     """
 
 
@@ -26,4 +31,10 @@ class InvalidOptionsError(TsError):
     """
     Raised when loaded settings contain an option that is not defined in the
     settings class.
+    """
+
+
+class InvalidValueError(TsError):
+    """
+    Raised the value of an option cannot be converted to the correct type.
     """

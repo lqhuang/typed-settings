@@ -1,4 +1,4 @@
-from typing import Any, Dict
+from typing import Any
 
 from attr import fields, has, resolve_types
 
@@ -38,7 +38,7 @@ def _deep_options(cls: type) -> OptionList:
     return result
 
 
-def _get_path(dct: Dict[str, Any], path: str) -> Any:
+def _get_path(dct: SettingsDict, path: str) -> Any:
     """
     Performs a nested dict lookup for *path* and returns the result.
 
@@ -60,7 +60,7 @@ def _get_path(dct: Dict[str, Any], path: str) -> Any:
     return dct
 
 
-def _set_path(dct: Dict[str, Any], path: str, val: Any) -> None:
+def _set_path(dct: SettingsDict, path: str, val: Any) -> None:
     """
     Sets a value to a nested dict and automatically creates missing dicts
     should they not exist.

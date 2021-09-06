@@ -159,7 +159,7 @@ class TestTomlFormat:
             port = 42
         """
         )
-        result = TomlFormat().load_file(config_file, "example")
+        result = TomlFormat("example").load_file(config_file)
         assert result == {
             "url": "spam",
             "host": {"port": 42},
@@ -177,7 +177,7 @@ class TestTomlFormat:
             b = "eggs"
         """
         )
-        result = TomlFormat().load_file(config_file, "tool.example")
+        result = TomlFormat("tool.example").load_file(config_file)
         assert result == {
             "a": "spam",
             "sub": {"b": "eggs"},
@@ -195,7 +195,7 @@ class TestTomlFormat:
             a = "spam"
         """
         )
-        result = TomlFormat().load_file(config_file, section)
+        result = TomlFormat(section).load_file(config_file)
         assert result == {}
 
     def test_file_not_found(self):
@@ -203,7 +203,7 @@ class TestTomlFormat:
         "ConfigFileNotFoundError" is raised when a file does not exist.
         """
         pytest.raises(
-            ConfigFileNotFoundError, TomlFormat().load_file, Path("x"), ""
+            ConfigFileNotFoundError, TomlFormat("").load_file, Path("x")
         )
 
     def test_file_not_allowed(
@@ -226,7 +226,7 @@ class TestTomlFormat:
         )
 
         pytest.raises(
-            ConfigFileLoadError, TomlFormat().load_file, config_file, ""
+            ConfigFileLoadError, TomlFormat("").load_file, config_file
         )
 
     def test_file_invalid(self, tmp_path: Path):
@@ -236,7 +236,7 @@ class TestTomlFormat:
         config_file = tmp_path.joinpath("settings.toml")
         config_file.write_text("spam")
         pytest.raises(
-            ConfigFileLoadError, TomlFormat().load_file, config_file, ""
+            ConfigFileLoadError, TomlFormat("").load_file, config_file
         )
 
 
@@ -316,9 +316,8 @@ class TestFileLoader:
             le_option: str = ""
 
         loader = FileLoader(
-            formats={"*.toml": TomlFormat()},
+            formats={"*.toml": TomlFormat("le-section")},
             files=[config_file],
-            section="le-section",
         )
         s = loader._load_file(config_file, _deep_options(Settings))
         assert s == {"le_option": "spam"}
@@ -342,9 +341,8 @@ class TestFileLoader:
             le_option: str = ""
 
         loader = FileLoader(
-            formats={"*.toml": TomlFormat()},
+            formats={"*.toml": TomlFormat("le-section")},
             files=[config_file],
-            section="le-section",
         )
         s = loader._load_file(config_file, _deep_options(Settings))
         assert s == {"le_option": "spam"}
@@ -353,7 +351,7 @@ class TestFileLoader:
         """
         An error is raised if a file has an unknown extension.
         """
-        loader = FileLoader({"*.toml": TomlFormat()}, [], "t")
+        loader = FileLoader({"*.toml": TomlFormat("t")}, [])
         pytest.raises(UnknownFormatError, loader._load_file, Path("f.py"), [])
 
     def test_load(self, tmp_path: Path):
@@ -380,7 +378,7 @@ class TestFileLoader:
             le_spam: str = ""
             le_eggs: str = ""
 
-        loader = FileLoader({"*.toml": TomlFormat()}, [cf1, cf2], "le-section")
+        loader = FileLoader({"*.toml": TomlFormat("le-section")}, [cf1, cf2])
         s = loader.load(_deep_options(Settings))
         assert s == {"le_spam": "spam", "le_eggs": "eggs"}
 
@@ -413,9 +411,7 @@ class TestFileLoader:
         else:
             files = [p]
 
-        loader = FileLoader(
-            {"*": TomlFormat()}, files, "test", "TEST_SETTINGS"
-        )
+        loader = FileLoader({"*": TomlFormat("test")}, files, "TEST_SETTINGS")
         if is_mandatory and not exists:
             pytest.raises(FileNotFoundError, loader.load, [])
         else:

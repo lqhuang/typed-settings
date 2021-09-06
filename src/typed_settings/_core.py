@@ -13,6 +13,7 @@ import cattr
 from ._dict_utils import _deep_options, _merge_dicts, _set_path
 from .attrs import METADATA_KEY
 from .attrs import converter as default_converter
+from .attrs import from_dict
 from .loaders import EnvLoader, FileLoader, Loader, TomlFormat
 from .types import AUTO, OptionList, T, _Auto
 
@@ -28,10 +29,48 @@ def default_loaders(
     config_files_var: Union[None, str, _Auto] = AUTO,
     env_prefix: Union[None, str, _Auto] = AUTO,
 ) -> List[Loader]:
+    """
+    Return a list of default settings loaders that are used by :func:`load()`.
+
+    These loaders are:
+
+    #. A :class:`.FileLoader` loader configured with the :class:`TomlFormat`
+    #. An :class:`.EnvLoader`
+
+    The :class:`.FileLoader` will load files from *config_files* and from the
+    environment variable *config_files_var*.
+
+    Args:
+        appname: Your application's name – used to derive defaults for the
+          remaining args.
+
+        config_files: Load settings from these files.  The last one has the
+          highest precedence.
+
+        config_file_section: Name of your app's section in the config file.
+          By default, use *appname* (in lower case and with "_" replaced by
+          "-".
+
+        config_files_var: Load list of settings files from this environment
+          variable.  By default, use :code:`{APPNAME}_SETTINGS`.  Multiple
+          paths have to be separated by ":".  The last file has the highest
+          precedence.  All files listed in this var have higher precedence than
+          files from *config_files*.
+
+          Set to ``None`` to disable this feature.
+
+        env_prefix: Load settings from environment variables with this prefix.
+          By default, use *APPNAME_*.
+
+          Set to ``None`` to disable loading env vars.
+
+    Return:
+        A list of :class:`.Loader` instances.
+    """
     loaders: List[Loader] = []
 
     section = (
-        appname
+        appname.lower().replace("_", "-")
         if isinstance(config_file_section, _Auto)
         else config_file_section
     )
@@ -44,8 +83,7 @@ def default_loaders(
         FileLoader(
             files=config_files,
             env_var=var_name,
-            section=section,
-            formats={"*.toml": TomlFormat()},
+            formats={"*.toml": TomlFormat(section)},
         )
     )
 
@@ -72,9 +110,12 @@ def load(
     env_prefix: Union[None, str, _Auto] = AUTO,
 ) -> T:
     """
-    Loads settings for *appname* and returns an instance of *cls*
+    Load settings for *appname* and return an instance of *cls*
 
-    Settings can be loaded from *config_files* and/or from the files specified
+    This function is a shortcut for :func:`load_settings()` with
+    :func:`default_loaders()`.
+
+    Settings are loaded from *config_files* and from the files specified
     via the *config_files_var* environment variable.  Settings can also be
     overridden via environment variables named like the corresponding setting
     and prefixed with *env_prefix*.
@@ -101,31 +142,36 @@ def load(
         appname: Your application's name.  Used to derive defaults for the
           remaining args.
 
-        config_files: Load settings from these TOML files.
+        config_files: Load settings from these files.
 
         config_file_section: Name of your app's section in the config file.
-          By default, use *appname*.
+          By default, use *appname* (in lower case and with "_" replaced by
+          "-".
 
         config_files_var: Load list of settings files from this environment
           variable.  By default, use :code:`{APPNAME}_SETTINGS`.  Multiple
-          paths have to be separated by ":".  Each settings file will update
-          its predecessor, so the last file will have the highest priority.
+          paths have to be separated by ":".  The last file has the highest
+          precedence.  All files listed in this var have higher precedence than
+          files from *config_files*.
 
           Set to ``None`` to disable this feature.
 
         env_prefix: Load settings from environment variables with this prefix.
-          By default, use *APPNAME_*.  Set to ``None`` to disable loading env
-          vars.
+          By default, use *APPNAME_*.
 
-    Returns:
-        An instance of *cls* populated with settings from settings
-        files and environment variables.
+          Set to ``None`` to disable loading env vars.
 
-    Raises:
-        FileNotFoundError: If a mandatory config file does not exist.
-        TypeError: If config values cannot be converted to the required type.
-        ValueError: If config values don't meet their requirements.
-        ValueError: If a config file contains an invalid option.
+    Return:
+        An instance of *cls* populated with settings from settings files and
+        environment variables.
+
+    Raise:
+        UnknownFormatError: When no :class:`FileFormat` is configured for a
+            loaded file.
+        ConfigFileNotFoundError: If *path* does not exist.
+        ConfigFileLoadError: If *path* cannot be read/loaded/decoded.
+        InvalidOptionsError: If invalid settings have been found.
+        InvalidValueError: If a value cannot be converted to the correct type.
     """
     loaders = default_loaders(
         appname=appname,
@@ -138,7 +184,7 @@ def load(
         options=_deep_options(cls),
         loaders=loaders,
     )
-    return default_converter.structure_attrs_fromdict(settings, cls)
+    return from_dict(settings, cls, default_converter)
 
 
 def load_settings(
@@ -146,13 +192,31 @@ def load_settings(
     loaders: List[Loader],
     converter: cattr.Converter = None,
 ) -> T:
+    """
+    Load settings defined by the class *cls* and return an instance of it.
+
+    Args:
+        cls: Attrs class with options (and default values).
+        loaders: A list of settings :class:`Loader`'s.
+        converter: An optional :class:`cattr.Converter` used for converting
+            option values to the required type.
+
+            By default, :data:`typed_settings.attrs.converter` is used.
+
+    Return:
+        An instance of *cls* populated with settings from the defined loaders.
+
+    Raise:
+        TsError: Depending on the configured loaders, any subclass of this
+            exception.
+    """
     if converter is None:
         converter = default_converter
     settings = _load_settings(
         options=_deep_options(cls),
         loaders=loaders,
     )
-    return converter.structure_attrs_fromdict(settings, cls)
+    return from_dict(settings, cls, converter)
 
 
 def _load_settings(
@@ -163,9 +227,7 @@ def _load_settings(
     Loads settings for *options* and returns them as dict.
 
     This function makes it easier to extend settings since it returns a dict
-    that can easily be updated (as compared to frozen settings instances).
-
-    See :func:`load_settings() for details on the arguments.
+    that can easily be updated.
     """
     settings: Dict[str, Any] = {}
 

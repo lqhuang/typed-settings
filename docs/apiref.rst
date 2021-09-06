@@ -7,10 +7,54 @@ This is the full list of all public classes and functions.
 .. currentmodule:: typed_settings
 
 
-Attrs Helpers
-=============
+Core
+====
+
+
+Core Functions
+--------------
+
+Core functions for loading and working with settings.
+
+.. currentmodule:: typed_settings
+.. autofunction:: default_loaders
+.. autofunction:: find
+.. autofunction:: load
+.. autofunction:: load_settings
+
+
+Exceptions
+----------
+
+.. automodule:: typed_settings.exceptions
+   :members:
+
+
+Loaders
+-------
+
+.. automodule:: typed_settings.loaders
+   :members:
+
+
+Types
+-----
+
+.. automodule:: typed_settings.types
+   :members:
+
+
+Attrs
+======
+
+Classes and Fields
+------------------
 
 Helpers for creating :mod:`attrs` classes and fields with sensible details for Typed Settings.
+
+.. currentmodule:: typed_settings.attrs
+
+.. autodata:: converter
 
 .. _func-settings:
 
@@ -75,22 +119,11 @@ Helpers for creating :mod:`attrs` classes and fields with sensible details for T
         Settings(password=***)
 
 
-Core Functions
-==============
+Converters
+----------
 
-Core functions for loading and working with settings.
-
-.. autofunction:: find
-
-.. autofunction:: load
-
-.. function:: load_settings(...)
-
-   This is now an alias to :func:`load()`.  The next release (v0.11 or
-   v1.0) will introduce breaking changes to the signature of this
-   function.  Please use :func:`load()` instead.
-
-   .. deprecated:: 0.10
+.. automodule:: typed_settings.attrs.converters
+   :members:
 
 
 Click Options
@@ -98,36 +131,13 @@ Click Options
 
 Decorators for using Typed Settings with and as :mod:`click` options.
 
+.. currentmodule:: typed_settings
 .. autofunction:: click_options
 .. autofunction:: pass_settings
 
 
-Validators, Converters, Hooks for ``attrs``
-===========================================
-
-These functions are here to mature and may eventually end up in attrs.
-
-Validators
-----------
-
-.. automodule:: typed_settings.attrs.validators
-   :members:
-
-Converters
-----------
-
-.. automodule:: typed_settings.attrs.converters
-   :members:
-
-Hooks
------
-
-.. automodule:: typed_settings.attrs.hooks
-   :members:
-
-
 Utilities for generating Click options
-======================================
+--------------------------------------
 
 .. automodule:: typed_settings.click_utils
    :members: TypeHandler, DEFAULT_TYPES, EnumChoice, handle_datetime,

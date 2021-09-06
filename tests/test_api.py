@@ -42,6 +42,9 @@ def test_load_settings(cls, tmp_path):
 def test_dir():
     names = dir(ts)
     assert names == [
+        "EnvLoader",
+        "FileLoader",
+        "TomlFormat",
         "click_options",
         "default_loaders",
         "find",

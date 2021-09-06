@@ -1,6 +1,9 @@
+"""
+Internal data structures.
+"""
 from typing import Any, List, MutableMapping, TypeVar
 
-from attr import Attribute, frozen
+import attr
 
 
 T = TypeVar("T")
@@ -31,10 +34,12 @@ Sentinel to indicate the lack of a value when ``None`` is ambiguous.
 """
 
 
-@frozen
+@attr.frozen
 class OptionInfo:
     """
     Information about (possibly nested) option attributes.
+
+    Each instance represents a single attribute of an apps's settings class.
     """
 
     path: str
@@ -42,9 +47,9 @@ class OptionInfo:
     Dotted path to the option name relative to the root settings class.
     """
 
-    field: Attribute
+    field: attr.Attribute
     """
-    ``attrs`` :class:`.Attribute` instance for the option.
+    :class:`attr.Attribute` instance for the option.
     """
 
     cls: type

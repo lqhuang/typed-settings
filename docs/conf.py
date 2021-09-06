@@ -58,5 +58,6 @@ autodoc_member_order = "bysource"
 intersphinx_mapping = {
     "python": ("https://docs.python.org/3/", None),
     "attrs": ("https://www.attrs.org/en/stable/", None),
+    "cattrs": ("https://cattrs.readthedocs.io/en/latest/", None),
     "click": ("https://click.palletsprojects.com/en/latest/", None),
 }

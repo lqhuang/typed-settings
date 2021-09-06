@@ -102,6 +102,44 @@ Settings(host=Host(name='example.com', port=443), endpoint='/spam', retries=3)
 ```
 
 
+### Configurable settings loaders
+
+The first example used a convenience shortcut with pre-configured settings loaders.
+However, Typed Settings lets you explicitly configure which loaders are used and how they work:
+
+```python
+# example.py
+import typed_settings as ts
+
+@ts.settings
+class Settings:
+    option: str
+
+settings = ts.load_settings(
+    cls=Settings,
+    loaders=[
+        ts.FileLoader(
+            files=[],
+            env_var="EXAMPLE_SETTINGS",
+            formats={
+                "*.toml": ts.TomlFormat("example"),
+            },
+        ),
+        ts.EnvLoader(prefix="EXAMPLE_"),
+      ],
+)
+print(settings)
+```
+
+```console
+$ EXAMPLE_OPTION="Hello, World!" python example.py
+Settings(option='Hello, World!')
+```
+
+In order to write your own loaders or support new file formats, you need to implement the `Loader` or `FileFormat` [protocols](https://typed-settings.readthedocs.io/en/latest/apiref.html#module-typed_settings.loaders).
+
+You can also pass a custom [cattrs converter](https://cattrs.readthedocs.io/en/latest/index.html) to add support for additional Python types.
+
 ### Click
 
 Optionally, click options can be generated for each option.  Config files and environment variables will still be read and can be overriden by passing command line options.

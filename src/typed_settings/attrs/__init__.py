@@ -4,7 +4,7 @@ Helpers for and additions to attrs.
 from datetime import datetime
 from enum import Enum
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Callable, Dict, Optional, overload
+from typing import TYPE_CHECKING, Any, Callable, Dict, Optional, Type, overload
 
 import attr
 import attr._make
@@ -20,6 +20,8 @@ if TYPE_CHECKING:
         _ValidatorArgType,
     )
 
+from ..exceptions import InvalidValueError
+from ..types import SettingsDict, T
 from .converters import to_bool, to_dt, to_enum
 from .hooks import make_auto_converter
 
@@ -28,11 +30,19 @@ METADATA_KEY = "typed_settings"
 
 
 converter = cattr.GenConverter()
+"""
+A :class:`cattr.GenConverter` configured with addional hooks for loading
+the follwing types:
+
+- :class:`bool` using :func:`.to_bool()`
+- :class:`datetime.datetime` using :func:`.to_dt()`
+- :class:`enum.Enum` using :func:`.to_enum()`
+- :class:`pathlib.Path`
+"""
 converter.register_structure_hook(bool, lambda v, t: to_bool(v))
 converter.register_structure_hook(datetime, lambda v, t: to_dt(v))
 converter.register_structure_hook(Enum, lambda v, t: to_enum(t)(v))
 converter.register_structure_hook(Path, lambda v, t: Path(v))
-fromdict = converter.structure_attrs_fromdict
 
 
 class _SecretRepr:
@@ -47,6 +57,31 @@ SECRET = _SecretRepr()
 
 
 auto_convert = make_auto_converter({bool: to_bool, datetime: to_dt})
+
+
+def from_dict(
+    settings: SettingsDict, cls: Type[T], converter: cattr.Converter
+) -> T:
+    """
+    Convert a settings dict to an attrs class instance using a cattrs
+    converter.
+
+    Args:
+        settings: Dictionary with settings
+        cls: Attrs class to which the settings are converted to
+        converter: Cattrs convert to use for the conversion
+
+    Return:
+        An instance of *cls*.
+
+    Raise:
+        InvalidValueError: If a value cannot be converted to the correct type.
+    """
+    try:
+        return converter.structure_attrs_fromdict(settings, cls)
+    except (AttributeError, ValueError, TypeError) as e:
+        raise InvalidValueError(str(e)) from e
+
 
 settings = attr.define
 """An alias to :func:`attr.define()`"""

@@ -8,11 +8,14 @@ from functools import update_wrapper
 from typing import Any, Callable, Dict, List, Optional, Tuple, Type
 
 import attr
+import cattr
 import click
 
 from ._core import T, _load_settings
 from ._dict_utils import _deep_options, _get_path, _merge_dicts, _set_path
-from .attrs import METADATA_KEY, _SecretRepr, fromdict
+from .attrs import METADATA_KEY, _SecretRepr
+from .attrs import converter as default_converter
+from .attrs import from_dict
 from .attrs._compat import get_args, get_origin
 from .loaders import Loader
 
@@ -25,6 +28,7 @@ StrDict = Dict[str, Any]
 def click_options(
     cls: Type[T],
     loaders: List[Loader],
+    converter: Optional[cattr.Converter] = None,
     type_handler: "Optional[TypeHandler]" = None,
 ) -> Callable[[Callable], Callable]:
     """
@@ -32,6 +36,19 @@ def click_options(
     :func:`.load_settings()`.
 
     A single *cls* instance is passed to the decorated function
+
+    Args:
+        cls: Attrs class with options (and default values).
+        loaders: A list of settings :class:`Loader`'s.
+        converter: An optional :class:`cattr.Converter` used for converting
+            option values to the required type.
+
+            By default, :data:`typed_settings.attrs.converter` is used.
+        type_handler: Helps creating proper click options for option types that
+            are not natively supported by click.
+
+    Return:
+        A decorator for a click command.
 
     Example:
 
@@ -48,11 +65,11 @@ def click_options(
          ... def cli(settings):
          ...     print(settings)
 
-    See :func:`.load_settings()` for argument descriptions.
     """
     cls = attr.resolve_types(cls)
     options = _deep_options(cls)
     settings = _load_settings(options, loaders)
+    converter = converter or default_converter
     type_handler = type_handler or TypeHandler()
 
     def pass_settings(f: AnyFunc) -> Decorator:
@@ -64,7 +81,7 @@ def click_options(
         def new_func(*args, **kwargs):
             ctx = click.get_current_context()
             _merge_dicts(settings, ctx.obj.get("settings"))
-            ctx.obj["settings"] = fromdict(settings, cls)
+            ctx.obj["settings"] = from_dict(settings, cls, default_converter)
             return f(ctx.obj["settings"], *args, **kwargs)
 
         return update_wrapper(new_func, f)

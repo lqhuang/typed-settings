@@ -6,9 +6,13 @@ from typing import Any, List
 from ._core import default_loaders, load, load_settings
 from ._file_utils import find
 from .attrs import option, secret, settings
+from .loaders import EnvLoader, FileLoader, TomlFormat
 
 
 __all__ = [
+    "EnvLoader",
+    "FileLoader",
+    "TomlFormat",
     "click_options",
     "default_loaders",
     "find",

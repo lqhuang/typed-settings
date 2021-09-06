@@ -50,9 +50,8 @@ class TestLoadSettings:
     ) -> List[Loader]:
         return [
             FileLoader(
-                formats={"*.toml": TomlFormat()},
+                formats={"*.toml": TomlFormat("example")},
                 files=config_files,
-                section="example",
             ),
             EnvLoader(prefix="EXAMPLE_"),
         ]
