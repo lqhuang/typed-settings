@@ -1,8 +1,9 @@
+import importlib.util
 import logging
 import os
 from fnmatch import fnmatch
 from pathlib import Path
-from typing import Any, Dict, Iterable, List, Optional, Union
+from typing import Any, Callable, Dict, Iterable, List, Optional, Union
 
 
 try:
@@ -54,12 +55,13 @@ class FileFormat(Protocol):
     Custom file format loaders must implement this.
     """
 
-    def load_file(self, path: Path) -> SettingsDict:
+    def load_file(self, path: Path, options: OptionList) -> SettingsDict:
         """
         Load settings from a given file and return them as a dict.
 
         Args:
             path: The path to the config file.
+            options: The list of available settings.
 
         Return:
             A dict with the loaded settings.
@@ -176,7 +178,7 @@ class FileLoader:
         # the user the exact file that contains errors.
         for pattern, parser in self.formats.items():
             if fnmatch(path.name, pattern):
-                settings = parser.load_file(path)
+                settings = parser.load_file(path, options)
                 settings = clean_settings(settings, options, path)
                 return settings
 
@@ -224,8 +226,85 @@ class FileLoader:
 
 
 class PythonFormat:
-    def load_file(self, path: Path) -> SettingsDict:
-        return {}
+    """
+    Support for TOML files.  Read settings from the given *section*.
+
+    Args:
+        section: The config file section to load settings from.
+    """
+
+    def __init__(
+        self,
+        cls_name: str,
+        key_transformer: Callable[[str], str] = lambda k: k,
+        flat: bool = False,
+    ):
+        self.cls_name = cls_name
+        self.key_transformer = key_transformer
+        self.flat = flat
+
+    @staticmethod
+    def to_lower(text: str) -> str:
+        """
+        Transform *text* to lower case.
+        """
+        return text.lower()
+
+    def load_file(self, path: Path, options: OptionList) -> SettingsDict:
+        """
+        Load settings from a Python file and return them as a dict.
+
+        Args:
+            path: The path to the config file.
+            options: The list of available settings.
+
+        Return:
+            A dict with the loaded settings.
+
+        Raise:
+            ConfigFileNotFoundError: If *path* does not exist.
+            ConfigFileLoadError: If *path* cannot be read/loaded/decoded.
+        """
+        module = self._import_module(path)
+
+        def cls2dict(cls) -> SettingsDict:
+            d = dict(cls.__dict__)
+            result = {}
+            for k, v in d.items():
+                if k.startswith("_"):
+                    continue
+                k = self.key_transformer(k)
+                if isinstance(v, type):
+                    v = cls2dict(v)
+                result[k] = v
+            return result
+
+        try:
+            cls = getattr(module, self.cls_name)
+        except AttributeError:
+            return {}
+        settings = cls2dict(cls)
+        if self.flat:
+            for o in options:
+                key = f"{o.path.replace('.', '_')}"
+                if key in settings:
+                    val = settings.pop(key)
+                    _set_path(settings, o.path, val)
+        return settings
+
+    def _import_module(self, path: Path) -> object:
+        module_name = path.stem
+        spec = importlib.util.spec_from_file_location(module_name, path)
+        if spec is None or spec.loader is None:
+            raise ConfigFileNotFoundError(
+                "No such file or directory: '{path}'"
+            )
+        module = importlib.util.module_from_spec(spec)
+        try:
+            spec.loader.exec_module(module)  # type: ignore
+        except SyntaxError as e:
+            raise ConfigFileLoadError(str(e)) from e
+        return module
 
 
 class TomlFormat:
@@ -239,12 +318,13 @@ class TomlFormat:
     def __init__(self, section: str):
         self.section = section
 
-    def load_file(self, path: Path) -> SettingsDict:
+    def load_file(self, path: Path, options: OptionList) -> SettingsDict:
         """
         Load settings from a TOML file and return them as a dict.
 
         Args:
             path: The path to the config file.
+            options: The list of available settings.
 
         Return:
             A dict with the loaded settings.

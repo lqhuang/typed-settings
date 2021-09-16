@@ -1,3 +1,4 @@
+import textwrap
 from itertools import product
 from pathlib import Path
 from typing import Any, Dict, List, Optional
@@ -16,7 +17,9 @@ from typed_settings.exceptions import (
 )
 from typed_settings.loaders import (
     EnvLoader,
+    FileFormat,
     FileLoader,
+    PythonFormat,
     TomlFormat,
     clean_settings,
 )
@@ -139,27 +142,126 @@ class TestCleanSettings:
         clean_settings(s, _deep_options(Settings), "t")
 
 
+class TestPythonFormat:
+    """Tests for PythonFormat"""
+
+    @pytest.mark.parametrize(
+        "fmt, data",
+        [
+            (
+                PythonFormat("example"),
+                """\
+                class example:
+                    url = "spam"
+
+                    class host:
+                        port = 42
+                """,
+            ),
+            (
+                PythonFormat("EXAMPLE", key_transformer=PythonFormat.to_lower),
+                """\
+                class EXAMPLE:
+                    URL = "spam"
+
+                    class HOST:
+                        PORT = 42
+                """,
+            ),
+            (
+                PythonFormat("example", flat=True),
+                """\
+                class example:
+                    url = "spam"
+                    host_port = 42
+                """,
+            ),
+            (
+                PythonFormat(
+                    "EXAMPLE", key_transformer=PythonFormat.to_lower, flat=True
+                ),
+                """\
+                class EXAMPLE:
+                    URL = "spam"
+                    HOST_PORT = 42
+                """,
+            ),
+        ],
+    )
+    def test_load_python(self, fmt: FileFormat, data: str, tmp_path: Path):
+        """
+        We can load settings from a Python file.
+        """
+        config_file = tmp_path.joinpath("settings.py")
+        config_file.write_text(textwrap.dedent(data))
+        result = fmt.load_file(config_file, _deep_options(Settings))
+        assert result == {
+            "url": "spam",
+            "host": {"port": 42},
+        }
+
+    @pytest.mark.parametrize("section", ["example", "spam.example"])
+    def test_section_not_found(self, section: str, tmp_path: Path):
+        """
+        An empty dict is returned when the config file does not contain the
+        desired class.
+        """
+        config_file = tmp_path.joinpath("settings.py")
+        config_file.write_text("class spam:\n    a = 'spam'\n")
+        result = PythonFormat(section).load_file(
+            config_file, _deep_options(Settings)
+        )
+        assert result == {}
+
+    def test_file_not_found(self):
+        """
+        "ConfigFileNotFoundError" is raised when a file does not exist.
+        """
+        pytest.raises(
+            ConfigFileNotFoundError,
+            PythonFormat("").load_file,
+            Path("x"),
+            _deep_options(Settings),
+        )
+
+    def test_file_invalid(self, tmp_path: Path):
+        """
+        "ConfigFileLoadError" is raised when a file contains invalid Python.
+        """
+        config_file = tmp_path.joinpath("settings.py")
+        config_file.write_text("3x = 'spam")
+        pytest.raises(
+            ConfigFileLoadError,
+            PythonFormat("").load_file,
+            config_file,
+            _deep_options(Settings),
+        )
+
+
 class TestTomlFormat:
     """Tests for TomlFormat"""
 
-    # TODO: Add tests for handling -/_ in the root config section.
-    # Currently we only try to load the user provided section name as is, but
-    # that may no longer work when we add a Python loader that requires _ in
-    # section names.
-
-    def test_load_toml(self, tmp_path: Path):
+    @pytest.mark.parametrize(
+        "fmt, data",
+        [
+            (
+                TomlFormat("example"),
+                """\
+                [example]
+                url = "spam"
+                [example.host]
+                port = 42
+                """,
+            ),
+        ],
+    )
+    def test_load_toml(self, fmt: FileFormat, data: str, tmp_path: Path):
         """
         We can load settings from a TOML file.
         """
         config_file = tmp_path.joinpath("settings.toml")
-        config_file.write_text(
-            """[example]
-            url = "spam"
-            [example.host]
-            port = 42
-        """
-        )
-        result = TomlFormat("example").load_file(config_file)
+        config_file.write_text(textwrap.dedent(data))
+        result = fmt.load_file(config_file, _deep_options(Settings))
         assert result == {
             "url": "spam",
             "host": {"port": 42},
@@ -177,7 +279,9 @@ class TestTomlFormat:
             b = "eggs"
         """
         )
-        result = TomlFormat("tool.example").load_file(config_file)
+        result = TomlFormat("tool.example").load_file(
+            config_file, _deep_options(Settings)
+        )
         assert result == {
             "a": "spam",
             "sub": {"b": "eggs"},
@@ -195,7 +299,9 @@ class TestTomlFormat:
             a = "spam"
         """
         )
-        result = TomlFormat(section).load_file(config_file)
+        result = TomlFormat(section).load_file(
+            config_file, _deep_options(Settings)
+        )
         assert result == {}
 
     def test_file_not_found(self):
@@ -203,7 +309,10 @@ class TestTomlFormat:
         "ConfigFileNotFoundError" is raised when a file does not exist.
         """
         pytest.raises(
-            ConfigFileNotFoundError, TomlFormat("").load_file, Path("x")
+            ConfigFileNotFoundError,
+            TomlFormat("").load_file,
+            Path("x"),
+            _deep_options(Settings),
         )
 
     def test_file_not_allowed(
@@ -226,7 +335,10 @@ class TestTomlFormat:
         )
 
         pytest.raises(
-            ConfigFileLoadError, TomlFormat("").load_file, config_file
+            ConfigFileLoadError,
+            TomlFormat("").load_file,
+            config_file,
+            _deep_options(Settings),
         )
 
     def test_file_invalid(self, tmp_path: Path):
@@ -236,7 +348,10 @@ class TestTomlFormat:
         config_file = tmp_path.joinpath("settings.toml")
         config_file.write_text("spam")
         pytest.raises(
-            ConfigFileLoadError, TomlFormat("").load_file, config_file
+            ConfigFileLoadError,
+            TomlFormat("").load_file,
+            config_file,
+            _deep_options(Settings),
         )
 
 
