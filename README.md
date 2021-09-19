@@ -190,8 +190,16 @@ Settings(a_str='spam', an_int=1)
 - Settings can currently be loaded from:
 
   - TOML files
+  - Python files
   - Environment variables
   - *click* command line options
+
+- Settings are converted to their correct type using [cattrs](https://cattrs.readthedocs.io).
+
+  - Users can extend the default converter with hooks for custom types
+  - Lists can be loaded from strings from environment variables.
+    String-to-list conversion can be configured.
+    Strings can be JSON structues or simple comma (or colon) speparated lists (e.g., `"1,2,3"` or `"path1:path2"`).
 
 - Paths to settings files can be
 
