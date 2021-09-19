@@ -1,13 +1,19 @@
+import json
 import logging
 from pathlib import Path
-from typing import List
+from typing import Any, Dict, List
 
 import cattr
 import pytest
 
 from typed_settings import _core
 from typed_settings._dict_utils import _deep_options
-from typed_settings.attrs import option, settings
+from typed_settings.attrs import (
+    default_converter,
+    option,
+    register_strlist_hook,
+    settings,
+)
 from typed_settings.loaders import EnvLoader, FileLoader, Loader, TomlFormat
 
 
@@ -290,6 +296,47 @@ class TestLoadSettings:
 
         result = _core.load_settings(Settings, [EnvLoader("TEST_")], converter)
         assert result == Settings(Test(42))
+
+    @pytest.mark.parametrize(
+        "vals, kwargs",
+        [
+            (["3,4,42", "spam,eggs"], {"sep": ","}),
+            (["3:4:42", "spam:eggs"], {"sep": ":"}),
+            (['[3,4,"42"]', '["spam","eggs"]'], {"fn": json.loads}),
+        ],
+    )
+    def test_load_list_from_env(
+        self,
+        vals: List[str],
+        kwargs: Dict[str, Any],
+        loaders: List[Loader],
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+    ):
+        """
+        Lists can be loaded from env vars
+        """
+        c = default_converter()
+        register_strlist_hook(c, **kwargs)
+
+        @settings
+        class Settings:
+            x: List[int]
+            y: List[Path]
+            z: List[int]
+
+        # The str2list hook should not interfere with loading of "normal"
+        # lists.
+        sf = tmp_path.joinpath("settings.toml")
+        sf.write_text("[example]\nz = [1, 2]\n")
+
+        monkeypatch.setenv("EXAMPLE_X", vals[0])
+        monkeypatch.setenv("EXAMPLE_Y", vals[1])
+
+        result = _core.load_settings(Settings, loaders, c)
+        assert result == Settings(
+            x=[3, 4, 42], y=[Path("spam"), Path("eggs")], z=[1, 2]
+        )
 
 
 class TestLogging:

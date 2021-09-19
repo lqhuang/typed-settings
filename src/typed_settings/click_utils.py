@@ -13,9 +13,7 @@ import click
 
 from ._core import T, _load_settings
 from ._dict_utils import _deep_options, _get_path, _merge_dicts, _set_path
-from .attrs import METADATA_KEY, _SecretRepr
-from .attrs import converter as default_converter
-from .attrs import from_dict
+from .attrs import METADATA_KEY, _SecretRepr, default_converter, from_dict
 from .attrs._compat import get_args, get_origin
 from .loaders import Loader
 
@@ -69,7 +67,7 @@ def click_options(
     cls = attr.resolve_types(cls)
     options = _deep_options(cls)
     settings = _load_settings(options, loaders)
-    converter = converter or default_converter
+    converter = converter or default_converter()
     type_handler = type_handler or TypeHandler()
 
     def pass_settings(f: AnyFunc) -> Decorator:
@@ -81,7 +79,7 @@ def click_options(
         def new_func(*args, **kwargs):
             ctx = click.get_current_context()
             _merge_dicts(settings, ctx.obj.get("settings"))
-            ctx.obj["settings"] = from_dict(settings, cls, default_converter)
+            ctx.obj["settings"] = from_dict(settings, cls, converter)
             return f(ctx.obj["settings"], *args, **kwargs)
 
         return update_wrapper(new_func, f)

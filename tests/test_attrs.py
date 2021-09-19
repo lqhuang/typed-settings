@@ -4,7 +4,13 @@ from typing import Any, Dict, List, Optional, Tuple
 
 import pytest
 
-from typed_settings.attrs import converter, from_dict, option, secret, settings
+from typed_settings.attrs import (
+    default_converter,
+    from_dict,
+    option,
+    secret,
+    settings,
+)
 
 
 class LeEnum(Enum):
@@ -87,5 +93,5 @@ def test_supported_types(typ, value, expected):
     class S:
         opt: typ
 
-    inst = from_dict({"opt": value}, S, converter)
+    inst = from_dict({"opt": value}, S, default_converter())
     assert inst.opt == expected

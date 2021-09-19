@@ -545,8 +545,8 @@ class TestEnvLoader:
         monkeypatch.setenv("T_HOST", "spam")  # Haha! Just a deceit!
         monkeypatch.setenv("T_HOST_PORT", "25")
         loader = EnvLoader(prefix="T_")
-        settings = loader.load(options)
-        assert settings == {
+        results = loader.load(options)
+        assert results == {
             "url": "foo",
             "host": {
                 "port": "25",
@@ -562,5 +562,5 @@ class TestEnvLoader:
         monkeypatch.setenv("URL", "spam")
 
         loader = EnvLoader(prefix="")
-        settings = loader.load(options)
-        assert settings == {"url": "spam"}
+        results = loader.load(options)
+        assert results == {"url": "spam"}

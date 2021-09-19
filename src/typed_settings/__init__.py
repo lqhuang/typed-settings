@@ -5,7 +5,13 @@ from typing import Any, List
 
 from ._core import default_loaders, load, load_settings
 from ._file_utils import find
-from .attrs import option, secret, settings
+from .attrs import (
+    default_converter,
+    option,
+    register_strlist_hook,
+    secret,
+    settings,
+)
 from .loaders import EnvLoader, FileLoader, TomlFormat
 
 
@@ -14,12 +20,14 @@ __all__ = [
     "FileLoader",
     "TomlFormat",
     "click_options",
+    "default_converter",
     "default_loaders",
     "find",
     "load",
     "load_settings",
     "option",
     "pass_settings",
+    "register_strlist_hook",
     "secret",
     "settings",
 ]

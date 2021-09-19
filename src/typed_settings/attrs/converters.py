@@ -1,5 +1,5 @@
 """
-Additional attrs converters
+Additional (c)attrs converters
 """
 from datetime import datetime
 
