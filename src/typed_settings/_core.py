@@ -9,7 +9,8 @@ import attr
 import cattr
 
 from ._dict_utils import _deep_options, _merge_dicts, _set_path
-from .attrs import METADATA_KEY, default_converter, from_dict
+from .attrs import METADATA_KEY
+from .converters import default_converter, from_dict
 from .loaders import EnvLoader, FileLoader, Loader, TomlFormat
 from .types import AUTO, OptionList, T, _Auto
 

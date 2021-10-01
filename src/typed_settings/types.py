@@ -1,12 +1,14 @@
 """
 Internal data structures.
 """
+from enum import Enum
 from typing import Any, List, MutableMapping, TypeVar
 
 import attr
 
 
 T = TypeVar("T")
+ET = TypeVar("ET", bound=Enum)
 SettingsDict = MutableMapping[str, Any]
 
 

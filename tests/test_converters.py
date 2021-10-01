@@ -3,19 +3,40 @@ Tests for `typed_settings.attrs.converters`.
 """
 import sys
 from datetime import datetime, timedelta, timezone
+from enum import Enum
+from pathlib import Path
+from typing import Any, Dict, List, Optional, Tuple
 
 import attr
 import pytest
 
+from typed_settings.attrs import option, secret, settings
 from typed_settings.attrs.converters import (
     to_attrs,
-    to_bool,
-    to_dt,
     to_iterable,
     to_mapping,
     to_tuple,
     to_union,
 )
+from typed_settings.converters import (
+    default_converter,
+    from_dict,
+    to_bool,
+    to_dt,
+    to_enum,
+    to_path,
+)
+
+
+class LeEnum(Enum):
+    spam = "Le Spam"
+    eggs = "Le Eggs"
+
+
+@settings
+class S:
+    u: str = option()
+    p: str = secret()
 
 
 class TestToAttrs:
@@ -108,11 +129,11 @@ class TestToDt:
         Existing datetimes are returned unchanged.
         """
         dt = datetime(2020, 5, 4, 13, 37)
-        result = to_dt(dt)
+        result = to_dt(dt, datetime)
         assert result is dt
 
     @pytest.mark.parametrize(
-        "input, expected",
+        "value, expected",
         [
             ("2020-05-04 13:37:00", datetime(2020, 5, 4, 13, 37)),
             ("2020-05-04T13:37:00", datetime(2020, 5, 4, 13, 37)),
@@ -137,11 +158,11 @@ class TestToDt:
             ),
         ],
     )
-    def test_from_str(self, input, expected):
+    def test_from_str(self, value, expected):
         """
         Existing datetimes are returned unchanged.
         """
-        result = to_dt(input)
+        result = to_dt(value, datetime)
         assert result == expected
 
     def test_invalid_input(self):
@@ -183,7 +204,7 @@ class TestToBool:
         """
         Only a limited set of values can be converted to a bool.
         """
-        assert to_bool(val) is expected
+        assert to_bool(val, bool) is expected
 
     @pytest.mark.parametrize("val", ["", [], "spam", 2, -1])
     def test_to_bool_error(self, val):
@@ -193,7 +214,39 @@ class TestToBool:
 
         Everything that is not in the sets above raises an error.
         """
-        pytest.raises(ValueError, to_bool, val)
+        pytest.raises(ValueError, to_bool, val, bool)
+
+
+class TestToEnum:
+    """Tests for `to_enum`."""
+
+    @pytest.mark.parametrize(
+        "value, expected",
+        [
+            (LeEnum.spam, LeEnum.spam),
+            ("spam", LeEnum.spam),
+            ("Le Spam", LeEnum.spam),
+        ],
+    )
+    def test_to_enum(self, value, expected):
+        """
+        `to_enum()` accepts Enums, enum values and enum attribute names.
+        """
+        assert to_enum(value, LeEnum) is expected
+
+
+class TestToPath:
+    """Tests for `to_path`."""
+
+    @pytest.mark.parametrize(
+        "value, expected",
+        [
+            ("spam", Path("spam")),
+            (Path("eggs"), Path("eggs")),
+        ],
+    )
+    def test_to_path(self, value, expected):
+        assert to_path(value, Path) == expected
 
 
 class TestToIterable:
@@ -283,3 +336,62 @@ class TestToUnion:
         converter = to_union([int])
         with pytest.raises(ValueError):
             converter("spam")
+
+
+@pytest.mark.parametrize(
+    "typ, value, expected",
+    [
+        # Bools can be parsed from a defined set of values
+        (bool, True, True),
+        (bool, "True", True),
+        (bool, "true", True),
+        (bool, "yes", True),
+        (bool, "1", True),
+        (bool, 1, True),
+        (bool, False, False),
+        (bool, "False", False),
+        (bool, "false", False),
+        (bool, "no", False),
+        (bool, "0", False),
+        (bool, 0, False),
+        # Other simple types
+        (int, 23, 23),
+        (int, "42", 42),
+        (float, 3.14, 3.14),
+        (float, ".815", 0.815),
+        (str, "spam", "spam"),
+        (datetime, "2020-05-04T13:37:00", datetime(2020, 5, 4, 13, 37)),
+        # Enums are parsed from their "value"
+        (LeEnum, "Le Eggs", LeEnum.eggs),
+        # (Nested) attrs classes
+        (S, {"u": "user", "p": "pwd"}, S("user", "pwd")),
+        # Container types
+        (List[int], [1, 2], [1, 2]),
+        (List[S], [{"u": 1, "p": 2}], [S("1", "2")]),
+        (Dict[str, int], {"a": 1, "b": 3.1}, {"a": 1, "b": 3}),
+        (Dict[str, S], {"a": {"u": "u", "p": "p"}}, {"a": S("u", "p")}),
+        (Tuple[str, ...], [1, "2", 3], ("1", "2", "3")),
+        (Tuple[int, bool, str], [0, "0", 0], (0, False, "0")),
+        # "Special types"
+        (Any, 2, 2),
+        (Any, "2", "2"),
+        (Any, None, None),
+        (Optional[str], 1, "1"),
+        (Optional[S], None, None),
+        (Optional[S], {"u": "u", "p": "p"}, S("u", "p")),
+        (Optional[LeEnum], "Le Spam", LeEnum.spam),
+    ],
+)
+def test_supported_types(typ, value, expected):
+    """
+    All oficially supported types can be converted by attrs.
+
+    Please create an issue if something is missing here.
+    """
+
+    @settings
+    class Settings:
+        opt: typ
+
+    inst = from_dict({"opt": value}, Settings, default_converter())
+    assert inst.opt == expected

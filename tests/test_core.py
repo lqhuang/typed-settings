@@ -8,12 +8,8 @@ import pytest
 
 from typed_settings import _core
 from typed_settings._dict_utils import _deep_options
-from typed_settings.attrs import (
-    default_converter,
-    option,
-    register_strlist_hook,
-    settings,
-)
+from typed_settings.attrs import option, settings
+from typed_settings.converters import default_converter, register_strlist_hook
 from typed_settings.loaders import EnvLoader, FileLoader, Loader, TomlFormat
 
 

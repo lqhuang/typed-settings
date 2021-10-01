@@ -120,11 +120,8 @@ Helpers for creating :mod:`attrs` classes and fields with sensible details for T
 Converters
 ----------
 
-.. autofunction:: default_converter()
 
-.. autofunction:: register_strlist_hook()
-
-.. automodule:: typed_settings.attrs.converters
+.. automodule:: typed_settings.converters
    :members:
 
 

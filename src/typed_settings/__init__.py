@@ -5,13 +5,8 @@ from typing import Any, List
 
 from ._core import default_loaders, load, load_settings
 from ._file_utils import find
-from .attrs import (
-    default_converter,
-    option,
-    register_strlist_hook,
-    secret,
-    settings,
-)
+from .attrs import option, secret, settings
+from .converters import default_converter, register_strlist_hook
 from .loaders import EnvLoader, FileLoader, TomlFormat
 
 
