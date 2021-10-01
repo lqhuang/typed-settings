@@ -1,6 +1,6 @@
 import pytest
 
-from typed_settings.attrs import option, secret, settings
+from typed_settings.attrs import SECRET, option, secret, settings
 
 
 @settings
@@ -19,5 +19,8 @@ class TestAttrExtensions:
     def test_secret_str(self, inst):
         assert str(inst) == "S(u='spam', p=***)"
 
-    def test_secret_repr(self, inst):
+    def test_secret_repr_call(self, inst):
         assert repr(inst) == "S(u='spam', p=***)"
+
+    def test_secret_repr_repr(self):
+        assert str(SECRET) == "***"
