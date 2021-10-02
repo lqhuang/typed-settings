@@ -2,6 +2,35 @@
 Changelog
 =========
 
+0.11.0 (2021-10-02)
+===================
+
+- 💥 Use cattrs_ instead of `attrs auto-convert hooks`_.  This makes
+  converters more robust and easier to extend.
+
+- 💥 The signature of `load_settings()` has changed.  `load()` is now
+  the pre-configured convenience loader while `load_settings()` allows
+  full customization of all settings loaders and value converters.
+
+- ✨ Loaders can now be extended by users.  Typed settings bundles a file loader and an environment loader.
+  New loaders must implement the Loader_ protocol.
+
+- ✨ The file loader can be extended to support additional file formats.
+  File loaders must implement the FileFormat protocol.
+
+- ✨ Add experimental support for Python config files.
+
+- ✨ Environment variables can now contain list values.  Theses lists can eitehr be JSON or simple *{separator}* spearted lists (the separator can be configured, e.g., ``:`` or ``,``).
+
+- 🗑 The attrs specific converters and hooks are deprecated and will be
+  removed in a future release.
+
+.. _attrs auto-convert hooks: https://www.attrs.org/en/stable/extending.html#automatic-field-transformation-and-modification
+.. _cattrs: https://cattrs.readthedocs.io/en/latest/index.html
+.. _fileformat: https://typed-settings.readthedocs.io/en/latest/apiref.html#typed_settings.loaders.FileFormat
+.. _loader: https://typed-settings.readthedocs.io/en/latest/apiref.html#typed_settings.loaders.Loader
+
+
 0.10.0 (2021-06-23)
 ===================
 
