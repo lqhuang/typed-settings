@@ -6,14 +6,15 @@ from enum import Enum
 from pathlib import Path
 from typing import Any, Callable, Optional, Type, Union
 
-import cattr
+from attr import has
+from cattr import Converter, GenConverter
 from cattr._compat import is_sequence
 
 from .exceptions import InvalidValueError
 from .types import ET, SettingsDict, T
 
 
-def default_converter() -> cattr.GenConverter:
+def default_converter() -> GenConverter:
     """
     Get an instanceof the default converter used by Typed Settings.
 
@@ -26,17 +27,42 @@ def default_converter() -> cattr.GenConverter:
         - :class:`enum.Enum` using :func:`.to_enum()`
         - :class:`pathlib.Path`
 
+        The converter can also structure attrs instances from existing attrs
+        instances (normaly, it would only work with dicts).  This allows using
+        instances of nested class es of default values for options.  See
+        :func:`register_structure_hook_factory()`.
+
     This converter can also be used as a base for converters with custom
     structure hooks.
     """
-    converter = cattr.GenConverter()
+    converter = GenConverter()
+    register_attrs_hook_factory(converter)
     for t, h in DEFAULT_STRUCTURE_HOOKS:
         converter.register_structure_hook(t, h)  # type: ignore
     return converter
 
 
+def register_attrs_hook_factory(converter: Converter) -> None:
+    """
+    Register a hook factory that allows using instances of attrs classes where
+    cattrs would normally expect a dictionary.
+
+    These instances are then returned as-is and withour further processing.
+    """
+
+    def allow_attrs_instances(typ):
+        def structure_attrs(val, _):
+            if isinstance(val, typ):
+                return val
+            return converter.structure_attrs_fromdict(val, typ)
+
+        return structure_attrs
+
+    converter.register_structure_hook_factory(has, allow_attrs_instances)
+
+
 def register_strlist_hook(
-    converter: cattr.Converter,
+    converter: Converter,
     sep: Optional[str] = None,
     fn: Optional[Callable[[str], list]] = None,
 ) -> None:
@@ -90,9 +116,7 @@ def register_strlist_hook(
     converter.register_structure_hook_factory(is_sequence, gen_str2list)
 
 
-def from_dict(
-    settings: SettingsDict, cls: Type[T], converter: cattr.Converter
-) -> T:
+def from_dict(settings: SettingsDict, cls: Type[T], converter: Converter) -> T:
     """
     Convert a settings dict to an attrs class instance using a cattrs
     converter.

@@ -365,6 +365,7 @@ class TestToUnion:
         (LeEnum, "Le Eggs", LeEnum.eggs),
         # (Nested) attrs classes
         (S, {"u": "user", "p": "pwd"}, S("user", "pwd")),
+        (S, S("user", "pwd"), S("user", "pwd")),
         # Container types
         (List[int], [1, 2], [1, 2]),
         (List[S], [{"u": 1, "p": 2}], [S("1", "2")]),
