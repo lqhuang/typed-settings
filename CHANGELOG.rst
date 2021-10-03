@@ -2,6 +2,13 @@
 Changelog
 =========
 
+0.11.1 (2021-10-03)
+===================
+
+- 🐛 Allow using instances of nested attrs/settings classes as default values for options again.
+  Fixes a regression introduced by switching to cattrs.
+
+
 0.11.0 (2021-10-02)
 ===================
 
