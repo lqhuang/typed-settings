@@ -2,7 +2,15 @@
 Helpers for and additions to :mod:`attr`.
 """
 from datetime import datetime
-from typing import TYPE_CHECKING, Any, Callable, Dict, Optional, overload
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Callable,
+    Dict,
+    Mapping,
+    Optional,
+    overload,
+)
 
 import attr
 import attr._make
@@ -309,3 +317,46 @@ def secret(
         order=order,
         on_setattr=on_setattr,
     )
+
+
+def evolve(inst, **changes):
+    """
+    Create a new instance, based on *inst* with *changes* applied.
+
+    If the old value of an attribute is an ``attrs`` class and the new value
+    is a dict, the old value is updated recursively.
+
+    .. warning::
+
+       This function is very similar to :func:`attr.evolve()`, but the
+       ``attrs`` version is not updating values recursively.  Instead, it will
+       just replace ``attrs`` instances with a dict.
+
+    :param inst: Instance of a class with ``attrs`` attributes.
+    :param changes: Keyword changes in the new copy.
+
+    :return: A copy of inst with *changes* incorporated.
+
+    :raise TypeError: If *attr_name* couldn't be found in the class
+        ``__init__``.
+    :raise attr.exceptions.NotAnAttrsClassError: If *cls* is not an ``attrs``
+        class.
+
+    ..  versionadded:: 0.12.0
+    """
+    cls = inst.__class__
+    attrs = attr.fields(cls)
+    for a in attrs:
+        if not a.init:
+            continue
+        attr_name = a.name  # To deal with private attributes.
+        init_name = attr_name if attr_name[0] != "_" else attr_name[1:]
+        old_value = getattr(inst, attr_name)
+        if init_name not in changes:
+            # Add original value to changes
+            changes[init_name] = old_value
+        elif attr.has(old_value) and isinstance(changes[init_name], Mapping):
+            # Evolve nested attrs classes
+            changes[init_name] = evolve(old_value, **changes[init_name])
+
+    return cls(**changes)
