@@ -8,7 +8,7 @@ from typing import Any, Callable, Optional, Type, Union
 
 from attr import has
 from cattr import Converter, GenConverter
-from cattr._compat import is_sequence
+from cattr._compat import is_frozenset, is_mutable_set, is_sequence, is_tuple
 
 from .exceptions import InvalidValueError
 from .types import ET, SettingsDict, T
@@ -47,7 +47,7 @@ def register_attrs_hook_factory(converter: Converter) -> None:
     Register a hook factory that allows using instances of attrs classes where
     cattrs would normally expect a dictionary.
 
-    These instances are then returned as-is and withour further processing.
+    These instances are then returned as-is and without further processing.
     """
 
     def allow_attrs_instances(typ):
@@ -67,8 +67,9 @@ def register_strlist_hook(
     fn: Optional[Callable[[str], list]] = None,
 ) -> None:
     """
-    Register a hook factory with *converter* that allows structuring lists
-    from strings (which may, e.g., come from environment variables).
+    Register a hook factory with *converter* that allows structuring lists,
+    (frozen) sets and tuples from strings (which may, e.g., come from
+    environment variables).
 
     Args:
         converter: The converter to register the hooks with.
@@ -102,18 +103,29 @@ def register_strlist_hook(
     if sep is not None:
         fn = lambda v: v.split(sep)  # noqa
 
-    def gen_str2list(typ):
-        def str2list(val, _):
+    collection_types = [
+        # Order is important, tuple must be last!
+        (is_sequence, converter._structure_list),
+        (is_mutable_set, converter._structure_set),
+        (is_frozenset, converter._structure_frozenset),
+        (is_tuple, converter._structure_tuple),
+    ]
+
+    for check, structure_func in collection_types:
+        hook_factory = _generate_hook_factory(structure_func, fn)
+        converter.register_structure_hook_factory(check, hook_factory)
+
+
+def _generate_hook_factory(structure_func, fn):
+    def gen_func(typ):
+        def str2collection(val, _):
             if isinstance(val, str):
                 val = fn(val)
-            # "_structure_list()" is private but it seems more appropriate
-            # than this comprehension:
-            # return [c.structure(e, typ.__args__[0]) for e in val]
-            return converter._structure_list(val, typ)
+            return structure_func(val, typ)
 
-        return str2list
+        return str2collection
 
-    converter.register_structure_hook_factory(is_sequence, gen_str2list)
+    return gen_func
 
 
 def from_dict(settings: SettingsDict, cls: Type[T], converter: Converter) -> T:

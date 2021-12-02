@@ -5,7 +5,7 @@ import sys
 from datetime import datetime, timedelta, timezone
 from enum import Enum
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, FrozenSet, List, Optional, Set, Tuple
 
 import attr
 import pytest
@@ -21,6 +21,7 @@ from typed_settings.attrs.converters import (
 from typed_settings.converters import (
     default_converter,
     from_dict,
+    register_strlist_hook,
     to_bool,
     to_dt,
     to_enum,
@@ -396,3 +397,35 @@ def test_supported_types(typ, value, expected):
 
     inst = from_dict({"opt": value}, Settings, default_converter())
     assert inst.opt == expected
+
+
+STRLIST_TEST_DATA = [
+    (List[int], [1, 2, 3]),
+    (Set[int], {1, 2, 3}),
+    (FrozenSet[int], frozenset({1, 2, 3})),
+    (Tuple[int, ...], (1, 2, 3)),
+]
+
+if sys.version_info[:2] >= (3, 9):
+    STRLIST_TEST_DATA.extend(
+        [
+            (list[int], [1, 2, 3]),
+            (set[int], {1, 2, 3}),
+            (tuple[int, ...], (1, 2, 3)),  # type: ignore
+        ]
+    )
+
+
+@pytest.mark.parametrize(
+    "typ, expected",
+    STRLIST_TEST_DATA,
+)
+def test_strlist_hook(typ, expected):
+    @settings
+    class Settings:
+        a: typ
+
+    converter = default_converter()
+    register_strlist_hook(converter, sep=":")
+    inst = from_dict({"a": "1:2:3"}, Settings, converter)
+    assert inst == Settings(expected)
