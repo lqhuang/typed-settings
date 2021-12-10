@@ -37,6 +37,7 @@ def default_converter() -> GenConverter:
     """
     converter = GenConverter()
     register_attrs_hook_factory(converter)
+    register_strlist_hook(converter, ":")
     for t, h in DEFAULT_STRUCTURE_HOOKS:
         converter.register_structure_hook(t, h)  # type: ignore
     return converter
