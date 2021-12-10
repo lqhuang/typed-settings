@@ -146,7 +146,7 @@ def from_dict(settings: SettingsDict, cls: Type[T], converter: Converter) -> T:
     """
     try:
         return converter.structure_attrs_fromdict(settings, cls)
-    except (AttributeError, ValueError, TypeError) as e:
+    except (AttributeError, KeyError, ValueError, TypeError) as e:
         raise InvalidValueError(str(e)) from e
 
 
@@ -225,16 +225,23 @@ def to_enum(value: Any, cls: Type[ET]) -> ET:
     Return a converter that creates an instance of the :class:`.Enum` *cls*.
 
     If the to be converted value is not already an enum, the converter will
-    first try to create one by name (``MyEnum[val]``) and, if that fails, by
-    value (``MyEnum(val)``).
+    create one by name (``MyEnum[val]``).
+
+    Args:
+        value: The input data
+        cls: The enum type
+
+    Return:
+        An instance of *cls*
+
+    Raise:
+        KeyError: If *value* is not a valid member of *cls*
 
     """
     if isinstance(value, cls):
         return value
-    try:
-        return cls[value]
-    except KeyError:
-        return cls(value)
+
+    return cls[value]
 
 
 def to_path(value: Union[Path, str], _type: type) -> Path:

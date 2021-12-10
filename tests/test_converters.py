@@ -226,12 +226,11 @@ class TestToEnum:
         [
             (LeEnum.spam, LeEnum.spam),
             ("spam", LeEnum.spam),
-            ("Le Spam", LeEnum.spam),
         ],
     )
     def test_to_enum(self, value, expected):
         """
-        `to_enum()` accepts Enums, enum values and enum attribute names.
+        `to_enum()` accepts Enums and member names.
         """
         assert to_enum(value, LeEnum) is expected
 
@@ -362,8 +361,8 @@ class TestToUnion:
         (float, ".815", 0.815),
         (str, "spam", "spam"),
         (datetime, "2020-05-04T13:37:00", datetime(2020, 5, 4, 13, 37)),
-        # Enums are parsed from their "value"
-        (LeEnum, "Le Eggs", LeEnum.eggs),
+        # Enums are parsed from their "key"
+        (LeEnum, "eggs", LeEnum.eggs),
         # (Nested) attrs classes
         (S, {"u": "user", "p": "pwd"}, S("user", "pwd")),
         (S, S("user", "pwd"), S("user", "pwd")),
@@ -381,7 +380,7 @@ class TestToUnion:
         (Optional[str], 1, "1"),
         (Optional[S], None, None),
         (Optional[S], {"u": "u", "p": "p"}, S("u", "p")),
-        (Optional[LeEnum], "Le Spam", LeEnum.spam),
+        (Optional[LeEnum], "spam", LeEnum.spam),
     ],
 )
 def test_supported_types(typ, value, expected):
