@@ -27,6 +27,7 @@ from _pytest.python import Metafunc
 from typed_settings import (
     click_options,
     click_utils,
+    default_converter,
     default_loaders,
     option,
     pass_settings,
@@ -68,29 +69,32 @@ def make_cli(settings_cls: Type[T]) -> Cli:
 
     runner = Runner()
 
-    @click.group(invoke_without_command=True)
-    @click_options(settings_cls, default_loaders("test"))
-    def cli(settings: T):
-        runner.settings = settings
-
     def run(*args, **kwargs) -> CliResult:
+        @click.group(invoke_without_command=True)
+        @click_options(settings_cls, default_loaders("test"))
+        def cli(settings: T):
+            runner.settings = settings
+
         return runner.invoke(cli, args, **kwargs)
 
     return run
 
 
 @pytest.mark.parametrize(
-    "default, path, settings, expected",
+    "default, path, type, settings, expected",
     [
-        (attr.NOTHING, "a", {"a": 3}, 3),
-        (attr.NOTHING, "a", {}, attr.NOTHING),
-        (2, "a", {}, 2),
-        (attr.Factory(list), "a", {}, []),
+        (attr.NOTHING, "a", int, {"a": 3}, 3),
+        (attr.NOTHING, "a", int, {}, attr.NOTHING),
+        (2, "a", int, {}, 2),
+        (attr.Factory(list), "a", List[int], {}, []),
     ],
 )
-def test_get_default(default, path, settings, expected):
-    field = attr.Attribute("test", default, None, None, None, None, None, None)
-    result = click_utils._get_default(field, path, settings)
+def test_get_default(default, path, type, settings, expected):
+    converter = default_converter()
+    field = attr.Attribute(
+        "test", default, None, None, None, None, None, None, type=type
+    )
+    result = click_utils._get_default(field, path, settings, converter)
     assert result == expected
 
 
@@ -106,7 +110,7 @@ def test_get_default_factory():
 
     default = attr.Factory(factory, takes_self=True)
     field = attr.Attribute("test", default, None, None, None, None, None, None)
-    result = click_utils._get_default(field, "a", {})
+    result = click_utils._get_default(field, "a", {}, default_converter())
     assert result == "eggs"
 
 
@@ -116,14 +120,14 @@ def test_no_default(monkeypatch):
     """
 
     @settings
-    class S:
+    class Settings:
         a: str
         b: str
 
     monkeypatch.setenv("TEST_A", "spam")  # This makes only "S.b" mandatory!
 
     @click.command()
-    @click_options(S, default_loaders("test"))
+    @click_options(Settings, default_loaders("test"))
     def cli(settings):
         pass
 
@@ -144,12 +148,12 @@ def test_help_text():
     """
 
     @settings
-    class S:
+    class Settings:
         a: str = option(default="spam", help="Help for 'a'")
         b: str = secret(default="eggs", help="bbb")
 
     @click.command()
-    @click_options(S, default_loaders("test"))
+    @click_options(Settings, default_loaders("test"))
     def cli(settings):
         pass
 
@@ -172,11 +176,11 @@ def test_long_name():
     """
 
     @settings
-    class S:
+    class Settings:
         long_name: str = "val"
 
     @click.command()
-    @click_options(S, default_loaders("test"))
+    @click_options(Settings, default_loaders("test"))
     def cli(settings):
         pass
 
@@ -200,7 +204,6 @@ def test_click_default_from_settings(monkeypatch, tmp_path):
 
     tmp_path.joinpath("settings.toml").write_text('[test]\na = "x"\n')
     spath = tmp_path.joinpath("settings2.toml")
-    print(spath)
     spath.write_text('[test]\nb = "y"\n')
     monkeypatch.setenv("TEST_SETTINGS", str(spath))
     monkeypatch.setenv("TEST_C", "z")
@@ -236,19 +239,19 @@ def test_click_default_from_settings(monkeypatch, tmp_path):
 
 def test_unsupported_generic():
     @settings
-    class S:
+    class Settings:
         opt: Dict[int, int]
 
     with pytest.raises(TypeError, match="Cannot create click type"):
 
         @click.command()
-        @click_options(S, default_loaders("test"))
+        @click_options(Settings, default_loaders("test"))
         def cli(settings):
             pass
 
 
 class LeEnum(Enum):
-    spam = "le spam"
+    spam = "Le spam"
     eggs = "Le eggs"
 
 
@@ -273,12 +276,17 @@ class TestClickParamTypes:
         """
 
         @settings
-        class S:
+        class Settings:
             pass
 
         expected_help: List[str] = []
+
+        env_vars: Dict[str, str] = {}
+        expected_env_var_defaults: List[str] = []
+
         default_options: List[str] = []
         expected_defaults: Any = None
+
         cli_options: List[str] = []
         expected_settings: Any = None
 
@@ -294,7 +302,7 @@ class TestClickParamTypes:
         """
 
         @settings
-        class S:
+        class Settings:
             a: bool
             b: bool = True
             c: bool = False
@@ -304,9 +312,18 @@ class TestClickParamTypes:
             "  --b / --no-b  [default: b]",
             "  --c / --no-c  [default: no-c]",
         ]
-        expected_defaults = S(False, True, False)
+
+        env_vars = {"A": "1", "B": "0"}
+        expected_env_var_defaults = [
+            "  --a / --no-a  [default: a]",
+            "  --b / --no-b  [default: no-b]",
+            "  --c / --no-c  [default: no-c]",
+        ]
+
+        expected_defaults = Settings(False, True, False)
+
         cli_options = ["--no-a", "--no-b", "--c"]
-        expected_settings = S(False, False, True)
+        expected_settings = Settings(False, False, True)
 
     class IntFloatStrParam(ClickParamBase):
         """
@@ -314,7 +331,7 @@ class TestClickParamTypes:
         """
 
         @settings
-        class S:
+        class Settings:
             a: str = option(default="spam")
             b: str = secret(default="spam")
             c: int = 0
@@ -324,11 +341,21 @@ class TestClickParamTypes:
             "  --a TEXT     [default: spam]",
             "  --b TEXT     [default: ***]",
             "  --c INTEGER  [default: 0]",
-            "  --d FLOAT    [default: 0]",
+            "  --d FLOAT    [default: 0.0]",
         ]
-        expected_defaults = S()
+
+        env_vars = {"A": "eggs", "B": "bacon", "C": "42", "D": "3.14"}
+        expected_env_var_defaults = [
+            "  --a TEXT     [default: eggs]",
+            "  --b TEXT     [default: ***]",
+            "  --c INTEGER  [default: 42]",
+            "  --d FLOAT    [default: 3.14]",
+        ]
+
+        expected_defaults = Settings()
+
         cli_options = ["--a=eggs", "--b=pwd", "--c=3", "--d=3.1"]
-        expected_settings = S(a="eggs", b="pwd", c=3, d=3.1)
+        expected_settings = Settings(a="eggs", b="pwd", c=3, d=3.1)
 
     class DateTimeParam(ClickParamBase):
         """
@@ -336,7 +363,7 @@ class TestClickParamTypes:
         """
 
         @settings
-        class S:
+        class Settings:
             a: datetime = datetime.fromtimestamp(0, timezone.utc)
             b: datetime = datetime.fromtimestamp(0, timezone.utc)
             c: datetime = datetime.fromtimestamp(0, timezone.utc)
@@ -349,13 +376,29 @@ class TestClickParamTypes:
             "  --c [%Y-%m-%d|%Y-%m-%dT%H:%M:%S|%Y-%m-%dT%H:%M:%S%z]",
             "                                  [default: 1970-01-01T00:00:00+00:00]",  # noqa: E501
         ]
-        expected_defaults = S()
+
+        env_vars = {
+            "A": "2021-05-04T13:37:00Z",
+            "B": "2021-05-04T13:37:00",
+            "C": "2021-05-04",
+        }
+        expected_env_var_defaults = [
+            "  --a [%Y-%m-%d|%Y-%m-%dT%H:%M:%S|%Y-%m-%dT%H:%M:%S%z]",
+            "                                  [default: 2021-05-04T13:37:00+00:00]",  # noqa: E501
+            "  --b [%Y-%m-%d|%Y-%m-%dT%H:%M:%S|%Y-%m-%dT%H:%M:%S%z]",
+            "                                  [default: 2021-05-04T13:37:00]",  # noqa: E501
+            "  --c [%Y-%m-%d|%Y-%m-%dT%H:%M:%S|%Y-%m-%dT%H:%M:%S%z]",
+            "                                  [default: 2021-05-04T00:00:00]",  # noqa: E501
+        ]
+
+        expected_defaults = Settings()
+
         cli_options = [
             "--a=2020-05-04",
             "--b=2020-05-04T13:37:00",
             "--c=2020-05-04T13:37:00+00:00",
         ]
-        expected_settings = S(
+        expected_settings = Settings(
             datetime(2020, 5, 4),
             datetime(2020, 5, 4, 13, 37),
             datetime(2020, 5, 4, 13, 37, tzinfo=timezone.utc),
@@ -367,7 +410,7 @@ class TestClickParamTypes:
         """
 
         @settings
-        class S:
+        class Settings:
             a: LeEnum
             b: LeEnum = LeEnum.spam
 
@@ -375,10 +418,18 @@ class TestClickParamTypes:
             "  --a [spam|eggs]  [required]",
             "  --b [spam|eggs]  [default: spam]",
         ]
+
+        env_vars = {"A": "spam", "B": "eggs"}
+        expected_env_var_defaults = [
+            "  --a [spam|eggs]  [default: spam]",
+            "  --b [spam|eggs]  [default: eggs]",
+        ]
+
         default_options = ["--a=spam"]
-        expected_defaults = S(a=LeEnum.spam)
+        expected_defaults = Settings(a=LeEnum.spam)
+
         cli_options = ["--a=spam", "--b=eggs"]
-        expected_settings = S(LeEnum.spam, LeEnum.eggs)
+        expected_settings = Settings(LeEnum.spam, LeEnum.eggs)
 
     class PathParam(ClickParamBase):
         """
@@ -386,13 +437,18 @@ class TestClickParamTypes:
         """
 
         @settings
-        class S:
+        class Settings:
             a: Path = Path("/")
 
         expected_help = ["  --a PATH  [default: /]"]
-        expected_defaults = S()
+
+        env_vars = {"A": "/spam/eggs"}
+        expected_env_var_defaults = ["  --a PATH  [default: /spam/eggs]"]
+
+        expected_defaults = Settings()
+
         cli_options = ["--a=/spam"]
-        expected_settings = S(Path("/spam"))
+        expected_settings = Settings(Path("/spam"))
 
     class NestedParam(ClickParamBase):
         """
@@ -400,7 +456,7 @@ class TestClickParamTypes:
         """
 
         @settings
-        class S:
+        class Settings:
             @settings
             class Nested:
                 a: str = "nested"
@@ -412,9 +468,17 @@ class TestClickParamTypes:
             "  --n-a TEXT     [default: nested]",
             "  --n-b INTEGER  [default: 0]",
         ]
-        expected_defaults = S()
+
+        env_vars = {"N_A": "spam", "N_B": "42"}
+        expected_env_var_defaults = [
+            "  --n-a TEXT     [default: spam]",
+            "  --n-b INTEGER  [default: 42]",
+        ]
+
+        expected_defaults = Settings()
+
         cli_options = ["--n-a=eggs", "--n-b=3"]
-        expected_settings = S(S.Nested("eggs", 3))
+        expected_settings = Settings(Settings.Nested("eggs", 3))
 
     class ListParam(ClickParamBase):
         """
@@ -422,7 +486,7 @@ class TestClickParamTypes:
         """
 
         @settings
-        class S:
+        class Settings:
             a: List[int]
             b: Sequence[datetime] = [datetime(2020, 5, 4)]
             c: MutableSequence[int] = []
@@ -439,8 +503,25 @@ class TestClickParamTypes:
             "  --e INTEGER",
             "  --f INTEGER",
         ]
+
+        env_vars = {
+            "A": "1:2",
+            "B": "2021-01-01:2021-01-02",  # Dates with times wont work here!
+        }
+        expected_env_var_defaults = [
+            "  --a INTEGER                     [default: 1, 2]",
+            "  --b [%Y-%m-%d|%Y-%m-%dT%H:%M:%S|%Y-%m-%dT%H:%M:%S%z]",
+            "                                  [default: 2021-01-01T00:00:00,",
+            "                                  2021-01-02T00:00:00]",
+            "  --c INTEGER",
+            "  --d INTEGER",
+            "  --e INTEGER",
+            "  --f INTEGER",
+        ]
+
         default_options = ["--a=1"]
-        expected_defaults = S(a=[1])
+        expected_defaults = Settings(a=[1])
+
         cli_options = [
             "--a=1",
             "--a=2",
@@ -451,7 +532,7 @@ class TestClickParamTypes:
             "--e=5",
             "--f=6",
         ]
-        expected_settings = S(
+        expected_settings = Settings(
             [1, 2],
             [datetime(2020, 1, 1), datetime(2020, 1, 2)],
             [3],
@@ -467,7 +548,7 @@ class TestClickParamTypes:
         """
 
         @settings
-        class S:
+        class Settings:
             a: Tuple[int, ...] = (0,)
             b: Tuple[int, float, str] = (0, 0.0, "")
 
@@ -475,9 +556,17 @@ class TestClickParamTypes:
             "  --a INTEGER                  [default: 0]",
             "  --b <INTEGER FLOAT TEXT>...  [default: 0, 0.0, ]",
         ]
-        expected_defaults = S()
+
+        env_vars = {"A": "1:2", "B": "42:3.14:spam"}
+        expected_env_var_defaults = [
+            "  --a INTEGER                  [default: 1, 2]",
+            "  --b <INTEGER FLOAT TEXT>...  [default: 42, 3.14, spam]",
+        ]
+
+        expected_defaults = Settings()
+
         cli_options = ["--a=1", "--a=2", "--b", "1", "2.3", "spam"]
-        expected_settings = S((1, 2), (1, 2.3, "spam"))
+        expected_settings = Settings((1, 2), (1, 2.3, "spam"))
 
     class NestedTupleParam(ClickParamBase):
         """
@@ -485,28 +574,40 @@ class TestClickParamTypes:
         """
 
         @settings
-        class S:
+        class Settings:
             a: List[Tuple[int, int]] = option(factory=list)
 
         expected_help = [
             "  --a <INTEGER INTEGER>...",
         ]
-        expected_defaults = S()
+
+        # A list of tuples cannot be loaded with the default converter,
+        # so we skip this test here.
+        env_vars: Dict[str, Any] = {}
+        expected_env_var_defaults = [
+            "  --a <INTEGER INTEGER>...",
+        ]
+
+        expected_defaults = Settings()
+
         cli_options = ["--a", "1", "2", "--a", "3", "4"]
-        expected_settings = S([(1, 2), (3, 4)])
+        expected_settings = Settings([(1, 2), (3, 4)])
 
     def pytest_generate_tests(self, metafunc: Metafunc) -> None:
         params = []
+        fixtures = ["cli"] + [
+            n for n in metafunc.fixturenames if hasattr(self.ClickParamBase, n)
+        ]
         for param_cls in self.ClickParamBase._classes:
             argvals = []
-            for name in metafunc.fixturenames:
+            for name in fixtures:
                 if name == "cli":
-                    argvals.append(make_cli(param_cls.S))
+                    argvals.append(make_cli(param_cls.Settings))
                 else:
                     argvals.append(getattr(param_cls, name))
             params.append(pytest.param(*argvals, id=param_cls.__name__))  # type: ignore  # noqa: E501
 
-        metafunc.parametrize(metafunc.fixturenames, params)
+        metafunc.parametrize(fixtures, params)
 
     def test_help(self, cli: Cli[T], expected_help: List[str]):
         """
@@ -520,6 +621,33 @@ class TestClickParamTypes:
             "",
             "Options:",
         ] + expected_help
+        assert result.exit_code == 0
+        # fmt: on
+
+    def test_defaults_from_envvars(
+        self,
+        cli: Cli[T],
+        env_vars: Dict[str, str],
+        expected_env_var_defaults: List[str],
+        monkeypatch: pytest.MonkeyPatch,
+    ):
+        """
+        Previously loaded settings (e.g., from env vars) can be converted
+        to click options.
+
+        Regression test for #11
+        """
+        for var, val in env_vars.items():
+            monkeypatch.setenv(f"TEST_{var}", val)
+
+        result = cli("--help")
+
+        # fmt: off
+        assert result.output.splitlines()[:-1] == [
+            "Usage: cli [OPTIONS] COMMAND [ARGS]...",
+            "",
+            "Options:",
+        ] + expected_env_var_defaults
         assert result.exit_code == 0
         # fmt: on
 

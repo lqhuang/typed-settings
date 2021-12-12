@@ -1,11 +1,13 @@
 """
 Tests for `typed_settings.attrs.converters`.
 """
+import json
 import sys
 from datetime import datetime, timedelta, timezone
 from enum import Enum
+from itertools import product
 from pathlib import Path
-from typing import Any, Dict, FrozenSet, List, Optional, Set, Tuple
+from typing import Any, Dict, FrozenSet, List, Optional, Sequence, Set, Tuple
 
 import attr
 import pytest
@@ -400,9 +402,11 @@ def test_supported_types(typ, value, expected):
 
 STRLIST_TEST_DATA = [
     (List[int], [1, 2, 3]),
+    (Sequence[int], [1, 2, 3]),
     (Set[int], {1, 2, 3}),
     (FrozenSet[int], frozenset({1, 2, 3})),
     (Tuple[int, ...], (1, 2, 3)),
+    (Tuple[int, int, int], (1, 2, 3)),
 ]
 
 if sys.version_info[:2] >= (3, 9):
@@ -416,15 +420,21 @@ if sys.version_info[:2] >= (3, 9):
 
 
 @pytest.mark.parametrize(
-    "typ, expected",
-    STRLIST_TEST_DATA,
+    "input, kw, typ, expected",
+    [
+        (input, kw, typ, expected)
+        for (input, kw), (typ, expected) in product(
+            [("1:2:3", {"sep": ":"}), ("[1,2,3]", {"fn": json.loads})],
+            STRLIST_TEST_DATA,
+        )
+    ],
 )
-def test_strlist_hook(typ, expected):
+def test_strlist_hook(input, kw, typ, expected):
     @settings
     class Settings:
         a: typ
 
     converter = default_converter()
-    register_strlist_hook(converter, sep=":")
-    inst = from_dict({"a": "1:2:3"}, Settings, converter)
+    register_strlist_hook(converter, **kw)
+    inst = from_dict({"a": input}, Settings, converter)
     assert inst == Settings(expected)

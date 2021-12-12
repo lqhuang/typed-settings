@@ -67,7 +67,7 @@ def click_options(
     """
     cls = attr.resolve_types(cls)
     options = _deep_options(cls)
-    settings = _load_settings(options, loaders)
+    settings_dict = _load_settings(options, loaders)
     converter = converter or default_converter()
     type_handler = type_handler or TypeHandler()
 
@@ -79,8 +79,8 @@ def click_options(
 
         def new_func(*args, **kwargs):
             ctx = click.get_current_context()
-            _merge_dicts(settings, ctx.obj.get("settings"))
-            ctx.obj["settings"] = from_dict(settings, cls, converter)
+            _merge_dicts(settings_dict, ctx.obj.get("settings"))
+            ctx.obj["settings"] = from_dict(settings_dict, cls, converter)
             return f(ctx.obj["settings"], *args, **kwargs)
 
         return update_wrapper(new_func, f)
@@ -90,7 +90,9 @@ def click_options(
         The wrapper that actually decorates a function with all options.
         """
         for oinfo in reversed(options):
-            default = _get_default(oinfo.field, oinfo.path, settings)
+            default = _get_default(
+                oinfo.field, oinfo.path, settings_dict, converter
+            )
             option = _mk_option(
                 click.option, oinfo.path, oinfo.field, default, type_handler
             )
@@ -160,7 +162,9 @@ def handle_datetime(type: type, default: Any) -> StrDict:
         ),
     }
     if default is not attr.NOTHING:
-        type_info["default"] = default.isoformat()
+        if isinstance(default, datetime):
+            default = default.isoformat()
+        type_info["default"] = default
     return type_info
 
 
@@ -312,7 +316,12 @@ class TypeHandler:
             return type_info
 
 
-def _get_default(field: attr.Attribute, path: str, settings: StrDict) -> Any:
+def _get_default(
+    field: attr.Attribute,
+    path: str,
+    settings: StrDict,
+    converter: cattr.Converter,
+) -> Any:
     """
     Returns the proper default value for an attribute.
 
@@ -325,6 +334,12 @@ def _get_default(field: attr.Attribute, path: str, settings: StrDict) -> Any:
     except KeyError:
         # Use field's default
         default = field.default
+    else:
+        # If the default was found (no KeyError), convert the input value to
+        # the proper type.
+        # See: https://gitlab.com/sscherfke/typed-settings/-/issues/11
+        if field.type:
+            default = converter.structure(default, field.type)
 
     if isinstance(default, attr.Factory):  # type: ignore
         if default.takes_self:
