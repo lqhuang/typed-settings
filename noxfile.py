@@ -47,7 +47,8 @@ def coverage_report(session):
     session.install(".[test]")
     session.run("coverage", "combine")
     session.run("coverage", "xml")
-    session.run("coverage", "report")
+    session.run("coverage", "html")
+    session.run("coverage", "report", "--fail-under=97")
 
 
 @nox.session

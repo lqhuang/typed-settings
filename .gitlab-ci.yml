@@ -64,6 +64,9 @@ test-coverage:
   script:
     - nox --forcecolor -s coverage-report
   coverage: '/^TOTAL.*\s+(\d+\%)\s*$/'
+  artifacts:
+    paths:
+      - "htmlcov"
 
 release-check:
   stage: pre-release
