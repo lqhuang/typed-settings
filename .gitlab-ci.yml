@@ -51,7 +51,6 @@ test:
     - >-
       nox --forcecolor -s "test-${PY%%-*}($PKG_FORMAT)" --
       --junit-xml=report-${PY%%-*}-${PKG_FORMAT}.xml
-      tests
   artifacts:
     paths:
       - ".coverage"
@@ -64,6 +63,11 @@ test-coverage:
   script:
     - nox --forcecolor -s coverage-report
   coverage: '/^TOTAL.*\s+(\d+\%)\s*$/'
+  artifacts:
+    paths:
+      - "htmlcov"
+    reports:
+      cobertura: 'coverage.xml'
 
 release-check:
   stage: pre-release

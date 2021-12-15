@@ -1,7 +1,6 @@
 """
 Helpers for and additions to :mod:`attr`.
 """
-from datetime import datetime
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -25,8 +24,18 @@ if TYPE_CHECKING:
         _ValidatorArgType,
     )
 
-from .converters import to_bool, to_dt
-from .hooks import make_auto_converter
+from .hooks import auto_convert
+
+
+__all__ = [
+    "METADATA_KEY",
+    "SECRET",
+    "auto_convert",
+    "evolve",
+    "option",
+    "secret",
+    "settings",
+]
 
 
 METADATA_KEY = "typed_settings"
@@ -41,9 +50,6 @@ class _SecretRepr:
 
 
 SECRET = _SecretRepr()
-
-
-auto_convert = make_auto_converter({bool: to_bool, datetime: to_dt})
 
 
 settings = attr.define

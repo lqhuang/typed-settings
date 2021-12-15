@@ -3,7 +3,7 @@ import glob
 import nox
 
 
-LOCATIONS = [
+LINT_PATHS = [
     # "docs/conf.py",
     "noxfile.py",
     "setup.py",
@@ -37,9 +37,11 @@ def test(session, pkg_format):
 
     session.install(f"{src}[test]")
 
-    args = session.posargs or ["tests"]
-    # session.run("pytest", *args)
-    session.run("coverage", "run", "-m", "pytest", *args)
+    # We have to run the tests for the doctests in "src" separately or we'll
+    # get an "ImportPathMismatchError" (the "same" file is located in the
+    # cwd and in the nox venv).
+    session.run("coverage", "run", "-m", "pytest", "docs", "tests")
+    session.run("coverage", "run", "-m", "pytest", "src")
 
 
 @nox.session(name="coverage-report")
@@ -47,23 +49,20 @@ def coverage_report(session):
     session.install(".[test]")
     session.run("coverage", "combine")
     session.run("coverage", "xml")
-    session.run("coverage", "report")
+    session.run("coverage", "html")
+    session.run("coverage", "report", "--fail-under=97")
 
 
 @nox.session
 def lint(session):
     session.install(".[lint]")
-
-    args = session.posargs or LOCATIONS
-    session.run("flake8", *args)
+    session.run("flake8", *LINT_PATHS)
 
 
 @nox.session
 def mypy(session):
     session.install(".[lint]")
-
-    args = session.posargs or LOCATIONS
-    session.run("mypy", *args)
+    session.run("mypy", *LINT_PATHS)
 
 
 @nox.session

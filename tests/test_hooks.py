@@ -18,7 +18,6 @@ from typing import (
     Sequence,
     Set,
     Tuple,
-    Type,
     Union,
 )
 
@@ -243,7 +242,7 @@ class TestAutoConvertHook:
     DATA = {
         "a": "1",
         "b": "2",
-        "c": "Le Spam",
+        "c": "spam",
         "d": "2020-05-04T13:37:00",
         "e": [{"x": "23", "y": "42"}],
         "f": ["2020-05-04T13:37:00", "2020-05-04T13:37:00"],
@@ -286,7 +285,7 @@ class TestAutoConvertHook:
         assert d == {
             "a": 1.0,
             "b": 2.0,
-            "c": "Le Spam",
+            "c": "spam",
             "d": "2020-05-04T13:37:00",
             "e": [{"x": 23, "y": 42}],
             "f": ["2020-05-04T13:37:00"],
@@ -307,8 +306,7 @@ class TestAutoConvertHook:
             (bool, "True", True),
             (bool, 1, True),
             (bool, False, False),
-            (bool, "False", True),
-            (bool, "", False),
+            (bool, "False", False),
             (bool, 0, False),
             (int, 23, 23),
             (int, "42", 42),
@@ -316,7 +314,7 @@ class TestAutoConvertHook:
             (float, ".815", 0.815),
             (str, "spam", "spam"),
             (datetime, "2020-05-04T13:37:00", datetime(2020, 5, 4, 13, 37)),
-            (LeEnum, "Le Eggs", LeEnum.eggs),
+            (LeEnum, "eggs", LeEnum.eggs),
             (Child, {"x": "2", "y": "3"}, Child(2, 3)),
             (Any, 2, 2),
             (Any, "2", "2"),
@@ -356,7 +354,7 @@ class TestAutoConvertHook:
             (MutableSet[int], [1, 2], {1, 2}, set),
             (FrozenSet[int], [1, 2], frozenset({1, 2}), frozenset),
             (Tuple[str, ...], [1, "2", 3], ("1", "2", "3"), tuple),
-            (Tuple[int, bool, str], [0, "", 0], (0, False, "0"), tuple),
+            (Tuple[int, bool, str], [0, "no", 0], (0, False, "0"), tuple),
             (Dict[str, int], {"a": 1, "b": 3.1}, {"a": 1, "b": 3}, dict),
             (
                 Dict[str, Child],
@@ -385,15 +383,11 @@ class TestAutoConvertHook:
             (Optional[str], 1, "1", str),
             (Optional[Child], None, None, type(None)),
             (Optional[Child], {"x": "1", "y": "2"}, Child(1, 2), Child),
-            (Optional[LeEnum], "Le Spam", LeEnum.spam, LeEnum),
-            (Union[None, Child, List[str]], None, None, type(None)),
-            (
-                Union[None, Child, List[str]],
-                {"x": "1", "y": "2"},
-                Child(1, 2),
-                Child,
-            ),
-            (Union[None, Child, List[str]], [1, 2], ["1", "2"], list),
+            (Optional[LeEnum], "spam", LeEnum.spam, LeEnum),
+            (Union[None, Child], None, None, type(None)),
+            (Union[None, Child], {"x": "1", "y": "2"}, Child(1, 2), Child),
+            (Union[None, List[str]], None, None, type(None)),
+            (Union[None, List[str]], [1, 2], ["1", "2"], list),
         ],
     )
     def test_generic_types(self, typ, value, expected_val, expected_type):
@@ -410,16 +404,3 @@ class TestAutoConvertHook:
         c = C(value)
         assert c.opt == expected_val
         assert type(c.opt) is expected_type
-
-    def test_invalid_generic_type(self):
-        """
-        Annotating a generic type that the converter doesn't know leads to
-        a TypeError.
-        """
-        with pytest.raises(
-            TypeError, match="Cannot create converter for generic type:"
-        ):
-
-            @auto_converter
-            class C:
-                x: Type[int]
