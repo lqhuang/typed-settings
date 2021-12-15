@@ -25,4 +25,4 @@ lines_after_imports = 2
 src_paths = ["src", "tests"]
 
 [tool.pytest.ini_options]
-addopts = "--doctest-glob='*.rst' --doctest-modules --ignore=docs/_build"
+addopts = "--doctest-glob='*.md' --doctest-glob='*.rst' --doctest-modules --ignore=docs/_build"
