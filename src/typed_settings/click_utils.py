@@ -11,10 +11,10 @@ import attr
 import cattr
 import click
 
+from ._compat import get_args, get_origin
 from ._core import T, _load_settings
 from ._dict_utils import _deep_options, _get_path, _merge_dicts, _set_path
 from .attrs import METADATA_KEY, _SecretRepr
-from .attrs._compat import get_args, get_origin
 from .converters import default_converter, from_dict
 from .loaders import Loader
 
@@ -121,34 +121,6 @@ def pass_settings(f: AnyFunc) -> AnyFunc:
         return ctx.invoke(f, settings, *args, **kwargs)
 
     return update_wrapper(new_func, f)
-
-
-class EnumChoice(click.Choice):
-    """*Click* parameter type for representing enums."""
-
-    def __init__(self, enum_type: Type[Enum]):
-        self.__enum = enum_type
-        super().__init__(list(enum_type.__members__))
-
-    # def __call__(
-    #     self,
-    #     value,
-    #     param,
-    #     ctx,
-    # ):
-    #     breakpoint()
-    #     return value
-
-    def __repr__(self) -> str:
-        return f"{self.__class__.__name__}({self.__enum})"
-
-    def convert(
-        self,
-        value: str,
-        param: Optional[click.Parameter],
-        ctx: Optional[click.Context],
-    ) -> Enum:
-        return self.__enum[super().convert(value, param, ctx)]
 
 
 def handle_datetime(type: type, default: Any) -> StrDict:
