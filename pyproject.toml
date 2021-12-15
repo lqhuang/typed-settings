@@ -11,7 +11,6 @@ source = ["src", ".nox/*/site-packages"]
 [tool.coverage.report]
 # exclude_lines = ["pragma: no cover", "...", "if TYPE_CHECKING"]
 exclude_lines = ["pragma: no cover", "\\.\\.\\.", "if TYPE_CHECKING"]
-fail_under = 97
 show_missing = true
 
 [tool.coverage.run]
@@ -26,4 +25,4 @@ lines_after_imports = 2
 src_paths = ["src", "tests"]
 
 [tool.pytest.ini_options]
-addopts = "--doctest-glob='*.rst' --doctest-modules --ignore=docs/_build"
+addopts = "--doctest-glob='*.md' --doctest-glob='*.rst' --doctest-modules --ignore=docs/_build"
