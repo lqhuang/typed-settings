@@ -5,30 +5,36 @@ Why Typed Settings?
 Comprehensive List of Features
 ==============================
 
+- Default settings are defined by your app and can be overridden by external sources (like config files, environment variables, command line options).
 
-- Default settings are defined by your app and can be overridden by config files, environment variables and click options.
-
-- Settings are defined as attrs classes with types, (automatically generated) converters and validators.
+- Settings are defined as attrs classes with type hints and, optionally, validators.
 
   - Secrets are hidden when a settings instance is printed.
 
 - Options can be basic data types (bool, int, float, str), Enums, lists of basic types, or nested settings classes (:ref:`full list <func-settings>`).
 
-  - An error is raised if options have an unsupported type
+  - Cattrs_ is used for converting settings values to the desired type.
+    You can add hooks for converting any types that are not supported out-of-the-box.
 
-- Settings can be loaded from multiple config files.
+- You can configure from which sources settings are loaded.
+
+  Typed Settings ships with a file loader and an environment variable
+  loader.
+
+  The file loader supports Toml and Python files.
+
+  You can extend Typed Settings with custom loaders and add support for additional file formats.
+
+- The file loader can load settings from multiple config files.
 
   - Settings files can be optional or mandatory.
-
-  - Config files are allowed to contain settings for multiple apps (like ``pyproject.toml``)
-
+  - Config files are allowed to contain settings for multiple apps (like :file:`pyproject.toml`)
   - Paths to config files have to be explicitly named.
     There are no implicit default search paths.
-
+  - There is a helper for searching config files in the current project or file system.
   - Additional paths for config files can be specified via an environment variable.
     As in ``PATH``, multiple paths are separated by a ``:``.
     The last file in the list has the highest priority.
-
   - Extra options in config files (that do not map to an attribute in the settings class) are errors.
 
 - Environment variables with a defined prefix override settings from config files.
@@ -38,10 +44,9 @@ Comprehensive List of Features
   They are passed to the cli function as a single object (instead of individually).
 
   - Click options support the same types as normal options.
-
   - Options can define a help-string for Click options.
 
-- Settings must be explicitly loaded, either via ``typed_settings.load_settings()`` or via ``typed_settings.click_options()``.
+- Settings must be explicitly loaded, either via :func:`typed_settings.load()`/:func`typed_settings.load_settings()` or via :func:`typed_settings.click_options()`.
 
   - Both functions allow you to customize config file paths, prefixes et cetera.
 
@@ -50,7 +55,8 @@ Comprehensive List of Features
   - Config files that are being loaded or that cannot be found
   - Looked up env vars
 
-.. _click: https://click.palletsprojects.com/
+.. _cattrs: https://cattrs.readthedocs.io
+.. _click: https://click.palletsprojects.com
 
 
 What about Dynaconf?

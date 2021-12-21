@@ -11,7 +11,7 @@ Typed Settings
 
 ----
 
-Typed Settings allows you to cleanly structure your settings with `attrs <https://www.attrs.org>`_ classes.
+Typed Settings allows you to cleanly structure and validate your settings with `attrs <https://www.attrs.org>`_ classes.
 Type annotations will be used to automatically convert values to the proper type (using `cattrs <https://cattrs.readthedocs.io>`_).
 You can currently load settings from these sources:
 
