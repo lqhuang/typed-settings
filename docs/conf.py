@@ -1,29 +1,17 @@
-# -- Path setup --------------------------------------------------------------
-
-import re
-from pathlib import Path
-
-
-def find_version():
-    path = Path(__file__).parent.parent.joinpath("setup.py")
-    version_file = path.read_text()
-    version_match = re.search(r'^ +version="([^"]+)",$', version_file, re.M)
-    if version_match:
-        return version_match.group(1)
-    raise RuntimeError("Unable to find version string")
-
-
-# -- Project information -----------------------------------------------------
+try:
+    from importlib.metadata import version as get_version
+except ImportError:
+    # py37 - Just create a mock for testing:
+    def get_version(_):
+        return '0.0.0'
 
 
 project = "Typed Settings"
 author = "Stefan Scherfke"
 copyright = "2020, Stefan Scherfke"
-release = find_version()
+release = get_version("typed-settings")
 version = ".".join(release.split(".")[0:2])
 
-
-# -- General configuration ---------------------------------------------------
 
 extensions = [
     "sphinx.ext.autodoc",
@@ -36,20 +24,15 @@ templates_path = ["_templates"]
 exclude_patterns = ["_build", "Thumbs.db", ".DS_Store"]
 
 
-# -- Options for HTML output -------------------------------------------------
-
 html_theme = "furo"
 # html_theme_options = {
 #     "logo_only": True,
 #     "sidebar_hide_name": True,
 # }
-
 html_static_path = ["_static"]
 html_logo = "_static/typed-settings-spacing.svg"
 html_title = "Typed Settings"
 
-
-# -- Extension configuration -------------------------------------------------
 
 # Autodoc
 autodoc_member_order = "bysource"
