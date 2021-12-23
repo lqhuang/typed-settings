@@ -11,23 +11,19 @@ Typed Settings
 
 ----
 
-Typed Settings allows you to cleanly structure and validate your settings with attrs_ classes.
-Type annotations will be used to automatically convert values to the proper type (using cattrs_).
+Typed Settings allows you to cleanly structure and validate your settings with `attrs <https://www.attrs.org>`_ classes.
+Type annotations will be used to automatically convert values to the proper type (using `cattrs <https://cattrs.readthedocs.io>`_).
 You can currently load settings from these sources:
 
 - TOML files (multiple, if you want to).  Paths can be statically specified or dynamically set via an environment variable.
 - Environment variables
-- click_ command line options
+- `click <https://click.palletsprojects.com>`_ command line options
 
 You can use Typed settings, e.g., for
 
 - server processes
 - containerized apps
 - command line applications
-
-.. _attrs: https://www.attrs.org
-.. _cattrs: https://cattrs.readthedocs.io
-.. _click: https://click.palletsprojects.com
 
 
 Installation
