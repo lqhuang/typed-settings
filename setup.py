@@ -3,7 +3,13 @@ from setuptools import find_packages, setup
 
 DEPS = ["attrs>=20.3", "cattrs>=1.7", "toml>=0.10"]
 DEPS_CLICK = ["click>=7,<9"]
-DEPS_TEST = DEPS_CLICK + ["pytest>=6", "pytest-cov", "coverage[toml]>=5.3"]
+DEPS_TEST = DEPS_CLICK + [
+    "coverage[toml]>=5.3",
+    "docutils",
+    "pygments",
+    "pytest-cov",
+    "pytest>=6",
+]
 DEPS_LINT = DEPS_CLICK + [
     "flake8",
     "flake8-bandit",
@@ -11,6 +17,7 @@ DEPS_LINT = DEPS_CLICK + [
     "flake8-bugbear",
     "flake8-isort",
     "mypy",
+    "types-docutils",
     "types-toml",
 ]
 DEPS_DOCS = DEPS_CLICK + ["furo", "sphinx", "sphinx-autodoc-typehints"]
@@ -34,8 +41,8 @@ if __name__ == "__main__":
         maintainer="Stefan Scherfke",
         maintainer_email="stefan@sofa-rockers.org",
         keywords=["settings", "types", "configuration", "options"],
-        long_description=open("README.md").read(),
-        long_description_content_type="text/markdown",
+        long_description=open("README.rst").read(),
+        long_description_content_type="text/x-rst",
         packages=find_packages(where="src"),
         package_dir={"": "src"},
         include_package_data=True,
