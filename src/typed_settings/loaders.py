@@ -227,7 +227,7 @@ class FileLoader:
 
 class PythonFormat:
     """
-    Support for TOML files.  Read settings from the given *section*.
+    Support for Python files.  Read settings from the given *section*.
 
     Args:
         section: The config file section to load settings from.

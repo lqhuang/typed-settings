@@ -51,6 +51,7 @@ Classes and Fields
 ------------------
 
 Helpers for creating :mod:`attrs` classes and fields with sensible details for Typed Settings.
+They are all also available directly from the :mod:`typed_settings` module.
 
 .. currentmodule:: typed_settings.attrs
 
@@ -116,6 +117,8 @@ Helpers for creating :mod:`attrs` classes and fields with sensible details for T
         >>> Settings(password="1234")
         Settings(password=***)
 
+.. autofunction:: evolve
+
 
 Converters
 ----------
@@ -139,5 +142,4 @@ Utilities for generating Click options
 --------------------------------------
 
 .. automodule:: typed_settings.click_utils
-   :members: TypeHandler, DEFAULT_TYPES, EnumChoice, handle_datetime,
-      handle_enum
+   :members: TypeHandler, DEFAULT_TYPES, handle_datetime, handle_enum

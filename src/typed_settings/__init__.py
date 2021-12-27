@@ -5,7 +5,7 @@ from typing import Any, List
 
 from ._core import default_loaders, load, load_settings
 from ._file_utils import find
-from .attrs import option, secret, settings
+from .attrs import evolve, option, secret, settings
 from .converters import default_converter, register_strlist_hook
 from .loaders import EnvLoader, FileLoader, TomlFormat
 
@@ -17,6 +17,7 @@ __all__ = [
     "click_options",
     "default_converter",
     "default_loaders",
+    "evolve",
     "find",
     "load",
     "load_settings",

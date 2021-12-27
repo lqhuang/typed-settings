@@ -48,6 +48,7 @@ def test_dir():
         "click_options",
         "default_converter",
         "default_loaders",
+        "evolve",
         "find",
         "load",
         "load_settings",

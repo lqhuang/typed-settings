@@ -26,8 +26,7 @@ Basic Settings Definition and Loading
 
 
 Settings are defined as `attrs classes`_.
-You can either use the decorators provided by attrs or the :func:`settings` decorator that comes with Typed Settings.
-This decorator is an alias to :func:`attr.define()`, but it additionally defines an auto-converter for option values:
+You can either use the decorators provided by ``attrs`` or the :func:`settings` decorator which is an alias to :func:`attr.define()`:
 
 .. code-block:: python
 
@@ -41,13 +40,13 @@ This decorator is an alias to :func:`attr.define()`, but it additionally defines
    >>> Settings("monty", "S3cr3t!")
    Settings(username='monty', password=***)
 
-As you can see, the string ``"433"`` has automatically been converted into an int when we created the instance.
+:func:`secret()` is a wrapper for :func:`attr.field()` and masks secrets when the settings instance is being printed.
 
 Settings should (but are not required to) define defaults for all options.
-If an option has no default and no config value can be found for it, attrs will raise an error.
+If an option has no default and no config value can be found for it, an error will be raised by ``attrs``.
 
 In real life, you don't manually instantiate your settings.
-Instead, you call the function :func:`load()`:
+Instead, you call the function :func:`load()` (or :func:`load_settings()` if you need all customization options):
 
 .. code-block:: python
 
@@ -71,11 +70,10 @@ Typed Settings will automatically look for environment variables matching :samp:
 
 .. code-block:: python
 
-   >>> import os
-   >>>
    >>> # Temporarily set some environment variables:
    >>> monkeypatch = getfixture("monkeypatch")
-   >>> monkeypatch.setattr(os, "environ", {"MYAPP_USERNAME": "monty", "MYAPP_PASSWORD": "S3cr3t!"})
+   >>> monkeypatch.setenv("MYAPP_USERNAME", "monty")
+   >>> monkeypatch.setenv("MYAPP_PASSWORD", "S3cr3t!")
    >>>
    >>> ts.load(Settings, appname="myapp")
    Settings(username='monty', password=***)
@@ -85,12 +83,25 @@ Typed Settings will automatically look for environment variables matching :samp:
 You can optionally change the prefix or disable loading environment variables completely.
 The guide :ref:`guide-settings-from-env-vars` shows you how.
 
+.. warning::
+
+   Never pass secrets via environment variables!
+
+   It's far easier for environment variables to leak outside than for config files.
+   You may, for example, accidentally leak your env via your CI/CD pipeline,
+   or you may be affected by a `security incident`_ for which you can't do anything.
+
+   Write your secret to a file and pass its path via a variable like :code:`MYAPP_API_TOKEN_FILE=/private/token` (instead of just :code:`MYAPP_API_TOKEN="3KX93ad..."`) to your app.
+   Alternatively, store it in a structured config file that you directly load with Typed Settings.
+
+   .. _security incident: https://thehackernews.com/2021/09/travis-ci-flaw-exposes-secrets-of.html
+
 
 Settings from Config Files
 ==========================
 
-To persist settings and avoid exporting environment variables again and again, you may want to use config files.
-Typed Settings uses TOML files for this (`Why?`_) and looks for the *appname* section by default:
+To pass secrets or to persist settings (and avoid exporting environment variables again and again), you may want to use config files.
+Typed Settings supports TOML files (`Why?`_) out-of-the-box and looks for the *appname* section by default:
 
 .. code-block:: python
 
@@ -111,7 +122,10 @@ Typed Settings uses TOML files for this (`Why?`_) and looks for the *appname* se
 You can also load settings from multiple files.
 Subsequent files override the settings of their predecessors.
 
+Appart from TOML, support for Python files is also built-in and you can add loaders for other file formats, too.
+
 .. _why?: https://www.python.org/dev/peps/pep-0518/#other-file-formats
+.. TODO Add refs to file format guide
 
 
 Dynamically Finding Config Files
@@ -137,9 +151,8 @@ You can do the same with Typed Settings:
 Dynamically Specifying Config Files
 ===================================
 
-You may not always know the paths of config files in advance,
-or you want to allow your users to specify additional ones.
-Typed Settings looks for an environment variable named :samp:`{APPNAME}_SETTINGS` (you can change or disable this).
+A third way to specify config files is via an environment variable.
+By default, Typed Settings looks for a variable named :samp:`{APPNAME}_SETTINGS` (you can change or disable this).
 The variable can contain one ore more paths separated by a colon (``:``):
 
 .. code-block:: python
@@ -153,7 +166,7 @@ The variable can contain one ore more paths separated by a colon (``:``):
 
 Config files specified via an environment variable are loaded *after* statically defined ones.
 
-By default, no error will be raised if a config file does not exist.
+Normally, no error will be raised if a config file does not exist.
 However, you can mark files as *mandatory* if you want an error instead.
 You can read more about this in the guide :ref:`guide-working-with-config-files`.
 
@@ -164,9 +177,8 @@ Command Line Options with Click
 Some tools (like :ref:`example-pytest` or :ref:`example-twine`) allow you store settings in a config file and override them on-the-fly via command line options.
 
 Typed Settings can integrate with click_ and automatically create command line options for your settings.
-When you run your app, settings will first be loaded from config files
-and environment variables.
-The loaded values then serve as defaults for the correspoinding click options.
+When you run your app, settings will first be loaded from config files and environment variables.
+The loaded values then serve as defaults for the corresponding click options.
 
 Your CLI function receives all options as the single instance of your settings class:
 
@@ -230,13 +242,12 @@ However, this does not extend to mutable option values:
 
 Immutable settings can be desirable because they prevent you or your users from (accidentally) changing them while the app is running.
 
-But especially when you are testing your app, you may still want to modify your settings.
-You can create an updated copy of your settings via :func:`attr.evolve()`
+However, when you are testing your app, you may still want to modify your settings.
+You can create an updated copy of your settings via :func:`evolve()`, which is a recursive version of :func:`attr.evolve()`:
 
 .. code-block:: python
 
-   >>> from attr import evolve
-   >>> updated = evolve(settings, x=7)
+   >>> updated = ts.evolve(settings, x=7)
    >>> print(settings)
    FrozenSettings(x=3, y=[4])
    >>> print(updated)
@@ -250,7 +261,7 @@ How to Proceed
 
 If you have read this far, you should now have a basic understanding of how Typed Settings works and what it is capable of (`No, I still don't have a clue!`_).
 
-.. _no, i still don't have a clue!: https://gitlab.com/sscherfke/typed-settings/-/issues/new?issue[title]=Please%20improve%20Quickstart%20section%20XYZ
+.. _no, i still don't have a clue!: https://gitlab.com/sscherfke/typed-settings/-/issues/new?issue[title]=Please%20improve%20Getting%20Startet%20section%20XYZ
 
 Depending on what kind of learner you are, you can now either
 

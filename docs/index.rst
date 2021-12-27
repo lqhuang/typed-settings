@@ -77,12 +77,12 @@ Documentation
    :maxdepth: 2
    :caption: Contents:
 
-   why
-   getting-started
-   guides
-   examples
-   apiref
-   changelog
+   why.rst
+   getting-started.rst
+   guides.rst
+   examples.rst
+   apiref.rst
+   changelog.rst
 
 
 
