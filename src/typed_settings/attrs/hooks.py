@@ -4,8 +4,9 @@ Addtional attrs hooks
 from datetime import datetime
 from enum import Enum
 from functools import partial
-from typing import TYPE_CHECKING, get_type_hints
+from typing import TYPE_CHECKING
 
+import attr
 import cattr
 
 from ..converters import default_converter
@@ -55,13 +56,17 @@ def make_auto_converter(converter: cattr.Converter) -> "_FieldTransformer":
             >>>
             >>> auto_convert = make_auto_converter(converter)
             >>>
-            >>> @attr.frozen(field_transformer=auto_convert)
+            >>> @attr.define(field_transformer=auto_convert)
             ... class C:
             ...     a: Path
             ...     b: datetime
             ...
-            >>> C(a="spam.md", b="2020-05-04")
+            >>> inst = C(a="spam.md", b="2020-05-04")
+            >>> inst
             C(a=PosixPath('spam.md'), b=datetime.datetime(2020, 5, 4, 0, 0))
+            >>> inst.b = "2022-01-01"
+            >>> inst
+            C(a=PosixPath('spam.md'), b=datetime.datetime(2022, 1, 1, 0, 0))
 
     """
 
@@ -70,14 +75,12 @@ def make_auto_converter(converter: cattr.Converter) -> "_FieldTransformer":
         A field transformer that tries to convert all attribs of a class to
         their annotated type.
         """
-        # We cannot use attrs.resolve_types() here,
-        # because "cls" is not yet a finished attrs class:
-        type_hints = get_type_hints(cls)
+        attr.resolve_types(cls, attribs=attribs)
         results = []
         for attrib in attribs:
             # Do not override explicitly defined converters!
             if attrib.converter is None:
-                c = partial(converter.structure, cl=type_hints[attrib.name])
+                c = partial(converter.structure, cl=attrib.type)
                 attrib = attrib.evolve(converter=c)
             results.append(attrib)
 
