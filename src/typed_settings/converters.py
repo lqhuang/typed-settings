@@ -151,7 +151,7 @@ def from_dict(settings: SettingsDict, cls: Type[T], converter: Converter) -> T:
         raise InvalidValueError(str(e)) from e
 
 
-def to_dt(value: Union[datetime, str], _type: type) -> datetime:
+def to_dt(value: Union[datetime, str], _type: type = datetime) -> datetime:
     """
     Convert an ISO formatted string to :class:`datetime.datetime`.  Leave the
     input untouched if it is already a datetime.
@@ -182,7 +182,7 @@ def to_dt(value: Union[datetime, str], _type: type) -> datetime:
     return value
 
 
-def to_bool(value: Any, _type: type) -> bool:
+def to_bool(value: Any, _type: type = bool) -> bool:
     """
     Convert "boolean" strings (e.g., from env. vars.) to real booleans.
 
