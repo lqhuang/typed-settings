@@ -22,6 +22,7 @@ You can use Typed settings, e.g., for
 - server processes
 - containerized apps
 - command line applications
+- scripts and tools for scientific experiments and data analysis
 
 The documentation contains a [full list](https://typed-settings.readthedocs.io/en/latest/why.html#comprehensive-list-of-features) of all features.
 

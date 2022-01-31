@@ -46,7 +46,7 @@ Settings should (but are not required to) define defaults for all options.
 If an option has no default and no config value can be found for it, an error will be raised by ``attrs``.
 
 In real life, you don't manually instantiate your settings.
-Instead, you call the function :func:`load()` (or :func:`load_settings()` if you need all customization options):
+Instead, you call the function :func:`load()`:
 
 .. code-block:: python
 
@@ -57,6 +57,12 @@ The first argument of that function is your settings class and an instance of th
 The second argument is your *appname*.
 That value is being used to determine the config file section and prefix for environment variables.
 You can override both, though.
+
+.. note::
+
+   :func:`load()` is designed to be easy to use and cover most use cases.
+   There is also :func:`load_settings()`, which allows you to explicitly specify which loaders to use with which configuration,
+   and how loaded settings are converted to the correct type.
 
 .. _attrs classes: https://www.attrs.org/en/stable/examples.html
 .. _virtualenv: https://virtualenv.pypa.io/en/stable/

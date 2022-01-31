@@ -2,19 +2,406 @@
 Guides
 ======
 
-.. _guide-working-with-config-files:
+.. currentmodule:: typed_settings
 
-Working with Config Files
-=========================
+``load()`` and ``load_settings()``
+==================================
+
+Typed Settings exposes two functions for loading settings: :func:`load()` and :func:`load_settings()`.
+The former is designed to make the common use cases easy.
+The latter makes special cases possible and lets you configure everything in detail.
+
+``load()``
+----------
+
+- Uses the file and environent variable loader
+
+- Only supports TOML files
+
+- Derives settings for loaders from your *appname* (but some settings can be overriden)
+
+- Uses a default :program:`cattrs` converter
 
 
-.. _guide-using-pyproject-toml:
+``load_settings()``
+-------------------
 
-Using ``pyproject.toml``
-------------------------
+- You need to explicitly pass the list of loaders
+
+- You need to explicitly configure each loader
+
+- You can pass a custom/extended :program:`cattrs` converter
+
+.. note::
+
+   ``load(cls, ...)`` is basically the same as ``load_settings(cls, default_loaders(...), default_converter())``.
 
 
 .. _guide-settings-from-env-vars:
 
 Settings from Environment Variables
 ===================================
+
+Typeds Settings loads environment variables that match :code:`{PREFIX}{OPTION_NAME}`.
+
+:code:`{PREFIX}` is an option for the :class:`~typed_settings.loaders.EnvLoader`.
+It should be UPPER_CASE and end with a `_`, but this is not enforced.
+:code:`{PREFIX}` can also be an empty string.
+
+If you use :func:`load()` (or :func:`default_loaders()`), :code:`PREFIX` is derived from the *appname* argument.  For example, :code:`"appname"` becomes :code:`"APPNAME_"`.
+You can override it with the *env_prefix* argument.
+You can also completely disable environment variable loading by setting *env_prefix* to :code:`None`.
+
+Values loaded from environment variables are strings.
+They are converted to the type specified in the settings class via a :program:`cattrs` converter.
+The :func:`~typed_settings.converters.default_converter()` supports the most common types like booleans, dates, enums and paths.
+
+.. warning::
+
+   Never pass secrets via environment variables!
+
+   It's far easier for environment variables to leak outside than for config files.
+   You may, for example, accidentally leak your env via your CI/CD pipeline,
+   or you may be affected by a `security incident`_ for which you can't do anything.
+
+   Write your secret to a file and pass its path via a variable like :code:`MYAPP_API_TOKEN_FILE=/private/token` (instead of just :code:`MYAPP_API_TOKEN="3KX93ad..."`) to your app.
+   Alternatively, store it in a structured config file that you directly load with Typed Settings.
+
+   .. _security incident: https://thehackernews.com/2021/09/travis-ci-flaw-exposes-secrets-of.html
+
+
+Nested settings
+---------------
+
+Settings classes can be nested but environment variables have a flat namespace.
+So Typed Settings builds a flat list of all option and uses the "dotted path" to an attribute (e.g., :code:`attrib.nested_attrib.nested_nested_attrib`) for mapping flat names to nested attributes.
+
+Here's an example:
+
+.. code-block:: python
+
+    >>> import os
+    >>> import typed_settings as ts
+    >>>
+    >>> @ts.settings
+    ... class Nested:
+    ...     attrib1: int = 0
+    ...     attrib2: bool = True
+    >>>
+    >>> @ts.settings
+    ... class Settings:
+    ...     nested: Nested = Nested()
+    ...     attrib: str = ""
+    >>>
+    >>> os.environ["MYAPP_ATTRIB"] = "spam"
+    >>> os.environ["MYAPP_NESTED_ATTRIB1"] = "42"
+    >>> os.environ["MYAPP_NESTED_ATTRIB2"] = "0"
+    >>>
+    >>> ts.load(Settings, "myapp")
+    Settings(nested=Nested(attrib1=42, attrib2=False), attrib='spam')
+
+.. warning::
+
+   :code:`Settings` should not define an attribute :code:`nested_attrib1` as it would conflict with :code:`nested.attrib1`.
+   If you added this attribute to the example above, the value ``42`` would be assigned to both options.
+
+
+Overriding the var name for a single option
+-------------------------------------------
+
+Sometimes, you may want to read an option from another variable than Typed Settings would normally do.
+For example, you company's convention might be to use :code:`SSH_PRIVATE_KEY_FILE`, but your app would look for :code:`myapp_ssh_key_file`:
+
+.. code-block:: python
+
+    >>> @ts.settings
+    ... class Settings:
+    ...     ssh_key_file: str = ""
+    >>>
+    >>> ts.load(Settings, "myapp")
+    Settings(ssh_key_file='')
+
+In order to read from the desired env var, you can use :func:`os.getenv()` and assign its result as default for your option:
+
+.. code-block:: python
+
+    >>> import os
+    >>>
+    >>> os.environ["SSH_PRIVATE_KEY_FILE"] = "/run/private/id_ed25519"
+    >>>
+    >>> @ts.settings
+    ... class Settings:
+    ...     ssh_key_file: str = os.getenv("SSH_PRIVATE_KEY_FILE", "")
+    >>>
+    >>> ts.load(Settings, "myapp")
+    Settings(ssh_key_file='/run/private/id_ed25519')
+
+
+.. _guide-working-with-config-files:
+
+Working with Config Files
+=========================
+
+Besides environment variables, configuration files are another basic way to configure applications.
+
+There are several locations where configuration files are usually stored:
+
+- In the system's main configuration director (e.g., :file:`/etc/myapp/settings.toml`)
+- In your users' home (e.g., :file:`~/.config/myapp.toml` or :file:`~/.myapp.toml`)
+- In your project's root directory (e.g., :file:`~/Projects/myapp/pyproject.toml`)
+- In your current working directory
+- At a location pointed to by an environment variable (e.g., :code:`MYAPP_SETTINGS=/run/private/secrets.toml`)
+- …
+
+As you can see, there are many possibilities and depending on your app, any of them may make sense (or not).
+
+That's why Typed Settings has *no* default search paths for config files but lets you very flexibly configure them:
+
+- You can specify a static list of search paths
+- You can search for specific files at runtime
+- You can specify search paths at runtime via an environment variable
+
+.. TODO multiple files can be configured.  all files are loaded and
+   indifvidual settings are overridden.
+
+.. TODO add "only one file" option or a "file_filter: func" option
+
+
+Static Search Paths
+-------------------
+
+You can pass a static list of files to :func:`load()` and :func:`~typed_settings.loaders.FileLoader`.
+Paths can be strings or instances of :class:`pathlib.Path`.
+If multiple files are found, they are loaded from left to right.  That means that the last file has the highest precedence.
+
+The following example first loads a global configuration file and overrides it with user specific settings:
+
+.. code-block:: python
+
+    >>> from pathlib import Path
+    >>>
+    >>> @ts.settings
+    ... class Settings:
+    ...     option: str = ""
+    >>>
+    >>> config_files = [
+    ...     "/etc/myapp/settings.toml",
+    ...     Path.home().joinpath(".config", "myapp.toml"),
+    ... ]
+    >>> ts.load(Settings, "myapp", config_files)
+    Settings(option='')
+
+.. note::
+
+    You should not hard-code configuration directories like :file:`/etc` or :file:`~/.config`.
+    The library platformdirs_ (a friendly fork of the inactive :program:`appdirs`) determines the correct paths depending on the user's operating system.
+
+
+    .. _platformdirs: https://platformdirs.readthedocs.io/en/latest/
+
+
+Finding Files at Runtime
+------------------------
+
+Especially tools that are used for software development (i.e. linters or code formatters) search for their configuration in the current (Git) project.
+
+The function :func:`find()` does exactly that: It searches for a given filename from the current working directory upwards until it hits a defined stop directory or file.
+By default it stops when the current directory contains a :file:`.git` or :file:`.hg` folder.
+When the file is not found, it will return :file:`./{filename}`.
+
+It returns a :class:`pathlib.Path` that you can append to the list of static config files as described in the section above:
+
+.. code-block:: python
+
+    >>> @ts.settings
+    ... class Settings:
+    ...     option: str = ""
+    >>>
+    >>> config_files = [
+    ...     Path.home().joinpath(".config", "mylint.toml"),
+    ...     ts.find("mylint.toml"),
+    ... ]
+    >>> ts.load(Settings, "mylint", config_files)
+    Settings(option='')
+
+
+.. _guide-using-pyproject-toml:
+
+Using ``pyproject.toml``
+^^^^^^^^^^^^^^^^^^^^^^^^
+
+Since Typed Settings supports TOML files out-of-the box, you may wish to use :file:`pyproject.toml` for your tool's configuration.
+
+There are just two things you need to do:
+
+- Use :func:`find()` to find the :file:`project.toml` from all subdirectories of a project.
+- Override the default section name and `use the "tool." prefix`_.
+
+.. code-block:: python
+
+   >>> # Create a "project" in a temp. directory
+   >>> config = """[tool.myapp]
+   ... option = "spam"
+   ... """
+   >>> project_dir = getfixture("tmp_path")
+   >>> project_dir.joinpath("src").mkdir()
+   >>> project_dir.joinpath("pyproject.toml").write_text(config)
+   29
+   >>> # Change to the "src" dir of our "porject"
+   >>> monkeypatch = getfixture("monkeypatch")
+   >>> with monkeypatch.context() as m:
+   ...     m.chdir(project_dir / "src")
+   ...
+   ...     ts.load(
+   ...          Settings,
+   ...          "myapp",
+   ...          [ts.find("pyproject.toml")],
+   ...          config_file_section="tool.myapp",
+   ...     )
+   Settings(option='spam')
+
+.. _use the "tool." prefix: https://www.python.org/dev/peps/pep-0518/#id28
+
+
+Dynamic Search Paths via Environment Variables
+----------------------------------------------
+
+Sometimes, you don't know the location of your configuration files in advance.
+Sometimes, you don't even know where to search for them.
+This may, for example, be the case when your app runs in a container and the configuration files are mounted to an arbitrary location inside the container.
+
+For these cases, Typed Settings can read search paths for config files from an environment variable.
+If you use :func:`load()`, its name is derived from the *appname* argument and is :samp:`{MYAPP}_SETTINGS`.
+
+Multiple paths are separated by :code:`:`, similarly to the :envvar:`PATH` variable.
+However, in contrast to :code:`PATH`, *all* existing files are loaded one after another:
+
+.. code-block:: python
+
+   >>> @ts.settings
+   ... class Settings:
+   ...     option1: str = "default"
+   ...     option2: str = "default"
+   >>>
+   >>> # Create two config files and expose their paths via an env var
+   >>> project_dir = getfixture("tmp_path")
+   >>> f1 = project_dir.joinpath("conf1.toml")
+   >>> f1.write_text("""[myapp]
+   ... option1 = "spam"
+   ... option2 = "spam"
+   ... """)
+   42
+   >>> f2 = project_dir.joinpath("conf2.toml")
+   >>> f2.write_text("""[myapp]
+   ... option1 = "eggs"
+   ... """)
+   25
+   >>> with monkeypatch.context() as m:
+   ...     m.setenv("MYAPP_SETTINGS", f"{f1}:{f2}")
+   ...
+   ...     # Loading the files from the env var is enabled by default
+   ...     ts.load(Settings, "myapp")
+   Settings(option1='eggs', option2='spam')
+
+You can override the default using the *config_files_var* argument
+(or *env_var* if you use the :class:`FileLoader` directly):
+
+.. code-block:: python
+
+   >>> with monkeypatch.context() as m:
+   ...     m.setenv("MY_SETTINGS", str(f2))
+   ...     ts.load(Settings, "myapp", config_files_var="MY_SETTINGS")
+   Settings(option1='eggs', option2='default')
+
+If you set it to :code:`None`, loading filenames from an environment variable is disabled:
+
+.. code-block:: python
+
+   >>> with monkeypatch.context() as m:
+   ...     m.setenv("MYAPP_SETTINGS", f"{f1}:{f2}")
+   ...     ts.load(Settings, "myapp", config_files_var=None)
+   Settings(option1='default', option2='default')
+
+
+Config File Precedence
+----------------------
+
+Typed-Settings loads all files that it finds and merges their contents with all previously loaded settings.
+
+The list of static fiels (passed to :func:`load()` or :class:`FileLoader`) is always loaded first.
+The files specified via an environment variable are loaded afterwards:
+
+.. code-block:: python
+
+   >>> with monkeypatch.context() as m:
+   ...     m.setenv("MYAPP_SETTINGS", f"loaded_3rd.toml:loaded_4th.toml")
+   ...     s = ts.load(Settings, "myapp", ["loaded_1st.toml", ts.find("loaded_2nd.toml")])
+
+
+Optional and Mandatory Config Files
+-----------------------------------
+
+Config files – no matter if they are statically defined or passed via an environment variable – are *optional* by default.
+That means that no error is raised if some (or all) of the files do not exist:
+
+.. code-block:: python
+
+   >>> # Not an error:
+   >>> ts.load(Settings, "myapp", config_files=["/spam/eggs"])
+   Settings(option1='default', option2='default')
+
+You can mark files as *mandatory* by prefixing them with :code:`!`:
+
+.. code-block:: python
+
+   >>> # Raises an error:
+   >>> ts.load(Settings, "myapp", config_files=["!/spam"])
+   Traceback (most recent call last):
+   ...
+   FileNotFoundError: [Errno 2] No such file or directory: '/spam'
+
+
+Dynamic Options
+===============
+
+The benefit of class based settings is that you can use properties to create "dynamic" or "aggregated" settings.
+
+For example, image you want to configure the URL for a REST API but the only part that usually changes with every deployment is the hostname.
+
+For these cases, you can make each part of the URL configurable and create a property that returns the full URL:
+
+.. code-block:: python
+
+    >>> @ts.settings
+    ... class ServiceConfig:
+    ...     scheme: str = "https"
+    ...     host: str = "example.com"
+    ...     port: int = 443
+    ...     path: Path() = Path("api")
+    ...
+    ...     @property
+    ...     def url(self) -> str:
+    ...         return f"{self.scheme}://{self.host}:{self.port}/{self.path}"
+    ...
+    >>> print(ServiceConfig().url)
+    https://example.com:443/api
+
+Another use case is loading data from files, e.g., secrets like SSH keys:
+
+.. code-block:: python
+
+    >>> from pathlib import Path
+    >>>
+    >>> @ts.settings
+    ... class SSH:
+    ...     key_file: Path
+    ...
+    ...     @property
+    ...     def key(self) -> str:
+    ...         return self.key_file.read_text()
+    ...
+    >>> key_file = getfixture("tmp_path").joinpath("id_1337")
+    >>> key_file.write_text("le key")
+    6
+    >>> print(SSH(key_file=key_file).key)
+    le key
