@@ -5,14 +5,14 @@ from collections.abc import MutableSequence, MutableSet, Sequence
 from datetime import datetime
 from enum import Enum
 from functools import update_wrapper
-from typing import Any, Callable, Dict, List, Optional, Tuple, Type
+from typing import Any, Callable, Dict, List, Optional, Tuple, Type, Union
 
 import attr
 import cattr
 import click
 
 from ._compat import get_args, get_origin
-from ._core import T, _load_settings
+from ._core import T, _load_settings, default_loaders
 from ._dict_utils import _deep_options, _get_path, _merge_dicts, _set_path
 from .attrs import METADATA_KEY, _SecretRepr
 from .converters import default_converter, from_dict
@@ -26,19 +26,22 @@ StrDict = Dict[str, Any]
 
 def click_options(
     cls: Type[T],
-    loaders: List[Loader],
+    loaders: Union[str, List[Loader]],
     converter: Optional[cattr.Converter] = None,
     type_handler: "Optional[TypeHandler]" = None,
 ) -> Callable[[Callable], Callable]:
     """
-    Generates :mod:`click` options for a CLI which override settins loaded via
+    Generate :mod:`click` options for a CLI which override settins loaded via
     :func:`.load_settings()`.
 
     A single *cls* instance is passed to the decorated function
 
     Args:
         cls: Attrs class with options (and default values).
-        loaders: A list of settings :class:`Loader`'s.
+        loaders: Either a string with your app name or a list of settings
+            :class:`Loader`'s.  If it is a string, use it with
+            :func:`~typed_settings.default_loaders()` to get the defalt
+            loaders.
         converter: An optional :class:`cattr.Converter` used for converting
             option values to the required type.
 
@@ -67,7 +70,12 @@ def click_options(
     """
     cls = attr.resolve_types(cls)
     options = _deep_options(cls)
+
+    if isinstance(loaders, str):
+        loaders = default_loaders(loaders)
+
     settings_dict = _load_settings(options, loaders)
+
     converter = converter or default_converter()
     type_handler = type_handler or TypeHandler()
 

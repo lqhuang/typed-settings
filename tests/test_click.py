@@ -72,12 +72,33 @@ def make_cli(settings_cls: Type[T]) -> Cli:
     def run(*args, **kwargs) -> CliResult:
         @click.group(invoke_without_command=True)
         @click_options(settings_cls, default_loaders("test"))
-        def cli(settings: T):
+        def cli(settings: T) -> None:
             runner.settings = settings
 
         return runner.invoke(cli, args, **kwargs)
 
     return run
+
+
+def test_simple_cli():
+    """
+    "click_options()" uses the default loaders if you just pass an app name.
+    """
+
+    @settings
+    class Settings:
+        o: int
+
+    loaded = []
+
+    @click.command()
+    @click_options(Settings, "test")
+    def cli(settings: Settings) -> None:
+        loaded.append(settings)
+
+    result = click.testing.CliRunner().invoke(cli, ["--o=3"])
+    assert result.exit_code == 0
+    assert loaded == [Settings(3)]
 
 
 @pytest.mark.parametrize(

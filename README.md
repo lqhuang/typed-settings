@@ -157,7 +157,7 @@ class Settings:
     an_int: int = 3
 
 @click.command()
-@ts.click_options(Settings, ts.default_loaders("example"))
+@ts.click_options(Settings, "example")
 def main(settings):
     print(settings)
 
