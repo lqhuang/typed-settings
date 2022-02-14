@@ -5,12 +5,12 @@ Examples need to have a :file:`test.console` file that contains shell commands
 and their output similarly to Python doctests.
 """
 import subprocess
+from pathlib import Path
 from typing import TYPE_CHECKING, Dict, Generator, List, Optional, Union
 
 import pytest
 from _pytest._code.code import TerminalRepr
 from _pytest.assertion.util import _diff_text
-from py._path.local import LocalPath
 
 
 if TYPE_CHECKING:
@@ -20,21 +20,37 @@ if TYPE_CHECKING:
     from _pytest.main import Session
 
 
-EXAMPLES_DIR = LocalPath(__file__).dirpath("examples")
+EXAMPLES_DIR = Path(__file__).parent.joinpath("examples")
 
 
-def pytest_ignore_collect(path: LocalPath, config: "Config") -> bool:
+# Part of pathlib only from py39
+def is_relative_to(path: Path, other: Path) -> bool:
+    """Return True if the path is relative to another path or False."""
+    try:
+        path.relative_to(other)
+        return True
+    except ValueError:
+        return False
+
+
+def pytest_ignore_collect(collection_path: Path, config: "Config") -> bool:
     """Do not collect Python files from the examples."""
-    return path.relto(EXAMPLES_DIR) and path.ext == ".py"
+    return (
+        collection_path.is_relative_to(EXAMPLES_DIR)
+        and collection_path.suffix == ".py"
+    )
 
 
 def pytest_collect_file(
-    path: LocalPath, parent: "Session"
+    file_path: Path, parent: "Session"
 ) -> Optional["ExampleFile"]:
     """Checks if the file is a rst file and creates an
     :class:`ExampleFile` instance."""
-    if path.relto(EXAMPLES_DIR) and path.basename == "test.console":
-        return ExampleFile.from_parent(parent, fspath=path)
+    if (
+        is_relative_to(file_path, EXAMPLES_DIR)
+        and file_path.name == "test.console"
+    ):
+        return ExampleFile.from_parent(parent, path=file_path)
     return None
 
 
@@ -42,25 +58,18 @@ class ExampleFile(pytest.File):
     """Represents an example ``.py`` and its output ``.out``."""
 
     def collect(self) -> Generator["ExampleItem", None, None]:
-        testfile = self.fspath
-        name = f"Example.{self.fspath.dirpath().basename}"
+        name = f"Example.{self.path.parent.name}"
         name = "console_session"
-        yield ExampleItem.from_parent(self, name=name, testfile=testfile)
+        yield ExampleItem.from_parent(self, name=name)
 
 
 class ExampleItem(pytest.Item):
     """Executes an example found in a rst-file."""
 
-    def __init__(
-        self, name: str, parent: "Session", testfile: LocalPath
-    ) -> None:
-        super().__init__(name, parent)
-        self.testfile = testfile
-
     def runtest(self) -> None:
         # Read expected output.
         # The last line is an empty line, skip it.
-        lines = self.testfile.readlines(cr=False)[:-1]
+        lines = self.path.read_text().splitlines()
         cmds: Dict[str, List[str]] = {}
         last_cmd = ""
         for line in lines:
@@ -75,7 +84,7 @@ class ExampleItem(pytest.Item):
             output = subprocess.run(
                 cmd,
                 shell=True,
-                cwd=self.testfile.dirname,
+                cwd=self.path.parent,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.STDOUT,
                 universal_newlines=True,
