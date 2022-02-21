@@ -36,7 +36,7 @@ def is_relative_to(path: Path, other: Path) -> bool:
 def pytest_ignore_collect(collection_path: Path, config: "Config") -> bool:
     """Do not collect Python files from the examples."""
     return (
-        collection_path.is_relative_to(EXAMPLES_DIR)
+        is_relative_to(collection_path, EXAMPLES_DIR)
         and collection_path.suffix == ".py"
     )
 
