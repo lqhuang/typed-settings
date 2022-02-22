@@ -143,7 +143,7 @@ You can also pass a custom [cattrs converter](https://cattrs.readthedocs.io/en/l
 
 ### Click
 
-Optionally, click options can be generated for each option.  Config files and environment variables will still be read and can be overriden by passing command line options.
+Optionally, Click options can be generated for each option.  Config files and environment variables will still be read and can be overriden by passing command line options.
 
 
 ```python
@@ -184,7 +184,7 @@ Settings(a_str='spam', an_int=1)
 
 - Typed Settings’ `settings` decorator is an alias to `attr.define` and can optionally make your settings frozen (immutable).
 
-- `option()` and `secret()` are wrappers around `attr.field()` and add meta data handling for click options.
+- `option()` and `secret()` are wrappers around `attr.field()` and add meta data handling for Click options.
 
 - `secret()` attributes have string representation that masks the actual value, so that you can safely print or log settings instances.
 
@@ -193,7 +193,7 @@ Settings(a_str='spam', an_int=1)
   - TOML files
   - Python files
   - Environment variables
-  - *click* command line options
+  - *Click* command line options
 
 - Settings are converted to their correct type using [cattrs](https://cattrs.readthedocs.io).
 

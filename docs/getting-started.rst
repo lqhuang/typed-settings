@@ -184,7 +184,7 @@ Some tools (like :ref:`example-pytest` or :ref:`example-twine`) allow you store 
 
 Typed Settings can integrate with click_ and automatically create command line options for your settings.
 When you run your app, settings will first be loaded from config files and environment variables.
-The loaded values then serve as defaults for the corresponding click options.
+The loaded values then serve as defaults for the corresponding Click options.
 
 Your CLI function receives all options as the single instance of your settings class:
 

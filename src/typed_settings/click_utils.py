@@ -63,7 +63,7 @@ def click_options(
          ... class Settings: ...
          ...
          >>> @click.command()
-         ... @ts.click_options(Settings, ts.default_loaders("example"))
+         ... @ts.click_options(Settings, "example")
          ... def cli(settings):
          ...     print(settings)
 
@@ -142,9 +142,7 @@ def handle_datetime(type: type, default: Any) -> StrDict:
         ),
     }
     if default is not attr.NOTHING:
-        if isinstance(default, datetime):
-            default = default.isoformat()
-        type_info["default"] = default
+        type_info["default"] = default.isoformat()
     return type_info
 
 

@@ -405,3 +405,260 @@ Another use case is loading data from files, e.g., secrets like SSH keys:
     6
     >>> print(SSH(key_file=key_file).key)
     le key
+
+
+Command Line Arguments with Click
+=================================
+
+The general algorithm for generating a Click_ CLI for your settings looks like this:
+
+#. You decorate a Click command with :func:`click_options()` which roughly works like :func:`click.make_pass_decorator()`.
+
+#. The decorator will immediately (namely, at module import time)
+
+   - load your settings (e.g., from config files or env vars),
+   - create a :func:`click.option()` for each setting and use the loaded settings value as default for that option.
+
+#. You add a positional argument to your CLI function.
+
+#. When you run your CLI, the decorator :
+
+   - updates the settings with option values from the command line,
+   - passes the updated settings instances as positional argument to your CLI function.
+
+.. _click: https://click.palletsprojects.com
+
+For example, this minimal snippet:
+
+.. code-block:: python
+
+    >>> import click
+    >>> import click.testing
+    >>> import typed_settings as ts
+    >>>
+    >>> monkeypatch.setenv("EXAMPLE_SPAM", "23")
+    >>>
+    >>> @ts.settings
+    ... class Settings:
+    ...     spam: int = 42
+    ...
+    >>> @click.command()
+    ... @ts.click_options(Settings, "example")
+    ... def cli(settings: Settings):
+    ...     print(settings)
+    ...
+    >>> runner = click.testing.CliRunner()
+    >>> print(runner.invoke(cli, ["--help"]).output)
+    Usage: cli [OPTIONS]
+    <BLANKLINE>
+    Options:
+      --spam INTEGER  [default: 23]
+      --help          Show this message and exit.
+    <BLANKLINE>
+    >>> print(runner.invoke(cli, ["--spam=3"]).output)
+    Settings(spam=3)
+    <BLANKLINE>
+
+
+is roughly equivalent to:
+
+.. code-block:: python
+
+    >>> @ts.settings
+    ... class Settings:
+    ...     spam: int = 42
+    ...
+    >>> defaults = ts.load(Settings, "example")
+    >>>
+    >>> @click.command()
+    ... @click.option("--spam", type=int, default=defaults.spam, show_default=True)
+    ... def cli(spam: int):
+    ...     print(spam)
+    ...
+    >>> print(runner.invoke(cli, ["--help"]).output)
+    Usage: cli [OPTIONS]
+    <BLANKLINE>
+    Options:
+      --spam INTEGER  [default: 23]
+      --help          Show this message and exit.
+    <BLANKLINE>
+    >>> print(runner.invoke(cli, ["--spam=3"]).output)
+    3
+    <BLANKLINE>
+
+The major difference between the two is that Typed Settings passes the complete settings instances and not individual options.
+
+
+Configuring Loaders and Converters
+----------------------------------
+
+When you just pass an application name to :func:`click_options()` (as in the example above),
+it uses :func:`default_loaders()` to get the default loaders and :func:`default_converter()` to get the default converter.
+
+You can pass your own list of loaders instead of the app name like this:
+
+.. code-block:: python
+
+    >>> # Only load envs vars, no config files
+    >>> loaders = ts.default_loaders(
+    ...     appname="example",
+    ...     config_files=(),
+    ...     config_files_var=None,
+    ... )
+    >>> @click.command()
+    ... @ts.click_options(Settings, loaders)
+    ... def cli(settings: Settings):
+    ...     pass
+
+In a similar fashion, you can change the converter.
+
+.. code-block:: python
+
+    >>> converter = ts.default_converter()
+    >>> # converter.register_structure_hook(my_type, my_converter)
+    >>>
+    >>> @click.command()
+    ... @ts.click_options(Settings, "example", converter=converter)
+    ... def cli(settings: Settings):
+    ...     pass
+
+
+Order of Decorators
+-------------------
+
+Click passes the settings instances to your CLI function as positional argument.
+If you use other decorators that behave similarly (e.g., :func:`click.pass_context`),
+the order of decorators and arguments matters.
+
+The innermost decorator (the one closest to the :code:`def`) will be passed as first argument,
+The second-innermost as second argument and so forth:
+
+.. code-block:: python
+
+    >>> @click.command()
+    ... @ts.click_options(Settings, loaders)
+    ... @click.pass_context
+    ... def cli(ctx: click.Context, settings: Settings):
+    ...     print(ctx, settings)
+    ...
+    >>> print(runner.invoke(cli, []).stdout)
+    <click.core.Context object at 0x...> Settings(spam=23)
+    <BLANKLINE>
+
+
+Help!
+-----
+
+As you may have noticed in the examples above, the generated options were lacking a proper help string.
+You can add one via :func:`ts.option()` and :func:`ts.secret()`:
+
+.. code-block:: python
+
+    >>> @ts.settings
+    ... class Settings:
+    ...     spam: int = ts.option(default=23, help="Amount of SPAM required")
+    ...
+    >>> @click.command()
+    ... @ts.click_options(Settings, "example")
+    ... def cli(settings: Settings):
+    ...     print(settings)
+    ...
+    >>> print(runner.invoke(cli, ["--help"]).output)
+    Usage: cli [OPTIONS]
+    <BLANKLINE>
+    Options:
+      --spam INTEGER  Amount of SPAM required  [default: 23]
+      --help          Show this message and exit.
+    <BLANKLINE>
+
+
+Extending supported types
+-------------------------
+
+Typed Settings and it's Click utilities support the data types for the most common use cases out-of-the-box
+(in fact, it was quite hard to come up with an example that makes at least *some* sense …;-)).
+
+But let's assume you have a dataclass class that represents an RGB color and
+you want to use a single command line option for it (like :samp:`--color {R G B}`).
+
+.. code-block:: python
+
+    >>> import attrs
+    >>> import dataclasses
+    >>>
+    >>> @dataclasses.dataclass
+    ... class RGB:
+    ...     r: int = 0
+    ...     g: int = 0
+    ...     b: int = 0
+    ...
+    >>> @ts.settings
+    ... class Settings:
+    ...     color: RGB = RGB(0, 0, 0)
+
+Since Cattrs has no built-in support for dataclasses, we need to register a converter for it:
+
+.. code-block:: python
+
+    >>> converter = ts.default_converter()
+    >>> converter.register_structure_hook(
+    ...     RGB, lambda v, t: v if isinstance(v, RGB) else t(*v)
+    ... )
+
+Typed Settings uses a :class:`~typed_settings.click_utils.TypeHandler` to generate type specific arguments for :func:`click.option()`.
+The :class:`~typed_settings.click_utils.TypeHandler` takes a dictionary that maps Python type to handler functions.
+These functions receive that type and the default value for the option.
+They return a dictionary with keyword arguments for :func:`click.option()`.
+
+For our use case, we need an :code:`int` options that takes exactly three arguments and has the metavar :code:`R G B`.
+If (and only if) there is a default value for our option, we want to use it.
+
+.. code-block:: python
+
+    >>> from typed_settings.click_utils import DEFAULT_TYPES, StrDict, TypeHandler
+    >>>
+    >>> def handle_rgb(type: type, default: object) -> StrDict:
+    ...     type_info = {
+    ...         "type": int,
+    ...         "nargs": 3,
+    ...         "metavar": "R G B",
+    ...     }
+    ...     if default is not attrs.NOTHING:
+    ...         type_info["default"] = dataclasses.astuple(default)
+    ...     return type_info
+
+We now update the dict with built-in type handlers with our own and
+create a new :class:`~typed_settings.click_utils.TypeHandler` instance with it:
+
+.. code-block:: python
+
+    >>> type_dict = {
+    ...     **DEFAULT_TYPES,
+    ...     RGB: handle_rgb,
+    ... }
+    >>> type_handler = TypeHandler(type_dict)
+
+Finally, we need to pass the type handler as well as our updated converter to :class:`typed_setting.click_options()` and we are ready to go:
+
+.. code-block:: python
+
+    >>> @click.command()
+    ... @ts.click_options(Settings, "example", converter, type_handler=type_handler)
+    ... def cli(settings: Settings):
+    ...     print(settings)
+    ...
+    >>> # Check if our metavar and default value is used:
+    >>> print(runner.invoke(cli, ["--help"]).output)
+    Usage: cli [OPTIONS]
+    <BLANKLINE>
+    Options:
+      --color R G B  [default: 0, 0, 0]
+      --help         Show this message and exit.
+    <BLANKLINE>
+    >>> # Try passing our own color:
+    >>> print(runner.invoke(cli, ["--color", "23", "42", "7"]).output)
+    Settings(color=RGB(r=23, g=42, b=7))
+    <BLANKLINE>
+
+The way described above should be sufficient for most extensions.
+However, if you need to achieve something more complicated, like adding support for new kinds of container types, you can also sub-class :class:`~typed_settings.click_utils.TypeHandler()`.

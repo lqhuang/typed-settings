@@ -17,6 +17,7 @@ Core Functions
 Core functions for loading and working with settings.
 
 .. currentmodule:: typed_settings
+.. autofunction:: default_converter
 .. autofunction:: default_loaders
 .. autofunction:: find
 .. autofunction:: load
