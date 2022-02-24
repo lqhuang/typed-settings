@@ -3,6 +3,7 @@
 .coverage.*
 .coverage
 .mypy_cache/
+.nox/
 .pytest_cache/
 __pycache__/
 build/
