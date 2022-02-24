@@ -178,6 +178,7 @@ def load(
         env_prefix=env_prefix,
     )
     settings = _load_settings(
+        cls=cls,
         options=_deep_options(cls),
         loaders=loaders,
     )
@@ -212,6 +213,7 @@ def load_settings(
     if converter is None:
         converter = default_converter()
     settings = _load_settings(
+        cls=cls,
         options=_deep_options(cls),
         loaders=loaders,
     )
@@ -219,6 +221,7 @@ def load_settings(
 
 
 def _load_settings(
+    cls: type,
     options: OptionList,
     loaders: List[Loader],
 ) -> Dict[str, Any]:
@@ -239,7 +242,7 @@ def _load_settings(
             continue
         _set_path(settings, opt.path, opt.field.default)
 
-    loaded_settings = [loader.load(options) for loader in loaders]
+    loaded_settings = [loader.load(cls, options) for loader in loaders]
 
     for ls in loaded_settings:
         _merge_dicts(settings, ls)

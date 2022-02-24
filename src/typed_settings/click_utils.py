@@ -74,7 +74,7 @@ def click_options(
     if isinstance(loaders, str):
         loaders = default_loaders(loaders)
 
-    settings_dict = _load_settings(options, loaders)
+    settings_dict = _load_settings(cls, options, loaders)
 
     converter = converter or default_converter()
     type_handler = type_handler or TypeHandler()

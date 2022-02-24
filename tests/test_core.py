@@ -65,6 +65,7 @@ class TestLoadSettings:
         not a settings instance.
         """
         settings = _core._load_settings(
+            cls=Settings,
             options=_deep_options(Settings),
             loaders=loaders,
         )

@@ -19,6 +19,7 @@ from typed_settings.loaders import (
     EnvLoader,
     FileFormat,
     FileLoader,
+    InstanceLoader,
     PythonFormat,
     TomlFormat,
     clean_settings,
@@ -194,7 +195,7 @@ class TestPythonFormat:
         """
         config_file = tmp_path.joinpath("settings.py")
         config_file.write_text(textwrap.dedent(data))
-        result = fmt.load_file(config_file, _deep_options(Settings))
+        result = fmt.load_file(config_file, Settings, _deep_options(Settings))
         assert result == {
             "url": "spam",
             "host": {"port": 42},
@@ -209,7 +210,7 @@ class TestPythonFormat:
         config_file = tmp_path.joinpath("settings.py")
         config_file.write_text("class spam:\n    a = 'spam'\n")
         result = PythonFormat(section).load_file(
-            config_file, _deep_options(Settings)
+            config_file, Settings, _deep_options(Settings)
         )
         assert result == {}
 
@@ -222,6 +223,7 @@ class TestPythonFormat:
             PythonFormat("").load_file,
             Path("x"),
             _deep_options(Settings),
+            Settings,
         )
 
     def test_file_invalid(self, tmp_path: Path):
@@ -235,6 +237,7 @@ class TestPythonFormat:
             PythonFormat("").load_file,
             config_file,
             _deep_options(Settings),
+            Settings,
         )
 
 
@@ -261,7 +264,7 @@ class TestTomlFormat:
         """
         config_file = tmp_path.joinpath("settings.toml")
         config_file.write_text(textwrap.dedent(data))
-        result = fmt.load_file(config_file, _deep_options(Settings))
+        result = fmt.load_file(config_file, Settings, _deep_options(Settings))
         assert result == {
             "url": "spam",
             "host": {"port": 42},
@@ -280,7 +283,9 @@ class TestTomlFormat:
         """
         )
         result = TomlFormat("tool.example").load_file(
-            config_file, _deep_options(Settings)
+            config_file,
+            _deep_options(Settings),
+            Settings,
         )
         assert result == {
             "a": "spam",
@@ -300,7 +305,7 @@ class TestTomlFormat:
         """
         )
         result = TomlFormat(section).load_file(
-            config_file, _deep_options(Settings)
+            config_file, Settings, _deep_options(Settings)
         )
         assert result == {}
 
@@ -313,6 +318,7 @@ class TestTomlFormat:
             TomlFormat("").load_file,
             Path("x"),
             _deep_options(Settings),
+            Settings,
         )
 
     def test_file_not_allowed(
@@ -339,6 +345,7 @@ class TestTomlFormat:
             TomlFormat("").load_file,
             config_file,
             _deep_options(Settings),
+            Settings,
         )
 
     def test_file_invalid(self, tmp_path: Path):
@@ -352,6 +359,7 @@ class TestTomlFormat:
             TomlFormat("").load_file,
             config_file,
             _deep_options(Settings),
+            Settings,
         )
 
 
@@ -434,7 +442,7 @@ class TestFileLoader:
             formats={"*.toml": TomlFormat("le-section")},
             files=[config_file],
         )
-        s = loader._load_file(config_file, _deep_options(Settings))
+        s = loader._load_file(config_file, Settings, _deep_options(Settings))
         assert s == {"le_option": "spam"}
 
     def test_load_file2(self, tmp_path: Path):
@@ -459,7 +467,7 @@ class TestFileLoader:
             formats={"*.toml": TomlFormat("le-section")},
             files=[config_file],
         )
-        s = loader._load_file(config_file, _deep_options(Settings))
+        s = loader._load_file(config_file, Settings, _deep_options(Settings))
         assert s == {"le_option": "spam"}
 
     def test_load_file_invalid_format(self):
@@ -467,7 +475,9 @@ class TestFileLoader:
         An error is raised if a file has an unknown extension.
         """
         loader = FileLoader({"*.toml": TomlFormat("t")}, [])
-        pytest.raises(UnknownFormatError, loader._load_file, Path("f.py"), [])
+        pytest.raises(
+            UnknownFormatError, loader._load_file, Path("f.py"), [], type
+        )
 
     def test_load(self, tmp_path: Path):
         """
@@ -494,7 +504,7 @@ class TestFileLoader:
             le_eggs: str = ""
 
         loader = FileLoader({"*.toml": TomlFormat("le-section")}, [cf1, cf2])
-        s = loader.load(_deep_options(Settings))
+        s = loader.load(Settings, _deep_options(Settings))
         assert s == {"le_spam": "spam", "le_eggs": "eggs"}
 
     @pytest.mark.parametrize(
@@ -508,6 +518,7 @@ class TestFileLoader:
         in_env,
         exists,
         tmp_path,
+        settings_cls: type,
         monkeypatch,
     ):
         """
@@ -528,15 +539,17 @@ class TestFileLoader:
 
         loader = FileLoader({"*": TomlFormat("test")}, files, "TEST_SETTINGS")
         if is_mandatory and not exists:
-            pytest.raises(FileNotFoundError, loader.load, [])
+            pytest.raises(FileNotFoundError, loader.load, settings_cls, [])
         else:
-            loader.load([])
+            loader.load(settings_cls, [])
 
 
 class TestEnvLoader:
     """Tests for EnvLoader"""
 
-    def test_from_env(self, options: OptionList, monkeypatch: MonkeyPatch):
+    def test_from_env(
+        self, settings_cls: type, options: OptionList, monkeypatch: MonkeyPatch
+    ):
         """
         Load options from env vars, ignore env vars for which no settings
         exist.
@@ -545,7 +558,7 @@ class TestEnvLoader:
         monkeypatch.setenv("T_HOST", "spam")  # Haha! Just a deceit!
         monkeypatch.setenv("T_HOST_PORT", "25")
         loader = EnvLoader(prefix="T_")
-        results = loader.load(options)
+        results = loader.load(settings_cls, options)
         assert results == {
             "url": "foo",
             "host": {
@@ -554,7 +567,7 @@ class TestEnvLoader:
         }
 
     def test_no_env_prefix(
-        self, options: OptionList, monkeypatch: MonkeyPatch
+        self, settings_cls: type, options: OptionList, monkeypatch: MonkeyPatch
     ):
         """
         It is okay to use an empty prefix.
@@ -562,5 +575,5 @@ class TestEnvLoader:
         monkeypatch.setenv("URL", "spam")
 
         loader = EnvLoader(prefix="")
-        results = loader.load(options)
+        results = loader.load(settings_cls, options)
         assert results == {"url": "spam"}
