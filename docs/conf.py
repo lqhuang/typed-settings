@@ -25,10 +25,18 @@ exclude_patterns = ["_build", "Thumbs.db", ".DS_Store"]
 
 
 html_theme = "furo"
-# html_theme_options = {
-#     "logo_only": True,
-#     "sidebar_hide_name": True,
-# }
+html_theme_options = {
+    # "logo_only": True,
+    # "sidebar_hide_name": True,
+    "light_css_variables": {
+        "color-brand-primary": "#266DB4",
+        "color-brand-content": "#266DB4",
+    },
+    "dark_css_variables": {
+        "color-brand-primary": "#3186DC",
+        "color-brand-content": "#3186DC",
+    },
+}
 html_static_path = ["_static"]
 html_logo = "_static/typed-settings-spacing.svg"
 html_title = "Typed Settings"
