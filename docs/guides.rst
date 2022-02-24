@@ -4,7 +4,7 @@ Guides
 
 .. currentmodule:: typed_settings
 
-``load()`` and ``load_settings()``
+``load()`` vs. ``load_settings()``
 ==================================
 
 Typed Settings exposes two functions for loading settings: :func:`load()` and :func:`load_settings()`.
@@ -14,23 +14,23 @@ The latter makes special cases possible and lets you configure everything in det
 ``load()``
 ----------
 
-- Uses the file and environent variable loader
+- Uses the file and environment variable loader.
 
-- Only supports TOML files
+- Only supports TOML files.
 
-- Derives settings for loaders from your *appname* (but some settings can be overriden)
+- Derives settings for loaders from your *appname* (but some settings can be overridden).
 
-- Uses a default :program:`cattrs` converter
+- Uses a default Cattrs converter.
 
 
 ``load_settings()``
 -------------------
 
-- You need to explicitly pass the list of loaders
+- You need to explicitly pass the list of loaders.
 
-- You need to explicitly configure each loader
+- You need to explicitly configure each loader.
 
-- You can pass a custom/extended :program:`cattrs` converter
+- You can pass a custom/extended Cattrs converter.
 
 .. note::
 
@@ -42,18 +42,18 @@ The latter makes special cases possible and lets you configure everything in det
 Settings from Environment Variables
 ===================================
 
-Typeds Settings loads environment variables that match :code:`{PREFIX}{OPTION_NAME}`.
+Typed Settings loads environment variables that match :code:`{PREFIX}{OPTION_NAME}`.
 
-:code:`{PREFIX}` is an option for the :class:`~typed_settings.loaders.EnvLoader`.
-It should be UPPER_CASE and end with a `_`, but this is not enforced.
-:code:`{PREFIX}` can also be an empty string.
+:samp:`{PREFIX}` is an option for the :class:`~typed_settings.loaders.EnvLoader`.
+It should be UPPER_CASE and end with an `_`, but this is not enforced.
+:samp:`{PREFIX}` can also be an empty string.
 
-If you use :func:`load()` (or :func:`default_loaders()`), :code:`PREFIX` is derived from the *appname* argument.  For example, :code:`"appname"` becomes :code:`"APPNAME_"`.
+If you use :func:`load()` (or :func:`default_loaders()`), :samp:`{PREFIX}` is derived from the *appname* argument.  For example, :code:`"appname"` becomes :code:`"APPNAME_"`.
 You can override it with the *env_prefix* argument.
 You can also completely disable environment variable loading by setting *env_prefix* to :code:`None`.
 
 Values loaded from environment variables are strings.
-They are converted to the type specified in the settings class via a :program:`cattrs` converter.
+They are converted to the type specified in the settings class via a Cattrs converter.
 The :func:`~typed_settings.converters.default_converter()` supports the most common types like booleans, dates, enums and paths.
 
 .. warning::
@@ -110,7 +110,7 @@ Overriding the var name for a single option
 -------------------------------------------
 
 Sometimes, you may want to read an option from another variable than Typed Settings would normally do.
-For example, you company's convention might be to use :code:`SSH_PRIVATE_KEY_FILE`, but your app would look for :code:`myapp_ssh_key_file`:
+For example, you company's convention might be to use :code:`SSH_PRIVATE_KEY_FILE`, but your app would look for :code:`MYAPP_SSH_KEY_FILE`:
 
 .. code-block:: python
 
@@ -146,7 +146,7 @@ Besides environment variables, configuration files are another basic way to conf
 
 There are several locations where configuration files are usually stored:
 
-- In the system's main configuration director (e.g., :file:`/etc/myapp/settings.toml`)
+- In the system's main configuration directory (e.g., :file:`/etc/myapp/settings.toml`)
 - In your users' home (e.g., :file:`~/.config/myapp.toml` or :file:`~/.myapp.toml`)
 - In your project's root directory (e.g., :file:`~/Projects/myapp/pyproject.toml`)
 - In your current working directory
@@ -161,10 +161,36 @@ That's why Typed Settings has *no* default search paths for config files but let
 - You can search for specific files at runtime
 - You can specify search paths at runtime via an environment variable
 
-.. TODO multiple files can be configured.  all files are loaded and
-   indifvidual settings are overridden.
+When multiple files are configured, Typed Settings loads every file that it finds.
+Each file that is loaded updates the settings that have been loaded so far.
 
-.. TODO add "only one file" option or a "file_filter: func" option
+
+Optional and Mandatory Config Files
+-----------------------------------
+
+Config files – no matter how they are configured – are *optional* by default.
+That means that no error is raised if some (or all) of the files do not exist:
+
+.. code-block:: python
+
+    >>> @ts.settings
+    ... class Settings:
+    ...     option1: str = "default"
+    ...     option2: str = "default"
+    >>>
+    >>> # Not an error:
+    >>> ts.load(Settings, "myapp", config_files=["/spam"])
+    Settings(option1='default', option2='default')
+
+You can mark files as *mandatory* by prefixing them with :code:`!`:
+
+.. code-block:: python
+
+    >>> # Raises an error:
+    >>> ts.load(Settings, "myapp", config_files=["!/spam"])
+    Traceback (most recent call last):
+    ...
+    FileNotFoundError: [Errno 2] No such file or directory: '/spam'
 
 
 Static Search Paths
@@ -194,7 +220,7 @@ The following example first loads a global configuration file and overrides it w
 .. note::
 
     You should not hard-code configuration directories like :file:`/etc` or :file:`~/.config`.
-    The library platformdirs_ (a friendly fork of the inactive :program:`appdirs`) determines the correct paths depending on the user's operating system.
+    The library platformdirs_ (a friendly fork of the inactive Appdirs) determines the correct paths depending on the user's operating system.
 
 
     .. _platformdirs: https://platformdirs.readthedocs.io/en/latest/
@@ -207,9 +233,9 @@ Especially tools that are used for software development (i.e. linters or code fo
 
 The function :func:`find()` does exactly that: It searches for a given filename from the current working directory upwards until it hits a defined stop directory or file.
 By default it stops when the current directory contains a :file:`.git` or :file:`.hg` folder.
-When the file is not found, it will return :file:`./{filename}`.
+When the file is not found, it returns :file:`./{filename}`.
 
-It returns a :class:`pathlib.Path` that you can append to the list of static config files as described in the section above:
+You can append the :class:`pathlib.Path` that this function returns to the list of static config files as described in the section above:
 
 .. code-block:: python
 
@@ -234,31 +260,38 @@ Since Typed Settings supports TOML files out-of-the box, you may wish to use :fi
 
 There are just two things you need to do:
 
-- Use :func:`find()` to find the :file:`project.toml` from all subdirectories of a project.
+- Use :func:`find()` to find the :file:`project.toml` from anywhere in your project.
 - Override the default section name and `use the "tool." prefix`_.
+
+To demonstrate this, we'll first create a "fake project" and change our working directory to its :file:`src` directory:
 
 .. code-block:: python
 
-   >>> # Create a "project" in a temp. directory
-   >>> config = """[tool.myapp]
-   ... option = "spam"
-   ... """
-   >>> project_dir = getfixture("tmp_path")
-   >>> project_dir.joinpath("src").mkdir()
-   >>> project_dir.joinpath("pyproject.toml").write_text(config)
-   29
-   >>> # Change to the "src" dir of our "porject"
-   >>> monkeypatch = getfixture("monkeypatch")
-   >>> with monkeypatch.context() as m:
-   ...     m.chdir(project_dir / "src")
-   ...
-   ...     ts.load(
-   ...          Settings,
-   ...          "myapp",
-   ...          [ts.find("pyproject.toml")],
-   ...          config_file_section="tool.myapp",
-   ...     )
-   Settings(option='spam')
+    >>> # Create a "project" in a temp. directory
+    >>> config = """[tool.myapp]
+    ... option = "spam"
+    ... """
+    >>> project_dir = getfixture("tmp_path")
+    >>> project_dir.joinpath("src").mkdir()
+    >>> project_dir.joinpath("pyproject.toml").write_text(config)
+    29
+    >>> # Change to the "src" dir of our "porject"
+    >>> monkeypatch = getfixture("monkeypatch")
+    >>> with monkeypatch.context() as m:
+    ...     m.chdir(project_dir / "src")
+    ...
+
+Now, we should be able to find the :file:`pyproject.toml` and load our settings from it:
+
+.. code-block:: python
+
+    ...     ts.load(
+    ...          Settings,
+    ...          "myapp",
+    ...          [ts.find("pyproject.toml")],
+    ...          config_file_section="tool.myapp",
+    ...     )
+    Settings(option='spam')
 
 .. _use the "tool." prefix: https://www.python.org/dev/peps/pep-0518/#id28
 
@@ -271,7 +304,7 @@ Sometimes, you don't even know where to search for them.
 This may, for example, be the case when your app runs in a container and the configuration files are mounted to an arbitrary location inside the container.
 
 For these cases, Typed Settings can read search paths for config files from an environment variable.
-If you use :func:`load()`, its name is derived from the *appname* argument and is :samp:`{MYAPP}_SETTINGS`.
+If you use :func:`load()`, its name is derived from the *appname* argument and is :samp:`{APPNAME}_SETTINGS`.
 
 Multiple paths are separated by :code:`:`, similarly to the :envvar:`PATH` variable.
 However, in contrast to :code:`PATH`, *all* existing files are loaded one after another:
@@ -297,6 +330,7 @@ However, in contrast to :code:`PATH`, *all* existing files are loaded one after 
    ... """)
    25
    >>> with monkeypatch.context() as m:
+   ...     # Export the env var that holds the paths to our config files
    ...     m.setenv("MYAPP_SETTINGS", f"{f1}:{f2}")
    ...
    ...     # Loading the files from the env var is enabled by default
@@ -328,7 +362,7 @@ Config File Precedence
 
 Typed-Settings loads all files that it finds and merges their contents with all previously loaded settings.
 
-The list of static fiels (passed to :func:`load()` or :class:`FileLoader`) is always loaded first.
+The list of static files (passed to :func:`load()` or :class:`FileLoader`) is always loaded first.
 The files specified via an environment variable are loaded afterwards:
 
 .. code-block:: python
@@ -338,35 +372,12 @@ The files specified via an environment variable are loaded afterwards:
    ...     s = ts.load(Settings, "myapp", ["loaded_1st.toml", ts.find("loaded_2nd.toml")])
 
 
-Optional and Mandatory Config Files
------------------------------------
-
-Config files – no matter if they are statically defined or passed via an environment variable – are *optional* by default.
-That means that no error is raised if some (or all) of the files do not exist:
-
-.. code-block:: python
-
-   >>> # Not an error:
-   >>> ts.load(Settings, "myapp", config_files=["/spam/eggs"])
-   Settings(option1='default', option2='default')
-
-You can mark files as *mandatory* by prefixing them with :code:`!`:
-
-.. code-block:: python
-
-   >>> # Raises an error:
-   >>> ts.load(Settings, "myapp", config_files=["!/spam"])
-   Traceback (most recent call last):
-   ...
-   FileNotFoundError: [Errno 2] No such file or directory: '/spam'
-
-
 Dynamic Options
 ===============
 
 The benefit of class based settings is that you can use properties to create "dynamic" or "aggregated" settings.
 
-For example, image you want to configure the URL for a REST API but the only part that usually changes with every deployment is the hostname.
+Imagine, you want to configure the URL for a REST API but the only part that usually changes with every deployment is the hostname.
 
 For these cases, you can make each part of the URL configurable and create a property that returns the full URL:
 
@@ -410,6 +421,8 @@ Another use case is loading data from files, e.g., secrets like SSH keys:
 Command Line Arguments with Click
 =================================
 
+You can generate Click command line options for your settings that let your users override settings loaded from other sources (like config files).
+
 The general algorithm for generating a Click_ CLI for your settings looks like this:
 
 #. You decorate a Click command with :func:`click_options()` which roughly works like :func:`click.make_pass_decorator()`.
@@ -428,7 +441,7 @@ The general algorithm for generating a Click_ CLI for your settings looks like t
 
 .. _click: https://click.palletsprojects.com
 
-For example, this minimal snippet:
+Take this minimal example:
 
 .. code-block:: python
 
@@ -460,7 +473,7 @@ For example, this minimal snippet:
     <BLANKLINE>
 
 
-is roughly equivalent to:
+The code above is roughly equivalent to:
 
 .. code-block:: python
 
@@ -495,7 +508,7 @@ Configuring Loaders and Converters
 When you just pass an application name to :func:`click_options()` (as in the example above),
 it uses :func:`default_loaders()` to get the default loaders and :func:`default_converter()` to get the default converter.
 
-You can pass your own list of loaders instead of the app name like this:
+Instead of passing an app name, you can pass your own list of loaders to :func:`click_options()`:
 
 .. code-block:: python
 
@@ -510,7 +523,7 @@ You can pass your own list of loaders instead of the app name like this:
     ... def cli(settings: Settings):
     ...     pass
 
-In a similar fashion, you can change the converter.
+In a similar fashion, you can use your own converter:
 
 .. code-block:: python
 
@@ -526,7 +539,7 @@ In a similar fashion, you can change the converter.
 Order of Decorators
 -------------------
 
-Click passes the settings instances to your CLI function as positional argument.
+Click passes the settings instance to your CLI function as positional argument.
 If you use other decorators that behave similarly (e.g., :func:`click.pass_context`),
 the order of decorators and arguments matters.
 
@@ -596,17 +609,21 @@ you want to use a single command line option for it (like :samp:`--color {R G B}
     ... class Settings:
     ...     color: RGB = RGB(0, 0, 0)
 
+.. note::
+
+   If we used ``attrs`` instead of :mod:`dataclasses` here, Typed Settings would automatically generate three options ``--color-r``, ``--color-g``, and ``--color-b``.
+
 Since Cattrs has no built-in support for dataclasses, we need to register a converter for it:
 
 .. code-block:: python
 
     >>> converter = ts.default_converter()
     >>> converter.register_structure_hook(
-    ...     RGB, lambda v, t: v if isinstance(v, RGB) else t(*v)
+    ...     RGB, lambda val, cls: val if isinstance(val, RGB) else cls(*val)
     ... )
 
 Typed Settings uses a :class:`~typed_settings.click_utils.TypeHandler` to generate type specific arguments for :func:`click.option()`.
-The :class:`~typed_settings.click_utils.TypeHandler` takes a dictionary that maps Python type to handler functions.
+The :class:`~typed_settings.click_utils.TypeHandler` takes a dictionary that maps Python types to handler functions.
 These functions receive that type and the default value for the option.
 They return a dictionary with keyword arguments for :func:`click.option()`.
 
@@ -617,7 +634,7 @@ If (and only if) there is a default value for our option, we want to use it.
 
     >>> from typed_settings.click_utils import DEFAULT_TYPES, StrDict, TypeHandler
     >>>
-    >>> def handle_rgb(type: type, default: object) -> StrDict:
+    >>> def handle_rgb(_type: type, default: object) -> StrDict:
     ...     type_info = {
     ...         "type": int,
     ...         "nargs": 3,
@@ -638,7 +655,7 @@ create a new :class:`~typed_settings.click_utils.TypeHandler` instance with it:
     ... }
     >>> type_handler = TypeHandler(type_dict)
 
-Finally, we need to pass the type handler as well as our updated converter to :class:`typed_setting.click_options()` and we are ready to go:
+Finally, we need to pass the type handler as well as our updated converter to :func:`click_options()` and we are ready to go:
 
 .. code-block:: python
 
@@ -656,7 +673,7 @@ Finally, we need to pass the type handler as well as our updated converter to :c
       --help         Show this message and exit.
     <BLANKLINE>
     >>> # Try passing our own color:
-    >>> print(runner.invoke(cli, ["--color", "23", "42", "7"]).output)
+    >>> print(runner.invoke(cli, "--color 23 42 7".split()).output)
     Settings(color=RGB(r=23, g=42, b=7))
     <BLANKLINE>
 
