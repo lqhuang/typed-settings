@@ -12,6 +12,7 @@ except ImportError:
     # Python 3.7
     from typing import _Protocol as Protocol  # type: ignore
 
+import attr
 import toml
 
 from ._dict_utils import _merge_dicts, _set_path
@@ -75,6 +76,36 @@ class FileFormat(Protocol):
             ConfigFileLoadError: If *path* cannot be read/loaded/decoded.
         """
         ...
+
+
+class InstanceLoader:
+    """
+    Load settings from an instance of the settings class.
+
+    Args:
+        instance: The settings instance from which to load option values.
+    """
+
+    def __init__(self, instance: object):
+        self.instance = instance
+
+    def load(self, settings_cls: type, options: OptionList) -> SettingsDict:
+        """
+        Load settings for the given options.
+
+        Args:
+            options: The list of available settings.
+            settings_cls: The base settings class for all options.
+
+        Return:
+            A dict with the loaded settings.
+        """
+        if not isinstance(self.instance, settings_cls):
+            raise ValueError(
+                f'"self.instance" is not an instance of {settings_cls}: '
+                f"{type(self.instance)}"
+            )
+        return attr.asdict(self.instance)
 
 
 class EnvLoader:

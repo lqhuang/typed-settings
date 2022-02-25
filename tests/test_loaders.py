@@ -577,3 +577,40 @@ class TestEnvLoader:
         loader = EnvLoader(prefix="")
         results = loader.load(settings_cls, options)
         assert results == {"url": "spam"}
+
+
+class TestInstanceLoader:
+    """Tests for InstanceLoader"""
+
+    def test_from_inst(
+        self, settings_cls: type, options: OptionList, monkeypatch: MonkeyPatch
+    ):
+        """
+        Load options from env vars, ignore env vars for which no settings
+        exist.
+        """
+        # "Host" has the same attributes as the "Host" from conftest.py,
+        # so it works (but only b/c it is a nested attribute and mypy doesn't
+        # know what we are doing 🙈)
+        inst = settings_cls(Host("spam", 42), "eggs", 23)
+        loader = InstanceLoader(inst)
+        results = loader.load(settings_cls, options)
+        assert results == {
+            "default": 23,
+            "url": "eggs",
+            "host": {
+                "name": "spam",
+                "port": 42,
+            },
+        }
+
+    def test_invalid_type(
+        self, settings_cls: type, options: OptionList, monkeypatch: MonkeyPatch
+    ):
+        """
+        It is okay to use an empty prefix.
+        """
+        # "Settings" is not the same as "settings_cls" from conftest.py
+        inst = Settings(Host("spam", 42), "eggs", 23)
+        loader = InstanceLoader(inst)
+        pytest.raises(ValueError, loader.load, settings_cls, options)
