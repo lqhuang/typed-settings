@@ -195,7 +195,7 @@ class TestPythonFormat:
         """
         config_file = tmp_path.joinpath("settings.py")
         config_file.write_text(textwrap.dedent(data))
-        result = fmt.load_file(config_file, Settings, _deep_options(Settings))
+        result = fmt(config_file, Settings, _deep_options(Settings))
         assert result == {
             "url": "spam",
             "host": {"port": 42},
@@ -209,7 +209,7 @@ class TestPythonFormat:
         """
         config_file = tmp_path.joinpath("settings.py")
         config_file.write_text("class spam:\n    a = 'spam'\n")
-        result = PythonFormat(section).load_file(
+        result = PythonFormat(section)(
             config_file, Settings, _deep_options(Settings)
         )
         assert result == {}
@@ -220,7 +220,7 @@ class TestPythonFormat:
         """
         pytest.raises(
             ConfigFileNotFoundError,
-            PythonFormat("").load_file,
+            PythonFormat(""),
             Path("x"),
             _deep_options(Settings),
             Settings,
@@ -234,7 +234,7 @@ class TestPythonFormat:
         config_file.write_text("3x = 'spam")
         pytest.raises(
             ConfigFileLoadError,
-            PythonFormat("").load_file,
+            PythonFormat(""),
             config_file,
             _deep_options(Settings),
             Settings,
@@ -264,7 +264,7 @@ class TestTomlFormat:
         """
         config_file = tmp_path.joinpath("settings.toml")
         config_file.write_text(textwrap.dedent(data))
-        result = fmt.load_file(config_file, Settings, _deep_options(Settings))
+        result = fmt(config_file, Settings, _deep_options(Settings))
         assert result == {
             "url": "spam",
             "host": {"port": 42},
@@ -282,10 +282,10 @@ class TestTomlFormat:
             b = "eggs"
         """
         )
-        result = TomlFormat("tool.example").load_file(
+        result = TomlFormat("tool.example")(
             config_file,
-            _deep_options(Settings),
             Settings,
+            _deep_options(Settings),
         )
         assert result == {
             "a": "spam",
@@ -304,7 +304,7 @@ class TestTomlFormat:
             a = "spam"
         """
         )
-        result = TomlFormat(section).load_file(
+        result = TomlFormat(section)(
             config_file, Settings, _deep_options(Settings)
         )
         assert result == {}
@@ -315,7 +315,7 @@ class TestTomlFormat:
         """
         pytest.raises(
             ConfigFileNotFoundError,
-            TomlFormat("").load_file,
+            TomlFormat(""),
             Path("x"),
             _deep_options(Settings),
             Settings,
@@ -342,7 +342,7 @@ class TestTomlFormat:
 
         pytest.raises(
             ConfigFileLoadError,
-            TomlFormat("").load_file,
+            TomlFormat(""),
             config_file,
             _deep_options(Settings),
             Settings,
@@ -356,7 +356,7 @@ class TestTomlFormat:
         config_file.write_text("spam")
         pytest.raises(
             ConfigFileLoadError,
-            TomlFormat("").load_file,
+            TomlFormat(""),
             config_file,
             _deep_options(Settings),
             Settings,
@@ -481,7 +481,7 @@ class TestFileLoader:
 
     def test_load(self, tmp_path: Path):
         """
-        FileLoader.load() loads multiple files, each one overriding options
+        FileLoader() loads multiple files, each one overriding options
         from its predecessor.
         """
         cf1 = tmp_path.joinpath("s1.toml")
@@ -504,7 +504,7 @@ class TestFileLoader:
             le_eggs: str = ""
 
         loader = FileLoader({"*.toml": TomlFormat("le-section")}, [cf1, cf2])
-        s = loader.load(Settings, _deep_options(Settings))
+        s = loader(Settings, _deep_options(Settings))
         assert s == {"le_spam": "spam", "le_eggs": "eggs"}
 
     @pytest.mark.parametrize(
@@ -539,9 +539,9 @@ class TestFileLoader:
 
         loader = FileLoader({"*": TomlFormat("test")}, files, "TEST_SETTINGS")
         if is_mandatory and not exists:
-            pytest.raises(FileNotFoundError, loader.load, settings_cls, [])
+            pytest.raises(FileNotFoundError, loader, settings_cls, [])
         else:
-            loader.load(settings_cls, [])
+            loader(settings_cls, [])
 
 
 class TestEnvLoader:
@@ -558,7 +558,7 @@ class TestEnvLoader:
         monkeypatch.setenv("T_HOST", "spam")  # Haha! Just a deceit!
         monkeypatch.setenv("T_HOST_PORT", "25")
         loader = EnvLoader(prefix="T_")
-        results = loader.load(settings_cls, options)
+        results = loader(settings_cls, options)
         assert results == {
             "url": "foo",
             "host": {
@@ -575,7 +575,7 @@ class TestEnvLoader:
         monkeypatch.setenv("URL", "spam")
 
         loader = EnvLoader(prefix="")
-        results = loader.load(settings_cls, options)
+        results = loader(settings_cls, options)
         assert results == {"url": "spam"}
 
 
@@ -594,7 +594,7 @@ class TestInstanceLoader:
         # know what we are doing 🙈)
         inst = settings_cls(Host("spam", 42), "eggs", 23)
         loader = InstanceLoader(inst)
-        results = loader.load(settings_cls, options)
+        results = loader(settings_cls, options)
         assert results == {
             "default": 23,
             "url": "eggs",
@@ -613,4 +613,4 @@ class TestInstanceLoader:
         # "Settings" is not the same as "settings_cls" from conftest.py
         inst = Settings(Host("spam", 42), "eggs", 23)
         loader = InstanceLoader(inst)
-        pytest.raises(ValueError, loader.load, settings_cls, options)
+        pytest.raises(ValueError, loader, settings_cls, options)

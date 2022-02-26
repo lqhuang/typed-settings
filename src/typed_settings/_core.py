@@ -242,7 +242,7 @@ def _load_settings(
             continue
         _set_path(settings, opt.path, opt.field.default)
 
-    loaded_settings = [loader.load(cls, options) for loader in loaders]
+    loaded_settings = [loader(cls, options) for loader in loaders]
 
     for ls in loaded_settings:
         _merge_dicts(settings, ls)
