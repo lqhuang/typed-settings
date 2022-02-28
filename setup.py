@@ -6,7 +6,7 @@ DEPS_CLICK = ["click>=7,<9"]
 DEPS_TEST = DEPS_CLICK + ["pytest>=6", "pytest-cov", "coverage[toml]>=5.3"]
 DEPS_LINT = DEPS_CLICK + [
     "flake8",
-    "flake8-bandit",
+    "flake8-bandit<1.7.3",  # 1.7.3 breaks the current flake8-bandit plugin
     "flake8-black",
     "flake8-bugbear",
     "flake8-isort",
