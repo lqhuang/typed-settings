@@ -12,6 +12,7 @@ except ImportError:
     # Python 3.7
     from typing import _Protocol as Protocol  # type: ignore
 
+import attr
 import toml
 
 from ._dict_utils import _merge_dicts, _set_path
@@ -34,12 +35,15 @@ class Loader(Protocol):
     Custom settings loaders must implement this.
     """
 
-    def load(self, options: OptionList) -> SettingsDict:
+    def __call__(
+        self, settings_cls: type, options: OptionList
+    ) -> SettingsDict:
         """
         Load settings for the given options.
 
         Args:
             options: The list of available settings.
+            settings_cls: The base settings class for all options.
 
         Return:
             A dict with the loaded settings.
@@ -55,13 +59,16 @@ class FileFormat(Protocol):
     Custom file format loaders must implement this.
     """
 
-    def load_file(self, path: Path, options: OptionList) -> SettingsDict:
+    def __call__(
+        self, path: Path, settings_cls: type, options: OptionList
+    ) -> SettingsDict:
         """
         Load settings from a given file and return them as a dict.
 
         Args:
             path: The path to the config file.
             options: The list of available settings.
+            settings_cls: The base settings class for all options.
 
         Return:
             A dict with the loaded settings.
@@ -71,6 +78,38 @@ class FileFormat(Protocol):
             ConfigFileLoadError: If *path* cannot be read/loaded/decoded.
         """
         ...
+
+
+class InstanceLoader:
+    """
+    Load settings from an instance of the settings class.
+
+    Args:
+        instance: The settings instance from which to load option values.
+    """
+
+    def __init__(self, instance: object):
+        self.instance = instance
+
+    def __call__(
+        self, settings_cls: type, options: OptionList
+    ) -> SettingsDict:
+        """
+        Load settings for the given options.
+
+        Args:
+            options: The list of available settings.
+            settings_cls: The base settings class for all options.
+
+        Return:
+            A dict with the loaded settings.
+        """
+        if not isinstance(self.instance, settings_cls):
+            raise ValueError(
+                f'"self.instance" is not an instance of {settings_cls}: '
+                f"{type(self.instance)}"
+            )
+        return attr.asdict(self.instance)
 
 
 class EnvLoader:
@@ -84,12 +123,15 @@ class EnvLoader:
     def __init__(self, prefix: str):
         self.prefix = prefix
 
-    def load(self, options: OptionList) -> SettingsDict:
+    def __call__(
+        self, settings_cls: type, options: OptionList
+    ) -> SettingsDict:
         """
         Load settings for the given options.
 
         Args:
             options: The list of available settings.
+            settings_cls: The base settings class for all options.
 
         Return:
             A dict with the loaded settings.
@@ -145,12 +187,15 @@ class FileLoader:
         self.env_var = env_var
         self.formats = formats
 
-    def load(self, options: OptionList) -> SettingsDict:
+    def __call__(
+        self, settings_cls: type, options: OptionList
+    ) -> SettingsDict:
         """
         Load settings for the given options.
 
         Args:
             options: The list of available settings.
+            settings_cls: The base settings class for all options.
 
         Return:
             A dict with the loaded settings.
@@ -165,20 +210,25 @@ class FileLoader:
         paths = self._get_config_filenames(self.files, self.env_var)
         merged_settings: SettingsDict = {}
         for path in paths:
-            settings = self._load_file(path, options)
+            settings = self._load_file(path, settings_cls, options)
             _merge_dicts(merged_settings, settings)
         return merged_settings
 
-    def _load_file(self, path: Path, options: OptionList) -> SettingsDict:
+    def _load_file(
+        self,
+        path: Path,
+        settings_cls: type,
+        options: OptionList,
+    ) -> SettingsDict:
         """
         Load a file and return its cleaned contents
         """
         # "clean_settings()" must be called for each loaded file individually
         # because of the "-"/"_" normalization.  This also allows us to tell
         # the user the exact file that contains errors.
-        for pattern, parser in self.formats.items():
+        for pattern, ffloader in self.formats.items():
             if fnmatch(path.name, pattern):
-                settings = parser.load_file(path, options)
+                settings = ffloader(path, settings_cls, options)
                 settings = clean_settings(settings, options, path)
                 return settings
 
@@ -250,13 +300,16 @@ class PythonFormat:
         """
         return text.lower()
 
-    def load_file(self, path: Path, options: OptionList) -> SettingsDict:
+    def __call__(
+        self, path: Path, settings_cls: type, options: OptionList
+    ) -> SettingsDict:
         """
         Load settings from a Python file and return them as a dict.
 
         Args:
             path: The path to the config file.
             options: The list of available settings.
+            settings_cls: The base settings class for all options.
 
         Return:
             A dict with the loaded settings.
@@ -318,13 +371,16 @@ class TomlFormat:
     def __init__(self, section: str):
         self.section = section
 
-    def load_file(self, path: Path, options: OptionList) -> SettingsDict:
+    def __call__(
+        self, path: Path, settings_cls: type, options: OptionList
+    ) -> SettingsDict:
         """
         Load settings from a TOML file and return them as a dict.
 
         Args:
             path: The path to the config file.
             options: The list of available settings.
+            settings_cls: The base settings class for all options.
 
         Return:
             A dict with the loaded settings.

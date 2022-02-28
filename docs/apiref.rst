@@ -36,6 +36,7 @@ Loaders
 
 .. automodule:: typed_settings.loaders
    :members:
+   :special-members: __call__
 
 
 Types

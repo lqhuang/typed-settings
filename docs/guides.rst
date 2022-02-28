@@ -418,6 +418,170 @@ Another use case is loading data from files, e.g., secrets like SSH keys:
     le key
 
 
+Adding Support for Additional File Types
+========================================
+
+The function :func:`load()` uses a :class:`~typed_settings.loaders.FileLoader` that only supports TOML files.
+However, the supported file formats are not hard-coded but can be configured and extended.
+
+If you use :func:`load_settings()`, you can (and must) pass a custom :class:`~typed_settings.loaders.FileLoader` instance that can be configured with loaders for different file formats.
+
+Before we start, we'll need a setting class and Pyton config file:
+
+.. code-block:: python
+
+    >>> @ts.settings
+    ... class Settings:
+    ...     option1: str = "default"
+    ...     option2: str = "default"
+    >>>
+    >>> py_file = getfixture("tmp_path").joinpath("conf.py")
+    >>> py_file.write_text("""
+    ... class MYAPP:
+    ...     OPTION1 = "spam"
+    ... """)
+    35
+
+We now create our loaders configuration.
+The :code:`formats` argument expects a dictionary that maps :mod:`glob` patterns to file format loaders:
+
+.. code-block:: Python
+
+    >>> from typed_settings.loaders import PythonFormat, TomlFormat
+    >>>
+    >>> file_loader = ts.FileLoader(
+    ...     formats={
+    ...         "*.toml": TomlFormat(section="myapp"),
+    ...         "*.py": PythonFormat("MYAPP", key_transformer=PythonFormat.to_lower),
+    ...     },
+    ...     files=[py_file],
+    ...     env_var=None,
+    ... )
+
+Now we can load settings from Python files:
+
+.. code-block:: python
+
+    >>> ts.load_settings(Settings, loaders=[file_loader])
+    Settings(option1='spam', option2='default')
+
+
+Writing Your Own File Format Loader
+-----------------------------------
+
+File format loaders must implement the :class:`~typed_settings.loaders.FileFormat` protocol:
+
+- They have to be callables (i.e., functions or a classes with a :meth:`~object.__call__()` method).
+- They have to accept a :class:`~pathlib.Path`, the user's settings class and a list of :class:`typed_settings.types.OptionInfo` instances.
+- They have to return a dictionary with the loaded settings.
+
+.. note::
+
+    Why return a :code:`dict` and not a settings instance?
+
+    (File format) loaders return a dictionary with loaded settings instead of instances of the user's settings class.
+
+    The reason for this is simply, that dicts can easier be created and merged than class instances.
+
+    Typed Settings validates and cleans the settings of all loaders automatically and
+    converts them to instances of your settings class.
+    So there's no need for you to do it on your own in your loader.
+
+A very simple JSON loader could look like this:
+
+
+.. code-block:: python
+
+    >>> import json
+    >>>
+    >>> def load_json(path, _settings_cls, _options):
+    ...     return json.load(path.open())
+
+If you want to use this in production, you should add proper error handling and documentation, though.
+You can take the :class:`~typed_settings.loaders.TomlFormat` as `an example <_modules/typed_settings/loaders.html#TomlFormat>`_.
+
+Using your file format loader works like in the example above:
+
+.. code-block:: python
+
+    >>> json_file = getfixture("tmp_path").joinpath("conf.json")
+    >>> json_file.write_text('{"option1": "spam", "option2": "eggs"}')
+    38
+    >>>
+    >>> file_loader = ts.FileLoader(
+    ...     formats={"*.json": load_json},
+    ...     files=[json_file],
+    ...     env_var=None,
+    ... )
+    >>> ts.load_settings(Settings, loaders=[file_loader])
+    Settings(option1='spam', option2='eggs')
+
+
+Writing Custom Loaders
+======================
+
+When you want to load settings from a completely new source, you can implement your own :class:`~typed_settings.loaders.Loader` (which is similar -- but not equal -- to :class:`~typed_settings.loaders.FileFormat`):
+
+- It has to be a callable (i.e., a function or a class with a :meth:`~object.__call__()` method).
+- It has to accept the user's settings class and a list of :class:`typed_settings.types.OptionInfo` instances.
+- It has to return a dictionary with the loaded settings.
+
+In the following example, we'll write a class that loads settings from an instance of the settings class.
+This maybe useful for libraries that want to give using applications the possibility to specify application specific defaults for that library.
+
+This time, we need some setup, because the settings instance has to be passed when we configure our loaders.
+When the settings are actually loaded and our :code:`InstanceLoader` is invoked, it converts the instances to a dictionary with settings and returns it:
+
+.. code-block:: python
+
+    >>> import attrs
+    >>>
+    >>> class InstanceLoader:
+    ...     def __init__(self, instance):
+    ...         self.instance = instance
+    ...
+    ...     def __call__(self, settings_cls, options):
+    ...         if not isinstance(self.instance, settings_cls):
+    ...             raise ValueError(
+    ...                 f'"self.instance" is not an instance of {settings_cls}: '
+    ...                 f"{type(self.instance)}"
+    ...             )
+    ...         return attrs.asdict(self.instance)
+
+
+Using the new loader works the same way as we've seen before:
+
+.. code-block:: python
+
+    >>> inst_loader = InstanceLoader(Settings("a", "b"))
+    >>> ts.load_settings(Settings, loaders=[inst_loader])
+    Settings(option1='a', option2='b')
+
+.. note::
+
+   Classes with just an :code:`__init__()` and a single method can also be implemented as partial functions:
+
+    .. code-block:: python
+
+        >>> from functools import partial
+        >>>
+        >>> def load_from_instance(instance, settings_cls, options):
+        ...     if not isinstance(instance, settings_cls):
+        ...         raise ValueError(
+        ...             f'"instance" is not an instance of {settings_cls}: '
+        ...             f"{type(instance)}"
+        ...         )
+        ...     return attrs.asdict(instance)
+        ...
+        >>> inst_loader = partial(load_from_instance, Settings("a", "b"))
+        >>> ts.load_settings(Settings, loaders=[inst_loader])
+        Settings(option1='a', option2='b')
+
+.. note::
+
+   The :class:`~typed_settings.loaders.InstanceLoader` was added to Typed Settings in version 1.0.0 but we'll keep this example.
+
+
 Command Line Arguments with Click
 =================================
 

@@ -19,6 +19,7 @@ from typed_settings.loaders import (
     EnvLoader,
     FileFormat,
     FileLoader,
+    InstanceLoader,
     PythonFormat,
     TomlFormat,
     clean_settings,
@@ -194,7 +195,7 @@ class TestPythonFormat:
         """
         config_file = tmp_path.joinpath("settings.py")
         config_file.write_text(textwrap.dedent(data))
-        result = fmt.load_file(config_file, _deep_options(Settings))
+        result = fmt(config_file, Settings, _deep_options(Settings))
         assert result == {
             "url": "spam",
             "host": {"port": 42},
@@ -208,8 +209,8 @@ class TestPythonFormat:
         """
         config_file = tmp_path.joinpath("settings.py")
         config_file.write_text("class spam:\n    a = 'spam'\n")
-        result = PythonFormat(section).load_file(
-            config_file, _deep_options(Settings)
+        result = PythonFormat(section)(
+            config_file, Settings, _deep_options(Settings)
         )
         assert result == {}
 
@@ -219,9 +220,10 @@ class TestPythonFormat:
         """
         pytest.raises(
             ConfigFileNotFoundError,
-            PythonFormat("").load_file,
+            PythonFormat(""),
             Path("x"),
             _deep_options(Settings),
+            Settings,
         )
 
     def test_file_invalid(self, tmp_path: Path):
@@ -232,9 +234,10 @@ class TestPythonFormat:
         config_file.write_text("3x = 'spam")
         pytest.raises(
             ConfigFileLoadError,
-            PythonFormat("").load_file,
+            PythonFormat(""),
             config_file,
             _deep_options(Settings),
+            Settings,
         )
 
 
@@ -261,7 +264,7 @@ class TestTomlFormat:
         """
         config_file = tmp_path.joinpath("settings.toml")
         config_file.write_text(textwrap.dedent(data))
-        result = fmt.load_file(config_file, _deep_options(Settings))
+        result = fmt(config_file, Settings, _deep_options(Settings))
         assert result == {
             "url": "spam",
             "host": {"port": 42},
@@ -279,8 +282,10 @@ class TestTomlFormat:
             b = "eggs"
         """
         )
-        result = TomlFormat("tool.example").load_file(
-            config_file, _deep_options(Settings)
+        result = TomlFormat("tool.example")(
+            config_file,
+            Settings,
+            _deep_options(Settings),
         )
         assert result == {
             "a": "spam",
@@ -299,8 +304,8 @@ class TestTomlFormat:
             a = "spam"
         """
         )
-        result = TomlFormat(section).load_file(
-            config_file, _deep_options(Settings)
+        result = TomlFormat(section)(
+            config_file, Settings, _deep_options(Settings)
         )
         assert result == {}
 
@@ -310,9 +315,10 @@ class TestTomlFormat:
         """
         pytest.raises(
             ConfigFileNotFoundError,
-            TomlFormat("").load_file,
+            TomlFormat(""),
             Path("x"),
             _deep_options(Settings),
+            Settings,
         )
 
     def test_file_not_allowed(
@@ -336,9 +342,10 @@ class TestTomlFormat:
 
         pytest.raises(
             ConfigFileLoadError,
-            TomlFormat("").load_file,
+            TomlFormat(""),
             config_file,
             _deep_options(Settings),
+            Settings,
         )
 
     def test_file_invalid(self, tmp_path: Path):
@@ -349,9 +356,10 @@ class TestTomlFormat:
         config_file.write_text("spam")
         pytest.raises(
             ConfigFileLoadError,
-            TomlFormat("").load_file,
+            TomlFormat(""),
             config_file,
             _deep_options(Settings),
+            Settings,
         )
 
 
@@ -434,7 +442,7 @@ class TestFileLoader:
             formats={"*.toml": TomlFormat("le-section")},
             files=[config_file],
         )
-        s = loader._load_file(config_file, _deep_options(Settings))
+        s = loader._load_file(config_file, Settings, _deep_options(Settings))
         assert s == {"le_option": "spam"}
 
     def test_load_file2(self, tmp_path: Path):
@@ -459,7 +467,7 @@ class TestFileLoader:
             formats={"*.toml": TomlFormat("le-section")},
             files=[config_file],
         )
-        s = loader._load_file(config_file, _deep_options(Settings))
+        s = loader._load_file(config_file, Settings, _deep_options(Settings))
         assert s == {"le_option": "spam"}
 
     def test_load_file_invalid_format(self):
@@ -467,11 +475,13 @@ class TestFileLoader:
         An error is raised if a file has an unknown extension.
         """
         loader = FileLoader({"*.toml": TomlFormat("t")}, [])
-        pytest.raises(UnknownFormatError, loader._load_file, Path("f.py"), [])
+        pytest.raises(
+            UnknownFormatError, loader._load_file, Path("f.py"), [], type
+        )
 
     def test_load(self, tmp_path: Path):
         """
-        FileLoader.load() loads multiple files, each one overriding options
+        FileLoader() loads multiple files, each one overriding options
         from its predecessor.
         """
         cf1 = tmp_path.joinpath("s1.toml")
@@ -494,7 +504,7 @@ class TestFileLoader:
             le_eggs: str = ""
 
         loader = FileLoader({"*.toml": TomlFormat("le-section")}, [cf1, cf2])
-        s = loader.load(_deep_options(Settings))
+        s = loader(Settings, _deep_options(Settings))
         assert s == {"le_spam": "spam", "le_eggs": "eggs"}
 
     @pytest.mark.parametrize(
@@ -508,6 +518,7 @@ class TestFileLoader:
         in_env,
         exists,
         tmp_path,
+        settings_cls: type,
         monkeypatch,
     ):
         """
@@ -528,15 +539,17 @@ class TestFileLoader:
 
         loader = FileLoader({"*": TomlFormat("test")}, files, "TEST_SETTINGS")
         if is_mandatory and not exists:
-            pytest.raises(FileNotFoundError, loader.load, [])
+            pytest.raises(FileNotFoundError, loader, settings_cls, [])
         else:
-            loader.load([])
+            loader(settings_cls, [])
 
 
 class TestEnvLoader:
     """Tests for EnvLoader"""
 
-    def test_from_env(self, options: OptionList, monkeypatch: MonkeyPatch):
+    def test_from_env(
+        self, settings_cls: type, options: OptionList, monkeypatch: MonkeyPatch
+    ):
         """
         Load options from env vars, ignore env vars for which no settings
         exist.
@@ -545,7 +558,7 @@ class TestEnvLoader:
         monkeypatch.setenv("T_HOST", "spam")  # Haha! Just a deceit!
         monkeypatch.setenv("T_HOST_PORT", "25")
         loader = EnvLoader(prefix="T_")
-        results = loader.load(options)
+        results = loader(settings_cls, options)
         assert results == {
             "url": "foo",
             "host": {
@@ -554,7 +567,7 @@ class TestEnvLoader:
         }
 
     def test_no_env_prefix(
-        self, options: OptionList, monkeypatch: MonkeyPatch
+        self, settings_cls: type, options: OptionList, monkeypatch: MonkeyPatch
     ):
         """
         It is okay to use an empty prefix.
@@ -562,5 +575,42 @@ class TestEnvLoader:
         monkeypatch.setenv("URL", "spam")
 
         loader = EnvLoader(prefix="")
-        results = loader.load(options)
+        results = loader(settings_cls, options)
         assert results == {"url": "spam"}
+
+
+class TestInstanceLoader:
+    """Tests for InstanceLoader"""
+
+    def test_from_inst(
+        self, settings_cls: type, options: OptionList, monkeypatch: MonkeyPatch
+    ):
+        """
+        Load options from env vars, ignore env vars for which no settings
+        exist.
+        """
+        # "Host" has the same attributes as the "Host" from conftest.py,
+        # so it works (but only b/c it is a nested attribute and mypy doesn't
+        # know what we are doing 🙈)
+        inst = settings_cls(Host("spam", 42), "eggs", 23)
+        loader = InstanceLoader(inst)
+        results = loader(settings_cls, options)
+        assert results == {
+            "default": 23,
+            "url": "eggs",
+            "host": {
+                "name": "spam",
+                "port": 42,
+            },
+        }
+
+    def test_invalid_type(
+        self, settings_cls: type, options: OptionList, monkeypatch: MonkeyPatch
+    ):
+        """
+        It is okay to use an empty prefix.
+        """
+        # "Settings" is not the same as "settings_cls" from conftest.py
+        inst = Settings(Host("spam", 42), "eggs", 23)
+        loader = InstanceLoader(inst)
+        pytest.raises(ValueError, loader, settings_cls, options)
