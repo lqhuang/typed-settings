@@ -475,17 +475,16 @@ File format loaders must implement the :class:`~typed_settings.loaders.FileForma
 - They have to accept a :class:`~pathlib.Path`, the user's settings class and a list of :class:`typed_settings.types.OptionInfo` instances.
 - They have to return a dictionary with the loaded settings.
 
-.. note::
+.. admonition:: Why return a :code:`dict` and not a settings instance?
+   :class: hint
 
-    Why return a :code:`dict` and not a settings instance?
+   (File format) loaders return a dictionary with loaded settings instead of instances of the user's settings class.
 
-    (File format) loaders return a dictionary with loaded settings instead of instances of the user's settings class.
+   The reason for this is simply, that dicts can easier be created and merged than class instances.
 
-    The reason for this is simply, that dicts can easier be created and merged than class instances.
-
-    Typed Settings validates and cleans the settings of all loaders automatically and
-    converts them to instances of your settings class.
-    So there's no need for you to do it on your own in your loader.
+   Typed Settings validates and cleans the settings of all loaders automatically and
+   converts them to instances of your settings class.
+   So there's no need for you to do it on your own in your loader.
 
 A very simple JSON loader could look like this:
 
@@ -557,11 +556,11 @@ Using the new loader works the same way as we've seen before:
     >>> ts.load_settings(Settings, loaders=[inst_loader])
     Settings(option1='a', option2='b')
 
-.. note::
+.. tip::
 
    Classes with just an :code:`__init__()` and a single method can also be implemented as partial functions:
 
-    .. code-block:: python
+   .. code-block:: python
 
         >>> from functools import partial
         >>>

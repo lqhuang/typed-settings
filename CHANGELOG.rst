@@ -2,6 +2,51 @@
 Changelog
 =========
 
+
+1.0.0 (2022-03-04)
+==================
+
+- 🎉 First stable release!
+
+- 💥 Change ``Loader`` and ``FileFormat`` protocols to use ``__call__()``.
+  This allows "normal" functions to be used as loaders, too.
+
+- 💥 Pass the settings class to loaders (in addition to the list of ``OptionInfo``\ s).
+
+- 💥 Enums are only converted from member name, not by value.
+
+- ✨ Add ``evolve()`` function for recursively updading settings.
+
+- ✨ Add ``InstanceLoader`` which loads settings from an existing instance of the settings class.
+
+- ✨ ``click_options()`` accepts just an appname and than works similar to ``load()``.
+  The old behavior (which is comparable to ``load_settings()`` still exists.
+
+- ✨ The ``strlisthook`` with ``:`` as separator is now activated by default.
+  It helps loading lists from environment variables.
+
+- 🐛 Fixed `#10`_: Fix handling tuples and sets in ``strlist`` hook.
+
+- 🐛 Fixed `#11`_: Properly convert loaded values to click default values.
+
+- ♻️ The ``attrs`` auto-convert hook now uses a Cattrs converter instead of custom conversion logic.
+
+- ✅ Increase test coverage to 100% again.
+
+- ✅ Migrate to pytest7.
+
+- 📝 Write "Guides" section of the docs.
+
+- 📝 Update "Getting Started" section of the docs.
+
+- 📝 Update "Why" section of the docs.
+
+- 📝 Try MyST (Markdown) but switch back to ReST (only for now, MyST looks very promising).
+
+.. _#10: https://gitlab.com/sscherfke/typed-settings/-/issues/10
+.. _#11: https://gitlab.com/sscherfke/typed-settings/-/issues/11
+
+
 0.11.1 (2021-10-03)
 ===================
 
@@ -163,7 +208,7 @@ Changelog
   An error is raised if a mandatory config file does not exist.
 - 💥 Flip *appname* and *settings_cls* args of ``load_settings()``.
 - ♻️ Refactor internals to improve extensibility.
-- 🚀 Add pre-commit hooks
+- 👷 Add pre-commit hooks
 
 
 0.3 (2020-09-17)
@@ -185,3 +230,29 @@ Changelog
 ================
 
 - 🎉 Initial PoC
+
+Legend
+======
+
+.. hlist::
+   :columns: 2
+
+   - 💥 Breaking change
+
+   - ✨ New feature
+
+   - 🗑Deprecation
+
+   - 🐛 Bug fix
+
+   - ✅ Tests added or improved
+
+   - 📝 Docs added or improved
+
+   - ♻️ Refactorings
+
+   - 📦 Packaging
+
+   - 👷 CI/CD
+
+   - 🎉 Something to celebrate

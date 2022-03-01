@@ -67,6 +67,9 @@ def click_options(
          ... def cli(settings):
          ...     print(settings)
 
+    .. versionchanged:: 1.0.0
+       Instead of a list of loaders, you can also just pass an application
+       name.
     """
     cls = attr.resolve_types(cls)
     options = _deep_options(cls)

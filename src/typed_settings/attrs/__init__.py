@@ -348,7 +348,7 @@ def evolve(inst, **changes):
     :raise attr.exceptions.NotAnAttrsClassError: If *cls* is not an ``attrs``
         class.
 
-    ..  versionadded:: 0.12.0
+    ..  versionadded:: 1.0.0
     """
     cls = inst.__class__
     attrs = attr.fields(cls)

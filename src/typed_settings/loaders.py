@@ -33,6 +33,10 @@ class Loader(Protocol):
     **Protocol:** Methods that settings loaders must implement.
 
     Custom settings loaders must implement this.
+
+    .. versionchanged:: 1.0.0
+       Renamed ``load()`` to ``__call__()`` and also pass the settings
+       class.
     """
 
     def __call__(
@@ -57,6 +61,10 @@ class FileFormat(Protocol):
     must implement.
 
     Custom file format loaders must implement this.
+
+    .. versionchanged:: 1.0.0
+       Renamed ``load_file()`` to ``__call__()`` and also pass the settings
+       class.
     """
 
     def __call__(
@@ -86,6 +94,8 @@ class InstanceLoader:
 
     Args:
         instance: The settings instance from which to load option values.
+
+    .. versionadded:: 1.0.0
     """
 
     def __init__(self, instance: object):
