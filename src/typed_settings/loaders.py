@@ -13,7 +13,7 @@ except ImportError:
     from typing import _Protocol as Protocol  # type: ignore
 
 import attr
-import toml
+import tomli
 
 from ._dict_utils import _merge_dicts, _set_path
 from .exceptions import (
@@ -401,10 +401,11 @@ class TomlFormat:
         """
         sections = self.section.split(".")
         try:
-            settings = toml.load(path.open())
+            with path.open("rb") as f:
+                settings = tomli.load(f)
         except FileNotFoundError as e:
             raise ConfigFileNotFoundError(str(e)) from e
-        except (PermissionError, toml.TomlDecodeError) as e:
+        except (PermissionError, tomli.TOMLDecodeError) as e:
             raise ConfigFileLoadError(str(e)) from e
         for s in sections:
             try:

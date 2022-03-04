@@ -2,6 +2,11 @@
 Changelog
 =========
 
+1.x.y (yyyy-mm-dd)
+==================
+
+- ♻️ Replace ``toml`` with ``tomli`` since it is actively maintained.
+
 
 1.0.0 (2022-03-04)
 ==================
