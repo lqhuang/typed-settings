@@ -1,5 +1,6 @@
 from datetime import datetime, timezone
 from enum import Enum
+from functools import partial
 from pathlib import Path
 from typing import (
     Any,
@@ -11,6 +12,7 @@ from typing import (
     MutableSequence,
     MutableSet,
     Optional,
+    Protocol,
     Sequence,
     Set,
     Tuple,
@@ -39,11 +41,26 @@ from typed_settings import (
 T = TypeVar("T")
 
 
+class Invoke(Protocol):
+    def __call__(self, cli: click.Command, *args: str) -> click.testing.Result:
+        ...
+
+
 class CliResult(click.testing.Result, Generic[T]):
     settings: Optional[T]
 
 
 Cli = Callable[..., CliResult[T]]
+
+
+@pytest.fixture(name="invoke")
+def _invoke() -> Invoke:
+    runner = click.testing.CliRunner()
+
+    def invoke(cli: click.Command, *args: str) -> click.testing.Result:
+        return runner.invoke(cli, args, catch_exceptions=False)
+
+    return invoke
 
 
 def make_cli(settings_cls: Type[T]) -> Cli:
@@ -75,12 +92,12 @@ def make_cli(settings_cls: Type[T]) -> Cli:
         def cli(settings: T) -> None:
             runner.settings = settings
 
-        return runner.invoke(cli, args, **kwargs)
+        return runner.invoke(cli, args, catch_exceptions=False, **kwargs)
 
     return run
 
 
-def test_simple_cli():
+def test_simple_cli(invoke):
     """
     "click_options()" uses the default loaders if you just pass an app name.
     """
@@ -89,16 +106,12 @@ def test_simple_cli():
     class Settings:
         o: int
 
-    loaded = []
-
     @click.command()
     @click_options(Settings, "test")
     def cli(settings: Settings) -> None:
-        loaded.append(settings)
+        assert settings == Settings(3)
 
-    result = click.testing.CliRunner().invoke(cli, ["--o=3"])
-    assert result.exit_code == 0
-    assert loaded == [Settings(3)]
+    result = invoke(cli, "--o=3")
 
 
 @pytest.mark.parametrize(
@@ -135,7 +148,7 @@ def test_get_default_factory():
     assert result == "eggs"
 
 
-def test_no_default(monkeypatch):
+def test_no_default(invoke, monkeypatch):
     """
     cli_options without a default are mandatory/required.
     """
@@ -152,8 +165,7 @@ def test_no_default(monkeypatch):
     def cli(settings):
         pass
 
-    runner = click.testing.CliRunner()
-    result = runner.invoke(cli, [])
+    result = invoke(cli)
     assert result.output == (
         "Usage: cli [OPTIONS]\n"
         "Try 'cli --help' for help.\n"
@@ -163,7 +175,7 @@ def test_no_default(monkeypatch):
     assert result.exit_code == 2
 
 
-def test_help_text():
+def test_help_text(invoke: Invoke):
     """
     cli_options/secrets can specify a help text for click cli_options.
     """
@@ -178,8 +190,7 @@ def test_help_text():
     def cli(settings):
         pass
 
-    runner = click.testing.CliRunner()
-    result = runner.invoke(cli, ["--help"])
+    result = invoke(cli, "--help")
     assert result.output == (
         "Usage: cli [OPTIONS]\n"
         "\n"
@@ -191,7 +202,7 @@ def test_help_text():
     assert result.exit_code == 0
 
 
-def test_long_name():
+def test_long_name(invoke: Invoke):
     """
     Underscores in option names are replaces with "-" in Click cli_options.
     """
@@ -205,8 +216,7 @@ def test_long_name():
     def cli(settings):
         pass
 
-    runner = click.testing.CliRunner()
-    result = runner.invoke(cli, ["--help"])
+    result = invoke(cli, "--help")
     assert result.output == (
         "Usage: cli [OPTIONS]\n"
         "\n"
@@ -217,7 +227,9 @@ def test_long_name():
     assert result.exit_code == 0
 
 
-def test_click_default_from_settings(monkeypatch, tmp_path):
+def test_click_default_from_settings(
+    invoke: Invoke, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+):
     """
     If a setting is set in a config file, that value is being used as default
     for click cli_options - *not* the default defined in the Settings class.
@@ -243,8 +255,7 @@ def test_click_default_from_settings(monkeypatch, tmp_path):
     def cli(settings):
         print(settings)
 
-    runner = click.testing.CliRunner()
-    result = runner.invoke(cli, ["--help"])
+    result = invoke(cli, "--help")
     assert result.output == (
         "Usage: cli [OPTIONS]\n"
         "\n"
@@ -259,6 +270,10 @@ def test_click_default_from_settings(monkeypatch, tmp_path):
 
 
 def test_unsupported_generic():
+    """
+    There is no support yet for dicts.
+    """
+
     @settings
     class Settings:
         opt: Dict[int, int]
@@ -702,7 +717,7 @@ class TestPassSettings:
     class Settings:
         opt: str = ""
 
-    def test_pass_settings(self):
+    def test_pass_settings(self, invoke: Invoke):
         """
         A subcommand can receive the settings via the `pass_settings`
         decorator.
@@ -716,15 +731,11 @@ class TestPassSettings:
         @cli.command()
         @pass_settings
         def cmd(settings):
-            print(settings)
             assert settings == self.Settings(opt="spam")
 
-        runner = click.testing.CliRunner()
-        result = runner.invoke(cli, ["--opt=spam", "cmd"])
-        assert result.output == "TestPassSettings.Settings(opt='spam')\n"
-        assert result.exit_code == 0
+        result = invoke(cli, "--opt=spam", "cmd")
 
-    def test_pass_settings_no_settings(self):
+    def test_pass_settings_no_settings(self, invoke: Invoke):
         """
         Pass ``None`` if no settings are defined.
         """
@@ -736,15 +747,11 @@ class TestPassSettings:
         @cli.command()
         @pass_settings
         def cmd(settings):
-            print(settings)
             assert settings is None
 
-        runner = click.testing.CliRunner()
-        result = runner.invoke(cli, ["cmd"])
-        assert result.output == "None\n"
-        assert result.exit_code == 0
+        result = invoke(cli, "cmd")
 
-    def test_pass_in_parent_context(self):
+    def test_pass_in_parent_context(self, invoke: Invoke):
         """
         The decorator can be used in the same context as "click_options()".
         This makes no sense, but works.
@@ -754,9 +761,6 @@ class TestPassSettings:
         @click_options(self.Settings, default_loaders("test"))
         @pass_settings
         def cli(s1, s2):
-            click.echo(s1 == s2)
+            assert s1 == s2
 
-        runner = click.testing.CliRunner()
-        result = runner.invoke(cli, ["--opt=spam"])
-        assert result.output == "True\n"
-        assert result.exit_code == 0
+        result = invoke(cli, "--opt=spam")
