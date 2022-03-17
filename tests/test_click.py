@@ -20,7 +20,7 @@ from typing import (
     TypeVar,
 )
 
-import attr
+import attrs
 import click
 import click.testing
 import pytest
@@ -69,7 +69,7 @@ def make_cli(settings_cls: Type[T]) -> Cli:
     for *settings_cls*.
 
     That functions returns a :class:`CliResult` with the loaded settings
-    instance (:attr:`CliResult.settings`).
+    instance (:attrs:`CliResult.settings`).
     """
 
     class Runner(click.testing.CliRunner):
@@ -111,179 +111,312 @@ def test_simple_cli(invoke):
     def cli(settings: Settings) -> None:
         assert settings == Settings(3)
 
-    result = invoke(cli, "--o=3")
+    invoke(cli, "--o=3")
 
 
-@pytest.mark.parametrize(
-    "default, path, type, settings, expected",
-    [
-        (attr.NOTHING, "a", int, {"a": 3}, 3),
-        (attr.NOTHING, "a", int, {}, attr.NOTHING),
-        (2, "a", int, {}, 2),
-        (attr.Factory(list), "a", List[int], {}, []),
-    ],
-)
-def test_get_default(default, path, type, settings, expected):
-    converter = default_converter()
-    field = attr.Attribute(
-        "test", default, None, None, None, None, None, None, type=type
+class TestDefaultsLoading:
+    """
+    Tests for loading default values
+    """
+
+    @pytest.mark.parametrize(
+        "default, path, type, settings, expected",
+        [
+            (attrs.NOTHING, "a", int, {"a": 3}, 3),
+            (attrs.NOTHING, "a", int, {}, attrs.NOTHING),
+            (2, "a", int, {}, 2),
+            (attrs.Factory(list), "a", List[int], {}, []),
+        ],
     )
-    result = click_utils._get_default(field, path, settings, converter)
-    assert result == expected
+    def test_get_default(
+        self,
+        default: object,
+        path: str,
+        type: type,
+        settings: dict,
+        expected: object,
+    ):
+        converter = default_converter()
+        field = attrs.Attribute(
+            "test", default, None, None, None, None, None, None, type=type
+        )
+        result = click_utils._get_default(field, path, settings, converter)
+        assert result == expected
 
+    def test_get_default_factory(self):
+        """
+        If the factory "takes self", ``None`` is passed since we do not yet have
+        an instance.
+        """
 
-def test_get_default_factory():
-    """
-    If the factory "takes self", ``None`` is passed since we do not yet have
-    an instance.
-    """
+        def factory(self) -> str:
+            assert self is None
+            return "eggs"
 
-    def factory(self) -> str:
-        assert self is None
-        return "eggs"
+        default = attrs.Factory(factory, takes_self=True)
+        field = attrs.Attribute(
+            "test", default, None, None, None, None, None, None
+        )
+        result = click_utils._get_default(field, "a", {}, default_converter())
+        assert result == "eggs"
 
-    default = attr.Factory(factory, takes_self=True)
-    field = attr.Attribute("test", default, None, None, None, None, None, None)
-    result = click_utils._get_default(field, "a", {}, default_converter())
-    assert result == "eggs"
+    def test_no_default(self, invoke, monkeypatch):
+        """
+        cli_options without a default are mandatory/required.
+        """
 
+        @settings
+        class Settings:
+            a: str
+            b: str
 
-def test_no_default(invoke, monkeypatch):
-    """
-    cli_options without a default are mandatory/required.
-    """
-
-    @settings
-    class Settings:
-        a: str
-        b: str
-
-    monkeypatch.setenv("TEST_A", "spam")  # This makes only "S.b" mandatory!
-
-    @click.command()
-    @click_options(Settings, default_loaders("test"))
-    def cli(settings):
-        pass
-
-    result = invoke(cli)
-    assert result.output == (
-        "Usage: cli [OPTIONS]\n"
-        "Try 'cli --help' for help.\n"
-        "\n"
-        "Error: Missing option '--b'.\n"
-    )
-    assert result.exit_code == 2
-
-
-def test_help_text(invoke: Invoke):
-    """
-    cli_options/secrets can specify a help text for click cli_options.
-    """
-
-    @settings
-    class Settings:
-        a: str = option(default="spam", help="Help for 'a'")
-        b: str = secret(default="eggs", help="bbb")
-
-    @click.command()
-    @click_options(Settings, default_loaders("test"))
-    def cli(settings):
-        pass
-
-    result = invoke(cli, "--help")
-    assert result.output == (
-        "Usage: cli [OPTIONS]\n"
-        "\n"
-        "Options:\n"
-        "  --a TEXT  Help for 'a'  [default: spam]\n"
-        "  --b TEXT  bbb  [default: ***]\n"
-        "  --help    Show this message and exit.\n"
-    )
-    assert result.exit_code == 0
-
-
-def test_long_name(invoke: Invoke):
-    """
-    Underscores in option names are replaces with "-" in Click cli_options.
-    """
-
-    @settings
-    class Settings:
-        long_name: str = "val"
-
-    @click.command()
-    @click_options(Settings, default_loaders("test"))
-    def cli(settings):
-        pass
-
-    result = invoke(cli, "--help")
-    assert result.output == (
-        "Usage: cli [OPTIONS]\n"
-        "\n"
-        "Options:\n"
-        "  --long-name TEXT  [default: val]\n"
-        "  --help            Show this message and exit.\n"
-    )
-    assert result.exit_code == 0
-
-
-def test_click_default_from_settings(
-    invoke: Invoke, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
-):
-    """
-    If a setting is set in a config file, that value is being used as default
-    for click cli_options - *not* the default defined in the Settings class.
-    """
-
-    tmp_path.joinpath("settings.toml").write_text('[test]\na = "x"\n')
-    spath = tmp_path.joinpath("settings2.toml")
-    spath.write_text('[test]\nb = "y"\n')
-    monkeypatch.setenv("TEST_SETTINGS", str(spath))
-    monkeypatch.setenv("TEST_C", "z")
-
-    @settings
-    class Settings:
-        a: str
-        b: str
-        c: str
-        d: str
-
-    @click.command()
-    @click_options(
-        Settings, default_loaders("test", [tmp_path.joinpath("settings.toml")])
-    )
-    def cli(settings):
-        print(settings)
-
-    result = invoke(cli, "--help")
-    assert result.output == (
-        "Usage: cli [OPTIONS]\n"
-        "\n"
-        "Options:\n"
-        "  --a TEXT  [default: x]\n"
-        "  --b TEXT  [default: y]\n"
-        "  --c TEXT  [default: z]\n"
-        "  --d TEXT  [required]\n"
-        "  --help    Show this message and exit.\n"
-    )
-    assert result.exit_code == 0
-
-
-def test_unsupported_generic():
-    """
-    There is no support yet for dicts.
-    """
-
-    @settings
-    class Settings:
-        opt: Dict[int, int]
-
-    with pytest.raises(TypeError, match="Cannot create click type"):
+        monkeypatch.setenv(
+            "TEST_A", "spam"
+        )  # This makes only "S.b" mandatory!
 
         @click.command()
         @click_options(Settings, default_loaders("test"))
         def cli(settings):
             pass
+
+        result = invoke(cli)
+        assert result.output == (
+            "Usage: cli [OPTIONS]\n"
+            "Try 'cli --help' for help.\n"
+            "\n"
+            "Error: Missing option '--b'.\n"
+        )
+        assert result.exit_code == 2
+
+    def test_help_text(self, invoke: Invoke):
+        """
+        cli_options/secrets can specify a help text for click cli_options.
+        """
+
+        @settings
+        class Settings:
+            a: str = option(default="spam", help="Help for 'a'")
+            b: str = secret(default="eggs", help="bbb")
+
+        @click.command()
+        @click_options(Settings, default_loaders("test"))
+        def cli(settings):
+            pass
+
+        result = invoke(cli, "--help")
+        assert result.output == (
+            "Usage: cli [OPTIONS]\n"
+            "\n"
+            "Options:\n"
+            "  --a TEXT  Help for 'a'  [default: spam]\n"
+            "  --b TEXT  bbb  [default: ***]\n"
+            "  --help    Show this message and exit.\n"
+        )
+        assert result.exit_code == 0
+
+    def test_long_name(self, invoke: Invoke):
+        """
+        Underscores in option names are replaces with "-" in Click cli_options.
+        """
+
+        @settings
+        class Settings:
+            long_name: str = "val"
+
+        @click.command()
+        @click_options(Settings, default_loaders("test"))
+        def cli(settings):
+            pass
+
+        result = invoke(cli, "--help")
+        assert result.output == (
+            "Usage: cli [OPTIONS]\n"
+            "\n"
+            "Options:\n"
+            "  --long-name TEXT  [default: val]\n"
+            "  --help            Show this message and exit.\n"
+        )
+        assert result.exit_code == 0
+
+    def test_click_default_from_settings(
+        self, invoke: Invoke, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    ):
+        """
+        If a setting is set in a config file, that value is being used as default
+        for click cli_options - *not* the default defined in the Settings class.
+        """
+
+        tmp_path.joinpath("settings.toml").write_text('[test]\na = "x"\n')
+        spath = tmp_path.joinpath("settings2.toml")
+        spath.write_text('[test]\nb = "y"\n')
+        monkeypatch.setenv("TEST_SETTINGS", str(spath))
+        monkeypatch.setenv("TEST_C", "z")
+
+        @settings
+        class Settings:
+            a: str
+            b: str
+            c: str
+            d: str
+
+        @click.command()
+        @click_options(
+            Settings,
+            default_loaders("test", [tmp_path.joinpath("settings.toml")]),
+        )
+        def cli(settings):
+            print(settings)
+
+        result = invoke(cli, "--help")
+        assert result.output == (
+            "Usage: cli [OPTIONS]\n"
+            "\n"
+            "Options:\n"
+            "  --a TEXT  [default: x]\n"
+            "  --b TEXT  [default: y]\n"
+            "  --c TEXT  [default: z]\n"
+            "  --d TEXT  [required]\n"
+            "  --help    Show this message and exit.\n"
+        )
+        assert result.exit_code == 0
+
+
+class TestSettingsPassing:
+    """
+    Test for passing settings as positional or keyword arg.
+    """
+
+    def test_pass_as_pos_arg(self, invoke: Invoke):
+        """
+        If no explicit argname is provided, the settings instance is passed
+        as positional argument.
+        """
+
+        @settings
+        class Settings:
+            o: int
+
+        @click.command()
+        @click_options(Settings, "test")
+        def cli(settings: Settings, /) -> None:
+            assert settings == Settings(3)
+
+        invoke(cli, "--o=3")
+
+    def test_pos_arg_order_1(self, invoke: Invoke):
+        """
+        The inner most decorator maps to the first argument.
+        """
+
+        @settings
+        class Settings:
+            o: int = 0
+
+        @click.command()
+        @click_options(Settings, "test")
+        @click.pass_obj
+        def cli(obj: dict, settings: Settings, /) -> None:
+            assert obj["settings"] is settings
+
+        invoke(cli)
+
+    def test_pos_arg_order_2(self, invoke: Invoke):
+        """
+        The inner most decorator maps to the first argument.
+
+        Variant of "test_pos_arg_order_1" with swapeed decorators/args.
+        """
+
+        @settings
+        class Settings:
+            o: int = 0
+
+        @click.command()
+        @click.pass_obj
+        @click_options(Settings, "test")
+        def cli(settings: Settings, obj: dict, /) -> None:
+            assert obj["settings"] is settings
+
+        invoke(cli)
+
+    def test_change_arg_name(self, invoke: Invoke):
+        """
+        The name of the settings argument can be changed.  It is then passed
+        as kwarg.
+        """
+
+        @settings
+        class Settings:
+            o: int
+
+        @click.command()
+        @click_options(Settings, "test", argname="le_settings")
+        def cli(*, le_settings: Settings) -> None:
+            assert le_settings == Settings(3)
+
+        invoke(cli, "--o=3")
+
+    def test_multi_settings(self, invoke: Invoke):
+        """
+        Multiple settings classes can be used when the argname is changed.
+        """
+
+        @settings
+        class A:
+            a: int = 0
+
+        @settings
+        class B:
+            b: str = "b"
+
+        @click.command()
+        @click_options(A, "test-a", argname="sa")
+        @click_options(B, "test-b", argname="sb")
+        def cli(*, sa: A, sb: B) -> None:
+            assert sa == A()
+            assert sb == B()
+
+        invoke(cli)
+        result = invoke(cli, "--help")
+        assert result.output == (
+            "Usage: cli [OPTIONS]\n"
+            "\n"
+            "Options:\n"
+            "  --a INTEGER  [default: 0]\n"
+            "  --b TEXT     [default: b]\n"
+            "  --help       Show this message and exit.\n"
+        )
+
+    def test_multi_settings_duplicates(self, invoke: Invoke):
+        """
+        Different settings classes should not define the same options!
+        """
+
+        @settings
+        class A:
+            a: int = 0
+
+        @settings
+        class B:
+            a: str = 3  # type: ignore
+            b: str = "b"
+
+        @click.command()
+        @click_options(A, "test-a", argname="sa")
+        @click_options(B, "test-b", argname="sb")
+        def cli(*, sa: A, sb: B) -> None:
+            pass
+
+        result = invoke(cli, "--help")
+        assert result.output == (
+            "Usage: cli [OPTIONS]\n"
+            "\n"
+            "Options:\n"
+            "  --a INTEGER  [default: 0]\n"
+            "  --a TEXT     [default: 3]\n"
+            "  --b TEXT     [default: b]\n"
+            "  --help       Show this message and exit.\n"
+        )
 
 
 class LeEnum(Enum):
@@ -710,6 +843,22 @@ class TestClickParamTypes:
         assert result.exit_code == 0
         assert result.settings == expected_settings
 
+    def test_unsupported_generic(self, cli: Cli[T]):
+        """
+        There is no support yet for dicts.
+        """
+
+        @settings
+        class Settings:
+            opt: Dict[int, int]
+
+        with pytest.raises(TypeError, match="Cannot create click type"):
+
+            @click.command()
+            @click_options(Settings, default_loaders("test"))
+            def cli(settings):
+                pass
+
 
 class TestPassSettings:
     """Tests for pass_settings()."""
@@ -734,7 +883,7 @@ class TestPassSettings:
         def cmd(settings):
             assert settings == self.Settings(opt="spam")
 
-        result = invoke(cli, "--opt=spam", "cmd")
+        invoke(cli, "--opt=spam", "cmd")
 
     def test_pass_settings_no_settings(self, invoke: Invoke):
         """
@@ -750,18 +899,19 @@ class TestPassSettings:
         def cmd(settings):
             assert settings is None
 
-        result = invoke(cli, "cmd")
+        invoke(cli, "cmd")
 
     def test_pass_in_parent_context(self, invoke: Invoke):
         """
         The decorator can be used in the same context as "click_options()".
+        Only one settings instance is passed in this case
         This makes no sense, but works.
         """
 
         @click.command()
         @click_options(self.Settings, default_loaders("test"))
         @pass_settings
-        def cli(s1, s2):
-            assert s1 == s2
+        def cli(settings):
+            assert s1 == Settings("spam")
 
-        result = invoke(cli, "--opt=spam")
+        invoke(cli, "--opt=spam")

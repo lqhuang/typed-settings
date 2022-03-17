@@ -19,6 +19,9 @@ from .converters import default_converter, from_dict
 from .loaders import Loader
 
 
+CTX_KEY = "settings"
+
+
 AnyFunc = Callable[..., Any]
 Decorator = Callable[[AnyFunc], AnyFunc]
 StrDict = Dict[str, Any]
@@ -29,6 +32,7 @@ def click_options(
     loaders: Union[str, List[Loader]],
     converter: Optional[cattr.Converter] = None,
     type_handler: "Optional[TypeHandler]" = None,
+    argname: Optional[str] = None,
 ) -> Callable[[Callable], Callable]:
     """
     Generate :mod:`click` options for a CLI which override settins loaded via
@@ -90,9 +94,16 @@ def click_options(
 
         def new_func(*args, **kwargs):
             ctx = click.get_current_context()
-            _merge_dicts(settings_dict, ctx.obj.get("settings"))
-            ctx.obj["settings"] = from_dict(settings_dict, cls, converter)
-            return f(ctx.obj["settings"], *args, **kwargs)
+            _merge_dicts(settings_dict, ctx.obj.get(CTX_KEY))
+            settings = from_dict(settings_dict, cls, converter)
+            if argname is None:
+                ctx_key = CTX_KEY
+                args = (settings,) + args
+            else:
+                ctx_key = argname
+                kwargs = {argname: settings, **kwargs}
+            ctx.obj[ctx_key] = settings
+            return f(*args, **kwargs)
 
         return update_wrapper(new_func, f)
 
@@ -114,24 +125,33 @@ def click_options(
     return wrap
 
 
-def pass_settings(f: AnyFunc) -> AnyFunc:
+def pass_settings(f: Optional[AnyFunc] = None, *, argname: str = "settings") -> AnyFunc:
     """
     Marks a callback as wanting to receive the innermost settings instance as
     first argument.
     """
 
-    def new_func(*args, **kwargs):
-        ctx = click.get_current_context()
-        node = ctx
-        settings = None
-        while node is not None:
-            if isinstance(node.obj, dict) and "settings" in node.obj:
-                settings = node.obj["settings"]
-                break
-            node = node.parent
-        return ctx.invoke(f, settings, *args, **kwargs)
+    def decorator(f: AnyFunc) -> AnyFunc:
 
-    return update_wrapper(new_func, f)
+        def new_func(*args, **kwargs):
+            ctx = click.get_current_context()
+            node = ctx
+            settings = None
+            kw = {}
+            while node is not None:
+                if isinstance(node.obj, dict) and argname in node.obj:
+                    kw[argname] = node.obj[argname]
+                    break
+                node = node.parent
+            kw.update(kwargs)
+            return ctx.invoke(f, *args, **kw)
+
+        return update_wrapper(new_func, f)
+
+    if f is None:
+        return decorator
+
+    return decorator(f)
 
 
 def handle_datetime(type: type, default: Any) -> StrDict:
@@ -350,7 +370,7 @@ def _mk_option(
     def cb(ctx, _param, value):
         if ctx.obj is None:
             ctx.obj = {}
-        settings = ctx.obj.setdefault("settings", {})
+        settings = ctx.obj.setdefault(CTX_KEY, {})
         _set_path(settings, path, value)
         return value
 
