@@ -96,12 +96,12 @@ def click_options(
             ctx = click.get_current_context()
             _merge_dicts(settings_dict, ctx.obj.get(CTX_KEY))
             settings = from_dict(settings_dict, cls, converter)
-            if argname is None:
-                ctx_key = CTX_KEY
-                args = (settings,) + args
-            else:
+            if argname:
                 ctx_key = argname
                 kwargs = {argname: settings, **kwargs}
+            else:
+                ctx_key = CTX_KEY
+                args = (settings,) + args
             ctx.obj[ctx_key] = settings
             return f(*args, **kwargs)
 
@@ -125,26 +125,32 @@ def click_options(
     return wrap
 
 
-def pass_settings(f: Optional[AnyFunc] = None, *, argname: str = "settings") -> AnyFunc:
+def pass_settings(
+    f: Optional[AnyFunc] = None, *, argname: Optional[str] = None
+) -> AnyFunc:
     """
     Marks a callback as wanting to receive the innermost settings instance as
     first argument.
     """
+    ctx_key = argname or CTX_KEY
 
     def decorator(f: AnyFunc) -> AnyFunc:
-
         def new_func(*args, **kwargs):
             ctx = click.get_current_context()
             node = ctx
             settings = None
-            kw = {}
             while node is not None:
-                if isinstance(node.obj, dict) and argname in node.obj:
-                    kw[argname] = node.obj[argname]
+                if isinstance(node.obj, dict) and ctx_key in node.obj:
+                    settings = node.obj[ctx_key]
                     break
                 node = node.parent
-            kw.update(kwargs)
-            return ctx.invoke(f, *args, **kw)
+
+            if argname:
+                kwargs = {argname: settings, **kwargs}
+            else:
+                args = (settings,) + args
+
+            return ctx.invoke(f, *args, **kwargs)
 
         return update_wrapper(new_func, f)
 

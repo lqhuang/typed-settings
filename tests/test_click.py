@@ -1,6 +1,5 @@
 from datetime import datetime, timezone
 from enum import Enum
-from functools import partial
 from pathlib import Path
 from typing import (
     Any,
@@ -12,7 +11,6 @@ from typing import (
     MutableSequence,
     MutableSet,
     Optional,
-    Protocol,
     Sequence,
     Set,
     Tuple,
@@ -41,9 +39,7 @@ from typed_settings import (
 T = TypeVar("T")
 
 
-class Invoke(Protocol):
-    def __call__(self, cli: click.Command, *args: str) -> click.testing.Result:
-        ...
+Invoke = Callable[..., click.testing.Result]
 
 
 class CliResult(click.testing.Result, Generic[T]):
@@ -137,7 +133,7 @@ class TestDefaultsLoading:
         expected: object,
     ):
         converter = default_converter()
-        field = attrs.Attribute(
+        field = attrs.Attribute(  # type: ignore[call-arg,var-annotated]
             "test", default, None, None, None, None, None, None, type=type
         )
         result = click_utils._get_default(field, path, settings, converter)
@@ -145,8 +141,8 @@ class TestDefaultsLoading:
 
     def test_get_default_factory(self):
         """
-        If the factory "takes self", ``None`` is passed since we do not yet have
-        an instance.
+        If the factory "takes self", ``None`` is passed since we do not yet
+        have an instance.
         """
 
         def factory(self) -> str:
@@ -242,8 +238,9 @@ class TestDefaultsLoading:
         self, invoke: Invoke, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
     ):
         """
-        If a setting is set in a config file, that value is being used as default
-        for click cli_options - *not* the default defined in the Settings class.
+        If a setting is set in a config file, that value is being used as
+        default for click cli_options - *not* the default defined in the
+        Settings class.
         """
 
         tmp_path.joinpath("settings.toml").write_text('[test]\na = "x"\n')
@@ -298,8 +295,12 @@ class TestSettingsPassing:
 
         @click.command()
         @click_options(Settings, "test")
-        def cli(settings: Settings, /) -> None:
-            assert settings == Settings(3)
+        # We should to this in this test:
+        #   def cli(settings: Settings, /) -> None:
+        # but that does not work in py37, so we just use name that is
+        # != CTX_KEY.
+        def cli(s: Settings) -> None:
+            assert s == Settings(3)
 
         invoke(cli, "--o=3")
 
@@ -315,7 +316,8 @@ class TestSettingsPassing:
         @click.command()
         @click_options(Settings, "test")
         @click.pass_obj
-        def cli(obj: dict, settings: Settings, /) -> None:
+        # def cli(obj: dict, settings: Settings, /) -> None:
+        def cli(obj: dict, settings: Settings) -> None:
             assert obj["settings"] is settings
 
         invoke(cli)
@@ -334,7 +336,8 @@ class TestSettingsPassing:
         @click.command()
         @click.pass_obj
         @click_options(Settings, "test")
-        def cli(settings: Settings, obj: dict, /) -> None:
+        # def cli(settings: Settings, obj: dict, /) -> None:
+        def cli(settings: Settings, obj: dict) -> None:
             assert obj["settings"] is settings
 
         invoke(cli)
@@ -869,8 +872,8 @@ class TestPassSettings:
 
     def test_pass_settings(self, invoke: Invoke):
         """
-        A subcommand can receive the settings via the `pass_settings`
-        decorator.
+        A subcommand can receive the settings (as pos arg) via the
+        `pass_settings` decorator.
         """
 
         @click.group()
@@ -880,8 +883,8 @@ class TestPassSettings:
 
         @cli.command()
         @pass_settings
-        def cmd(settings):
-            assert settings == self.Settings(opt="spam")
+        def cmd(s):
+            assert s == self.Settings(opt="spam")
 
         invoke(cli, "--opt=spam", "cmd")
 
@@ -901,17 +904,75 @@ class TestPassSettings:
 
         invoke(cli, "cmd")
 
+    def test_change_argname(self, invoke: Invoke):
+        """
+        The argument name for "pass_settings" can be changed but must be the
+        same as in "click_options()".
+        """
+
+        @click.group()
+        @click_options(self.Settings, "test", argname="le_settings")
+        def cli(le_settings):
+            pass
+
+        @cli.command()
+        @pass_settings(argname="le_settings")
+        def cmd(*, le_settings):
+            assert le_settings == self.Settings(opt="spam")
+
+        invoke(cli, "--opt=spam", "cmd")
+
     def test_pass_in_parent_context(self, invoke: Invoke):
         """
         The decorator can be used in the same context as "click_options()".
-        Only one settings instance is passed in this case
         This makes no sense, but works.
+        Since the settings are passed as pos. args, the cli receives two
+        instances in that case.
         """
 
         @click.command()
-        @click_options(self.Settings, default_loaders("test"))
+        @click_options(self.Settings, "test")
         @pass_settings
-        def cli(settings):
-            assert s1 == Settings("spam")
+        def cli(s1, s2):
+            assert s1 is s2
 
         invoke(cli, "--opt=spam")
+
+    def test_pass_in_parent_context_argname(self, invoke: Invoke):
+        """
+        The decorator can be used in the same context as "click_options()".
+        This makes no sense, but works.
+        With an explicit argname, only one instance is passed.
+        """
+
+        @click.command()
+        @click_options(self.Settings, "test", argname="le_settings")
+        @pass_settings(argname="le_settings")
+        def cli(*, le_settings):
+            assert le_settings == self.Settings("spam")
+
+        invoke(cli, "--opt=spam")
+
+    def test_combine_pass_settings_click_options(self, invoke: Invoke):
+        """
+        A sub command can receive the parent's options via "pass_settings"
+        and define its own options at the same time.
+        """
+
+        @settings
+        class SubSettings:
+            sub: str = ""
+
+        @click.group()
+        @click_options(self.Settings, "test-main", argname="main")
+        def cli(main):
+            assert main == self.Settings("spam")
+
+        @cli.command()
+        @click_options(SubSettings, "test-sub", argname="sub")
+        @pass_settings(argname="main")
+        def cmd(main, sub):
+            assert main == self.Settings("spam")
+            assert sub == SubSettings("eggs")
+
+        invoke(cli, "--opt=spam", "cmd", "--sub=eggs")
