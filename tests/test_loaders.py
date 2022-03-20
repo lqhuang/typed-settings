@@ -19,6 +19,7 @@ from typed_settings.loaders import (
     FileFormat,
     FileLoader,
     InstanceLoader,
+    OnePasswordLoader,
     PythonFormat,
     TomlFormat,
     clean_settings,
@@ -618,3 +619,23 @@ class TestInstanceLoader:
         inst = Settings(Host("spam", 42), "eggs", 23)
         loader = InstanceLoader(inst)
         pytest.raises(ValueError, loader, settings_cls, options)
+
+
+@pytest.mark.xfail(reason="Does not work in CI pipeline")
+class TestOnePasswordLoader:  # pragma: no cover
+    """Tests for OnePasswordLoader."""
+
+    def test_load(self) -> None:
+        """
+        Settings can be loaded from 1Password.
+        """
+
+        @settings(frozen=True)
+        class Settings:
+            username: str
+            password: str
+            is_admin: bool = False
+
+        loader = OnePasswordLoader(item="Test", vault="Test")
+        s = loader(Settings, _deep_options(Settings))
+        assert s == {"username": "spam", "password": "eggs"}

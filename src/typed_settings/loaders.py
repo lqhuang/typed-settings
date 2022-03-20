@@ -3,8 +3,10 @@ This module contains the settings loaders provided by Typed Settings and the
 protocol specification that they must implement.
 """
 import importlib.util
+import json
 import logging
 import os
+import subprocess  # noqa: S404
 from fnmatch import fnmatch
 from pathlib import Path
 from typing import Any, Callable, Dict, Iterable, List, Optional, Union
@@ -423,6 +425,31 @@ class TomlFormat:
                 settings = settings[s]
             except KeyError:
                 return {}
+        return settings
+
+
+class OnePasswordLoader:  # pragma: no cover
+    def __init__(self, item: str, vault: Optional[str] = None):
+        self.item = item
+        self.vault = vault
+
+    def __call__(
+        self, settings_cls: type, options: OptionList
+    ) -> SettingsDict:
+        cmd = ["op", "item", "get", "--format=json", self.item]
+        if self.vault:
+            cmd.append(f"--vault={self.vault}")
+        result = subprocess.run(  # noqa: S603
+            cmd, capture_output=True, text=True, check=True
+        )
+        data = json.loads(result.stdout)
+        option_names = [o.path for o in options]
+        settings = {
+            field["label"]: field["value"]
+            for field in data["fields"]
+            if "value" in field
+        }
+        settings = {k: v for k, v in settings.items() if k in option_names}
         return settings
 
 
