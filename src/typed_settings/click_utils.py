@@ -38,20 +38,31 @@ def click_options(
     Generate :mod:`click` options for a CLI which override settins loaded via
     :func:`.load_settings()`.
 
-    A single *cls* instance is passed to the decorated function
+    A single *cls* instance is passed to the decorated function -- by default
+    as positional argument.
 
     Args:
         cls: Attrs class with options (and default values).
+
         loaders: Either a string with your app name or a list of settings
             :class:`Loader`'s.  If it is a string, use it with
             :func:`~typed_settings.default_loaders()` to get the defalt
             loaders.
+
         converter: An optional :class:`cattr.Converter` used for converting
             option values to the required type.
 
             By default, :data:`typed_settings.attrs.converter` is used.
+
         type_handler: Helps creating proper click options for option types that
             are not natively supported by click.
+
+        argname: An optional argument name.  If it is set, the settings
+            instances is no longer passed as positional argument but as key
+            word argument.
+
+            This allows a function to be decorated with this function multiple
+            times.
 
     Return:
         A decorator for a click command.
@@ -74,6 +85,8 @@ def click_options(
     .. versionchanged:: 1.0.0
        Instead of a list of loaders, you can also just pass an application
        name.
+    .. versionchanged:: 1.1.0
+       Add the *argname* parameter.
     """
     cls = attr.resolve_types(cls)
     options = _deep_options(cls)
@@ -131,6 +144,42 @@ def pass_settings(
     """
     Marks a callback as wanting to receive the innermost settings instance as
     first argument.
+
+    If you specifiy an *argname* in :func:`click_options()`, you must specify
+    the same name here in order to get the correct settings instance.  The
+    settings instance is then passed as keyword argument.
+
+    Args:
+        argname: An optional argument name.  If it is set, the settings
+            instances is no longer passed as positional argument but as key
+            word argument.
+
+    Return:
+        A decorator for a click command.
+
+    Example:
+
+      .. code-block:: python
+
+         >>> import click
+         >>> import typed_settings as ts
+         >>>
+         >>> @ts.settings
+         ... class Settings: ...
+         ...
+         >>> @click.group()
+         ... @click_options(Settings, "example", argname="my_settings")
+         ... def cli(my_settings):
+         ...     pass
+         ...
+         >>> @cli.command()
+         ... # Use the same "argname" as above!
+         ... @pass_settings(argname="my_settings")
+         ... def sub_cmd(*, my_settings):
+         ...     print(my_settings)
+
+    .. versionchanged:: 1.1.0
+       Add the *argname* parameter.
     """
     ctx_key = argname or CTX_KEY
 

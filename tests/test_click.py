@@ -888,22 +888,6 @@ class TestPassSettings:
 
         invoke(cli, "--opt=spam", "cmd")
 
-    def test_pass_settings_no_settings(self, invoke: Invoke):
-        """
-        Pass ``None`` if no settings are defined.
-        """
-
-        @click.group()
-        def cli():
-            pass
-
-        @cli.command()
-        @pass_settings
-        def cmd(settings):
-            assert settings is None
-
-        invoke(cli, "cmd")
-
     def test_change_argname(self, invoke: Invoke):
         """
         The argument name for "pass_settings" can be changed but must be the
@@ -921,6 +905,38 @@ class TestPassSettings:
             assert le_settings == self.Settings(opt="spam")
 
         invoke(cli, "--opt=spam", "cmd")
+
+    def test_pass_settings_no_settings(self, invoke: Invoke):
+        """
+        Pass ``None`` if no settings are defined.
+        """
+
+        @click.group()
+        def cli():
+            pass
+
+        @cli.command()
+        @pass_settings
+        def cmd(settings):
+            assert settings is None
+
+        invoke(cli, "cmd")
+
+    def test_change_argname_no_settings(self, invoke: Invoke):
+        """
+        Pass ``None`` if no settings are defined.
+        """
+
+        @click.group()
+        def cli():
+            pass
+
+        @cli.command()
+        @pass_settings(argname="le_settings")
+        def cmd(le_settings):
+            assert le_settings is None
+
+        invoke(cli, "cmd")
 
     def test_pass_in_parent_context(self, invoke: Invoke):
         """

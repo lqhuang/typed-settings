@@ -584,32 +584,40 @@ Using the new loader works the same way as we've seen before:
 Command Line Arguments with Click
 =================================
 
-You can generate Click command line options for your settings that let your users override settings loaded from other sources (like config files).
+You can generate Click command line options for your settings.
+These let the users of your application override settings loaded from other sources (like config files).
 
 The general algorithm for generating a Click_ CLI for your settings looks like this:
 
-#. You decorate a Click command with :func:`click_options()` which roughly works like :func:`click.make_pass_decorator()`.
+#. You decorate a Click command with :func:`click_options()`.
 
 #. The decorator will immediately (namely, at module import time)
 
    - load your settings (e.g., from config files or env vars),
    - create a :func:`click.option()` for each setting and use the loaded settings value as default for that option.
 
-#. You add a positional argument to your CLI function.
+#. You add a positional/keyword argument to your CLI function.
 
 #. When you run your CLI, the decorator :
 
    - updates the settings with option values from the command line,
-   - passes the updated settings instances as positional argument to your CLI function.
+   - stores the settings instance in the Click context object (see :attr:`click.Context.obj`),
+   - passes the updated settings instances as positional/keyword argument to your CLI function.
 
 .. _click: https://click.palletsprojects.com
+
+.. note::
+
+   By default, the settings are passed as positional argument.
+   You can optionally specify a keyword argument name if you want your settings to be passed as keyword argument.
+
+   See :ref:`click-order-of-decorators` and :ref:`click-settings-as-keyword-arguments` for details about argument passing.
 
 Take this minimal example:
 
 .. code-block:: python
 
     >>> import click
-    >>> import click.testing
     >>> import typed_settings as ts
     >>>
     >>> monkeypatch.setenv("EXAMPLE_SPAM", "23")
@@ -622,7 +630,13 @@ Take this minimal example:
     ... @ts.click_options(Settings, "example")
     ... def cli(settings: Settings):
     ...     print(settings)
-    ...
+
+As you can see, an option is generated for each setting:
+
+.. code-block:: python
+
+    >>> import click.testing
+    >>>
     >>> runner = click.testing.CliRunner()
     >>> print(runner.invoke(cli, ["--help"]).output)
     Usage: cli [OPTIONS]
@@ -699,10 +713,49 @@ In a similar fashion, you can use your own converter:
     ...     pass
 
 
+Passing Settings to Sub-Commands
+--------------------------------
+
+One of Click's main advantages is that it makes it quite easy to create CLIs with sub commands (think of :program:`Git`).
+
+If you want to load your settings once in the main command and make them accessible in all subcommands,
+you can use the :func:`pass_settings` decorator.
+It searches all *context* objects from the current one via all parent context until it finds a settings instances and passes it to the decorated command:
+
+.. code-block:: python
+
+    >>> @click.group()
+    ... @ts.click_options(Settings, "example")
+    ... def cli(settings: Settings):
+    ...     pass
+    >>>
+    >>> @cli.command()
+    ... @ts.pass_settings
+    ... def sub_cmd(settings: Settings):
+    ...     click.echo(settings)
+    >>> print(runner.invoke(cli, ["--spam=3", "sub-cmd"]).output)
+    Settings(spam=3)
+    <BLANKLINE>
+
+.. note::
+
+   The example above only works well if either:
+
+   - Only the parent group loads settings
+   - Only concrete commands load settings
+
+   This is because the settings instance is stored in the :attr:`click.Context.obj` with a fixed key.
+
+   If you want your sub-commands to *additonally* load their own settings,
+   please continue to read the next two setions.
+
+
+.. _click-order-of-decorators:
+
 Order of Decorators
 -------------------
 
-Click passes the settings instance to your CLI function as positional argument.
+Click passes the settings instance to your CLI function as positional argument by default.
 If you use other decorators that behave similarly (e.g., :func:`click.pass_context`),
 the order of decorators and arguments matters.
 
@@ -719,6 +772,48 @@ The second-innermost as second argument and so forth:
     ...
     >>> print(runner.invoke(cli, []).stdout)
     <click.core.Context object at 0x...> Settings(spam=23)
+    <BLANKLINE>
+
+
+.. _click-settings-as-keyword-arguments:
+
+Settings as Keyword Arguments
+-----------------------------
+
+If a command wants to load multiple types of settings or
+if you use command groups where both, the parent group and its sub commands, want to load settings,
+then the "store a single settings instance ans pass it as positional argument" approach no longer works.
+
+Instead, you need to specify an *argname* for :func:`click_options()` and :func:`pass_settings()`.
+The settings instance is then stored under that key in the :attr:`click.Context.obj` and passed as keyword argument to the decorated function:
+
+.. code-block:: python
+
+    >>> @ts.settings
+    ... class CmdSettings:
+    ...     eggs: str = ""
+    >>>
+    >>> @click.group()
+    ... @ts.click_options(Settings, "example", argname="main_settings")
+    ... @click.pass_obj
+    ... def cli(ctx_obj: dict, *, main_settings: Settings):
+    ...     # "main_settings" is now a keyword argument
+    ...     # It is stored in the ctx object under the same key
+    ...     print(main_settings is ctx_obj["main_settings"])
+    >>>
+    >>> @cli.command()
+    ... # Require the parent group's settings as "main_settings"
+    ... @ts.pass_settings(argname="main_settings")
+    ... # Define command specific settings as "cmd_settings"
+    ... @ts.click_options(CmdSettings, "example-cmd", argname="cmd_settings")
+    ... def cmd(*, main_settings: Settings, cmd_settings: CmdSettings):
+    ...     print(main_settings)
+    ...     print(cmd_settings)
+    >>>
+    >>> print(runner.invoke(cli, ["--spam=42", "cmd", "--eggs=many"]).stdout)
+    True
+    Settings(spam=42)
+    CmdSettings(eggs='many')
     <BLANKLINE>
 
 
