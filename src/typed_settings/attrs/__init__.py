@@ -326,11 +326,11 @@ def secret(
         >>> Settings(password="1234")
         Settings(password=***)
     """
-    if help is not None:
-        if metadata is None:
-            metadata = {}
-        metadata.setdefault(METADATA_KEY, {})["help"] = help
-        metadata[METADATA_KEY]["param_decls"] = param_decls
+    for name, value in [("help", help), ("param_decls", param_decls)]:
+        if value is not None:
+            if metadata is None:
+                metadata = {}
+            metadata.setdefault(METADATA_KEY, {})[name] = value
 
     return attr.field(
         default=default,
