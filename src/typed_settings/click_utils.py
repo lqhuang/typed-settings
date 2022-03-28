@@ -107,7 +107,9 @@ def click_options(
 
         def new_func(*args, **kwargs):
             ctx = click.get_current_context()
-            _merge_dicts(settings_dict, ctx.obj.get(CTX_KEY))
+            if ctx.obj is None:
+                ctx.obj = {}
+            _merge_dicts(settings_dict, ctx.obj.get(CTX_KEY, {}))
             settings = from_dict(settings_dict, cls, converter)
             if argname:
                 ctx_key = argname

@@ -421,6 +421,22 @@ class TestSettingsPassing:
             "  --help       Show this message and exit.\n"
         )
 
+    def test_empty_cls(self, invoke: Invoke):
+        """
+        Empty settings classes are no special case.
+        """
+
+        @settings
+        class S:
+            pass
+
+        @click.command()
+        @click_options(S, "test")
+        def cli(settings: S):
+            assert settings == S()
+
+        invoke(cli)
+
 
 class LeEnum(Enum):
     spam = "Le spam"
