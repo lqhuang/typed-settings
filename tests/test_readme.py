@@ -15,7 +15,7 @@ def readme() -> str:
     """
     Returns the contents of the `README.md`.
     """
-    return HERE.parent.joinpath("README.md").read_text()
+    return HERE.parent.joinpath("README.md").read_text(encoding="utf-8")
 
 
 def load_readme() -> List[Tuple[str, List[str]]]:

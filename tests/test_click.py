@@ -764,3 +764,56 @@ class TestPassSettings:
             assert s1 == s2
 
         result = invoke(cli, "--opt=spam")
+
+
+class TestParamDecl:
+    """Tests for influencing the parameter declaration."""
+
+    @pytest.mark.parametrize('param_decl', [None, ("--opt/--no-opt")])
+    @pytest.mark.parametrize(
+        'flag, value',
+        [((), True), (("--opt",), True), (("--no-opt",), False)]
+    )
+    def test_default_for_flag_has_on_and_off_switch(
+        self, invoke: Invoke, param_decl, flag, value
+    ):
+        @settings
+        class Settings:
+            opt: bool = option(default=True, param_decl=param_decl)
+
+        @click.command()
+        @click_options(Settings, "test")
+        def cli(settings):
+            assert settings.opt is value
+
+        invoke(cli, *flag)
+
+    @pytest.mark.parametrize('flag, value', [((), False), (("--opt",), True)])
+    def test_create_a_flag_without_off_switch(self, invoke: Invoke, flag, value):
+        @settings
+        class Settings:
+            opt: bool = option(default=True, param_decl="--opt")
+
+        @click.command()
+        @click_options(Settings, "test")
+        def cli(*, settings):
+            assert settings.opt is value
+
+        invoke(cli, *flag)
+
+    @pytest.mark.parametrize(
+        'flag, value', [((), False), (("-x",), True), (("--exitfirst",), True)]
+    )
+    def test_create_a_short_handle_for_a_flag(self, invoke: Invoke, flag, value):
+        """Create a shorter handle for a command similar to pytest's -x."""
+
+        @settings
+        class Settings:
+            exitfirst: option(default=False, param_decl="-x/--exitfirst")
+
+        @click.command()
+        @click_options(Settings, "test")
+        def cli(*, settings):
+            assert settings.exitfirst is value
+
+        invoke(cli, *flag)
