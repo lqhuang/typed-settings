@@ -345,7 +345,6 @@ def _mk_option(
     Recursively creates click options and returns them as a list.
     """
     opt_name = path.replace(".", "-").replace("_", "-")
-    param_decl = f"--{opt_name}"
 
     def cb(ctx, _param, value):
         if ctx.obj is None:
@@ -360,6 +359,7 @@ def _mk_option(
         "callback": cb,
         "expose_value": False,
         "help": metadata.get("help", ""),
+        "is_flag": metadata.get("is_flag"),
     }
 
     if isinstance(field.repr, _SecretRepr):
@@ -370,9 +370,18 @@ def _mk_option(
     if default is attr.NOTHING:
         kwargs["required"] = True
 
+    param_decls_in_meta = metadata.get("param_decls")
+    if param_decls_in_meta is not None:
+        param_decls = param_decls_in_meta
+    elif field.type and field.type is bool:
+        param_decls = f"--{opt_name}/--no-{opt_name}"
+    else:
+        param_decls = f"--{opt_name}"
+
+    if isinstance(param_decls, str):
+        param_decls = (param_decls,)
+
     if field.type:  # pragma: no cover
-        if field.type is bool:
-            param_decl = f"{param_decl}/--no-{opt_name}"
         kwargs.update(type_handler.get_type(field.type, default))
 
-    return option(param_decl, **kwargs)
+    return option(*param_decls, **kwargs)
