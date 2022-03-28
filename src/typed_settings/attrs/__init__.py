@@ -72,6 +72,7 @@ def option(
     order: Optional[bool] = ...,
     on_setattr: Optional["_OnSetAttrArgType"] = ...,
     help: Optional[str] = ...,
+    param_decl: Optional[str] = ...,
 ) -> Any:
     ...
 
@@ -94,6 +95,7 @@ def option(
     order: Optional[bool] = ...,
     on_setattr: "Optional[_OnSetAttrArgType]" = ...,
     help: Optional[str] = ...,
+    param_decl: Optional[str] = ...,
 ) -> "_T":
     ...
 
@@ -115,6 +117,7 @@ def option(
     order: Optional[bool] = ...,
     on_setattr: "Optional[_OnSetAttrArgType]" = ...,
     help: Optional[str] = ...,
+    param_decl: Optional[str] = ...,
 ) -> "_T":
     ...
 
@@ -136,6 +139,7 @@ def option(
     order: Optional[bool] = ...,
     on_setattr: "Optional[_OnSetAttrArgType]" = ...,
     help: Optional[str] = ...,
+    param_decl: Optional[str] = ...,
 ) -> Any:
     ...
 
@@ -155,12 +159,14 @@ def option(
     order=None,
     on_setattr=None,
     help=None,
+    param_decl=None,
 ):
     """An alias to :func:`attr.field()`"""
     if help is not None:
         if metadata is None:
             metadata = {}
         metadata.setdefault(METADATA_KEY, {})["help"] = help
+        metadata[METADATA_KEY]["param_decl"] = param_decl
 
     return attr.field(
         default=default,
@@ -194,6 +200,7 @@ def secret(
     order: Optional[bool] = ...,
     on_setattr: "Optional[_OnSetAttrArgType]" = ...,
     help: Optional[str] = ...,
+    param_decl: Optional[str] = ...,
 ) -> Any:
     ...
 
@@ -216,6 +223,7 @@ def secret(
     order: Optional[bool] = ...,
     on_setattr: "Optional[_OnSetAttrArgType]" = ...,
     help: Optional[str] = ...,
+    param_decl: Optional[str] = ...,
 ) -> "_T":
     ...
 
@@ -237,6 +245,7 @@ def secret(
     order: Optional[bool] = ...,
     on_setattr: "Optional[_OnSetAttrArgType]" = ...,
     help: Optional[str] = ...,
+    param_decl: Optional[str] = ...,
 ) -> "_T":
     ...
 
@@ -258,6 +267,7 @@ def secret(
     order: Optional[bool] = ...,
     on_setattr: "Optional[_OnSetAttrArgType]" = ...,
     help: Optional[str] = ...,
+    param_decl: Optional[str] = ...,
 ) -> Any:
     ...
 
@@ -277,6 +287,7 @@ def secret(
     order=None,
     on_setattr=None,
     help=None,
+    param_decl=None,
 ):
     """
     An alias to :func:`option()` but with a default repr that hides screts.
@@ -308,6 +319,7 @@ def secret(
         if metadata is None:
             metadata = {}
         metadata.setdefault(METADATA_KEY, {})["help"] = help
+        metadata[METADATA_KEY]["param_decl"] = param_decl
 
     return attr.field(
         default=default,
