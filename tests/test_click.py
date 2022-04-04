@@ -329,7 +329,7 @@ class TestClickParamTypes:
             c: bool = False
 
         expected_help = [
-            "  --a / --no-a  [default: no-a; required]",
+            "  --a / --no-a  [required]",
             "  --b / --no-b  [default: b]",
             "  --c / --no-c  [default: no-c]",
         ]
@@ -341,7 +341,8 @@ class TestClickParamTypes:
             "  --c / --no-c  [default: no-c]",
         ]
 
-        expected_defaults = Settings(False, True, False)
+        default_options = ["--a"]
+        expected_defaults = Settings(True, True, False)
 
         cli_options = ["--no-a", "--no-b", "--c"]
         expected_settings = Settings(False, False, True)
