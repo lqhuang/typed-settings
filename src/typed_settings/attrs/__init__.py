@@ -1,5 +1,5 @@
 """
-Helpers for and additions to :mod:`attr`.
+Helpers for and additions to :mod:`attrs`.
 """
 from typing import (
     TYPE_CHECKING,
@@ -11,18 +11,27 @@ from typing import (
     overload,
 )
 
-import attr
-import attr._make
+import attrs
 
 
 if TYPE_CHECKING:
-    from attr import (
-        _T,
-        _ConverterType,
-        _OnSetAttrArgType,
-        _ReprArgType,
-        _ValidatorArgType,
-    )
+    try:
+        from attr import (  # type: ignore
+            _T,
+            _ConverterType,
+            _OnSetAttrArgType,
+            _ReprArgType,
+            _ValidatorArgType,
+        )
+    except ImportError:
+        # Just in case the symbols are moved from "attr" to "attrs"
+        from attrs import (  # type: ignore
+            _T,
+            _ConverterType,
+            _OnSetAttrArgType,
+            _ReprArgType,
+            _ValidatorArgType,
+        )
 
 from .hooks import auto_convert
 
@@ -52,8 +61,8 @@ class _SecretRepr:
 SECRET = _SecretRepr()
 
 
-settings = attr.define
-"""An alias to :func:`attr.define()`"""
+settings = attrs.define
+"""An alias to :func:`attrs.define()`"""
 
 
 @overload
@@ -142,7 +151,7 @@ def option(
 
 def option(
     *,
-    default=attr.NOTHING,
+    default=attrs.NOTHING,
     validator=None,
     repr=True,
     hash=None,
@@ -156,13 +165,13 @@ def option(
     on_setattr=None,
     help=None,
 ):
-    """An alias to :func:`attr.field()`"""
+    """An alias to :func:`attrs.field()`"""
     if help is not None:
         if metadata is None:
             metadata = {}
         metadata.setdefault(METADATA_KEY, {})["help"] = help
 
-    return attr.field(
+    return attrs.field(
         default=default,
         validator=validator,
         repr=repr,
@@ -264,7 +273,7 @@ def secret(
 
 def secret(
     *,
-    default=attr.NOTHING,
+    default=attrs.NOTHING,
     validator=None,
     repr=SECRET,
     hash=None,
@@ -289,7 +298,7 @@ def secret(
         All arguments are describted here:
 
         - :func:`option()`
-        - :func:`attr.field()`
+        - :func:`attrs.field()`
 
     Example:
 
@@ -309,7 +318,7 @@ def secret(
             metadata = {}
         metadata.setdefault(METADATA_KEY, {})["help"] = help
 
-    return attr.field(
+    return attrs.field(
         default=default,
         validator=validator,
         repr=repr,
@@ -334,7 +343,7 @@ def evolve(inst, **changes):
 
     .. warning::
 
-       This function is very similar to :func:`attr.evolve()`, but the
+       This function is very similar to :func:`attrs.evolve()`, but the
        ``attrs`` version is not updating values recursively.  Instead, it will
        just replace ``attrs`` instances with a dict.
 
@@ -351,8 +360,8 @@ def evolve(inst, **changes):
     ..  versionadded:: 1.0.0
     """
     cls = inst.__class__
-    attrs = attr.fields(cls)
-    for a in attrs:
+    attribs = attrs.fields(cls)
+    for a in attribs:
         if not a.init:
             continue
         attr_name = a.name  # To deal with private attributes.
@@ -361,7 +370,7 @@ def evolve(inst, **changes):
         if init_name not in changes:
             # Add original value to changes
             changes[init_name] = old_value
-        elif attr.has(old_value) and isinstance(changes[init_name], Mapping):
+        elif attrs.has(old_value) and isinstance(changes[init_name], Mapping):
             # Evolve nested attrs classes
             changes[init_name] = evolve(old_value, **changes[init_name])
 

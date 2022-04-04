@@ -1,7 +1,7 @@
 from setuptools import find_packages, setup
 
 
-DEPS = ["attrs>=20.3", "cattrs>=1.7", "toml>=0.10"]
+DEPS = ["attrs>=21.3", "cattrs>=1.10", "toml>=0.10"]
 DEPS_CLICK = ["click>=7,<9"]
 DEPS_TEST = DEPS_CLICK + ["pytest>=6", "pytest-cov", "coverage[toml]>=5.3"]
 DEPS_LINT = DEPS_CLICK + [

@@ -62,7 +62,7 @@ def lint(session):
 @nox.session
 def mypy(session):
     session.install(".[lint]")
-    session.run("mypy", *LINT_PATHS)
+    session.run("mypy", "--show-error-codes", *LINT_PATHS)
 
 
 @nox.session
