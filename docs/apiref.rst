@@ -61,7 +61,7 @@ They are all also available directly from the :mod:`typed_settings` module.
 
 .. function:: settings(maybe_cls=None, *, these=None, repr=None, hash=None, init=None, slots=True, frozen=True, weakref_slot=True, str=False, auto_attribs=None, kw_only=False, cache_hash=False, auto_exc=True, eq=None, order=False, auto_detect=True, getstate_setstate=None, on_setattr=None, field_transformer=<function auto_convert>)
 
-    An alias to :func:`attr.frozen`,
+    An alias to :func:`attrs.frozen`,
     configured with a *field_transformer* that automatically adds converters to all fields based on their annotated type.
 
     Supported concrete types:
@@ -91,7 +91,7 @@ They are all also available directly from the :mod:`typed_settings` module.
 
 .. function:: option(*, default=NOTHING, validator=None, repr=True, hash=None, init=True, metadata=None, converter=None, factory=None, kw_only=False, eq=None, order=None, on_setattr=None, help=None)
 
-    An alias to :func:`attr.field()`
+    An alias to :func:`attrs.field()`
 
     Additional Parameters
         **help** (str_): The help string for Click options

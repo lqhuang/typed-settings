@@ -182,9 +182,9 @@ Settings(a_str='spam', an_int=1)
 
 - Settings are defined as type-hinted `attrs` classes.
 
-- Typed Settings’ `settings` decorator is an alias to `attr.define` and can optionally make your settings frozen (immutable).
+- Typed Settings’ `settings` decorator is an alias to `attrs.define` and can optionally make your settings frozen (immutable).
 
-- `option()` and `secret()` are wrappers around `attr.field()` and add meta data handling for Click options.
+- `option()` and `secret()` are wrappers around `attrs.field()` and add meta data handling for Click options.
 
 - `secret()` attributes have string representation that masks the actual value, so that you can safely print or log settings instances.
 

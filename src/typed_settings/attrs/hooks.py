@@ -6,14 +6,18 @@ from enum import Enum
 from functools import partial
 from typing import TYPE_CHECKING
 
-import attr
-import cattr
+import attrs
+import cattrs
 
 from ..converters import default_converter
 
 
 if TYPE_CHECKING:
-    from attr import _FieldTransformer
+    try:
+        from attr import _FieldTransformer  # type: ignore
+    except ImportError:
+        # Just in case the symbols are moved from "attr" to "attrs"
+        from attrs import _FieldTransformer  # type: ignore
 
 
 __all__ = [
@@ -23,7 +27,7 @@ __all__ = [
 ]
 
 
-def make_auto_converter(converter: cattr.Converter) -> "_FieldTransformer":
+def make_auto_converter(converter: cattrs.Converter) -> "_FieldTransformer":
     """
     Creates and returns an auto-converter `field transformer`_.
 
@@ -36,7 +40,7 @@ def make_auto_converter(converter: cattr.Converter) -> "_FieldTransformer":
 
     Returns:
         A function that can be passed as *field_transformer* to
-        :func:`attr.define()`.
+        :func:`attrs.define()`.
 
     Example:
 
@@ -45,10 +49,10 @@ def make_auto_converter(converter: cattr.Converter) -> "_FieldTransformer":
             >>> from datetime import datetime
             >>> from pathlib import Path
             >>>
-            >>> import attr
-            >>> import cattr
+            >>> import attrs
+            >>> import cattrs
             >>>
-            >>> converter = cattr.GenConverter()
+            >>> converter = cattrs.GenConverter()
             >>> converter.register_structure_hook(
             ...     datetime, lambda v, _t: datetime.fromisoformat(v)
             ... )
@@ -56,7 +60,7 @@ def make_auto_converter(converter: cattr.Converter) -> "_FieldTransformer":
             >>>
             >>> auto_convert = make_auto_converter(converter)
             >>>
-            >>> @attr.define(field_transformer=auto_convert)
+            >>> @attrs.define(field_transformer=auto_convert)
             ... class C:
             ...     a: Path
             ...     b: datetime
@@ -75,7 +79,7 @@ def make_auto_converter(converter: cattr.Converter) -> "_FieldTransformer":
         A field transformer that tries to convert all attribs of a class to
         their annotated type.
         """
-        attr.resolve_types(cls, attribs=attribs)
+        attrs.resolve_types(cls, attribs=attribs)
         results = []
         for attrib in attribs:
             # Do not override explicitly defined converters!
@@ -96,7 +100,7 @@ type.
 
 It uses the :func:`.default_converter()`.
 
-*Deprecated:* Use ``cattr.structure()`` instead.
+*Deprecated:* Use ``cattrs.structure()`` instead.
 """
 
 
@@ -104,7 +108,7 @@ def auto_serialize(_inst, _attrib, value):
     """
     Inverse hook to :func:`auto_convert` for use with :func:`attrs.asdict()`.
 
-    *Deprecated:* Use ``cattr.unstructure()`` instead.
+    *Deprecated:* Use ``cattrs.unstructure()`` instead.
     """
     if isinstance(value, datetime):
         return datetime.isoformat(value)
