@@ -335,6 +335,18 @@ class TestLoadSettings:
             x=[3, 4, 42], y=[Path("spam"), Path("eggs")], z=[1, 2]
         )
 
+    def test_load_empty_cls(self):
+        """
+        Empty classes are no special case.
+        """
+
+        @settings
+        class Settings:
+            pass
+
+        result = _core.load(Settings, "example")
+        assert result == Settings()
+
 
 class TestLogging:
     """

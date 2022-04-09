@@ -6,9 +6,24 @@ from enum import Enum
 from pathlib import Path
 from typing import Any, Callable, Optional, Type, Union
 
-from attr import has
-from cattr import Converter, GenConverter
-from cattr._compat import is_frozenset, is_mutable_set, is_sequence, is_tuple
+from attrs import has
+from cattrs import Converter, GenConverter
+
+
+try:
+    from cattr._compat import (  # type: ignore
+        is_frozenset,
+        is_mutable_set,
+        is_sequence,
+        is_tuple,
+    )
+except ImportError:
+    from cattrs._compat import (  # type: ignore
+        is_frozenset,
+        is_mutable_set,
+        is_sequence,
+        is_tuple,
+    )
 
 from .exceptions import InvalidValueError
 from .types import ET, SettingsDict, T
@@ -19,7 +34,7 @@ def default_converter() -> GenConverter:
     Get an instanceof the default converter used by Typed Settings.
 
     Return:
-        A :class:`cattr.GenConverter` configured with addional hooks for
+        A :class:`cattrs.GenConverter` configured with addional hooks for
         loading the follwing types:
 
         - :class:`bool` using :func:`.to_bool()`

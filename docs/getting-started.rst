@@ -26,7 +26,7 @@ Basic Settings Definition and Loading
 
 
 Settings are defined as `attrs classes`_.
-You can either use the decorators provided by ``attrs`` or the :func:`settings` decorator which is an alias to :func:`attr.define()`:
+You can either use the decorators provided by ``attrs`` or the :func:`settings` decorator which is an alias to :func:`attrs.define()`:
 
 .. code-block:: python
 
@@ -40,7 +40,7 @@ You can either use the decorators provided by ``attrs`` or the :func:`settings` 
    >>> Settings("monty", "S3cr3t!")
    Settings(username='monty', password=***)
 
-:func:`secret()` is a wrapper for :func:`attr.field()` and masks secrets when the settings instance is being printed.
+:func:`secret()` is a wrapper for :func:`attrs.field()` and masks secrets when the settings instance is being printed.
 
 Settings should (but are not required to) define defaults for all options.
 If an option has no default and no config value can be found for it, an error will be raised by ``attrs``.
@@ -249,7 +249,7 @@ However, this does not extend to mutable option values:
 Immutable settings can be desirable because they prevent you or your users from (accidentally) changing them while the app is running.
 
 However, when you are testing your app, you may still want to modify your settings.
-You can create an updated copy of your settings via :func:`evolve()`, which is a recursive version of :func:`attr.evolve()`:
+You can create an updated copy of your settings via :func:`evolve()`, which is a recursive version of :func:`attrs.evolve()`:
 
 .. code-block:: python
 

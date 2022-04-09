@@ -1,11 +1,11 @@
 from setuptools import find_packages, setup
 
 
-DEPS = ["attrs>=20.3", "cattrs>=1.7", "tomli>=2"]
+DEPS = ["attrs>=21.3", "cattrs>=1.10", "tomli>=2"]
 DEPS_CLICK = ["click>=7,<9"]
 DEPS_TEST = DEPS_CLICK + ["pytest>=6", "pytest-cov", "coverage[toml]>=5.3"]
 DEPS_LINT = DEPS_CLICK + [
-    "bandit<1.7.3",  # 1.7.3 breaks the current flake8-bandit plugin
+    "bandit",
     "flake8",
     "flake8-bandit",
     "flake8-black",
@@ -21,7 +21,7 @@ DEPS_DEV = DEPS_TEST + DEPS_LINT + DEPS_DOCS + ["nox", "safety"]
 if __name__ == "__main__":
     setup(
         name="typed-settings",
-        version="1.0.0",
+        version="1.0.1",
         description="Typed settings based on attrs classes",
         license="MIT",
         url="https://gitlab.com/sscherfke/typed-settings",

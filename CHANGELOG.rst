@@ -2,10 +2,25 @@
 Changelog
 =========
 
+
 1.x.y (yyyy-mm-dd)
 ==================
 
 - ♻️ Replace ``toml`` with ``tomli`` since it is actively maintained.
+
+
+1.0.1 (2022-04-04)
+==================
+
+- 🗑 Deprecate the bundled ``attrs`` validators.  They are now part of ``attrs.validators``.
+
+- 🐛 Fixed `#16`_: Support new (c)attrs namespaces.  ``attrs`` 21.3 and ``cattrs`` 1.10 are now required.
+
+- 🐛 Bug fix
+
+- ✅ Adjust tests for Click 8.1
+
+.. _#16: https://gitlab.com/sscherfke/typed-settings/-/issues/10
 
 
 1.0.0 (2022-03-04)
@@ -246,7 +261,7 @@ Legend
 
    - ✨ New feature
 
-   - 🗑Deprecation
+   - 🗑 Deprecation
 
    - 🐛 Bug fix
 
