@@ -1008,3 +1008,77 @@ class TestPassSettings:
             assert sub == SubSettings("eggs")
 
         invoke(cli, "--opt=spam", "cmd", "--sub=eggs")
+
+
+class TestParamDecl:
+    """Tests for influencing the parameter declaration."""
+
+    @pytest.mark.parametrize('param_decls', [None, ("--opt/--no-opt")])
+    @pytest.mark.parametrize(
+        'flag, value',
+        [(None, True), ("--opt", True), ("--no-opt", False)]
+    )
+    def test_default_for_flag_has_on_and_off_switch(
+        self, invoke: Invoke, param_decls, flag, value
+    ):
+        @settings
+        class Settings:
+            opt: bool = option(default=True, param_decls=param_decls)
+
+        @click.command()
+        @click_options(Settings, "test")
+        def cli(settings):
+            assert settings.opt is value
+
+        if flag is None:
+            result = invoke(cli)
+        else:
+            result = invoke(cli, flag)
+        assert result.exit_code == 0
+
+    @pytest.mark.parametrize(
+        'flag, value', [(None, False), ("--opt", True), ("--no-opt", False)]
+    )
+    def test_create_a_flag_without_off_switch(self, invoke: Invoke, flag, value):
+
+        @settings
+        class Settings:
+            opt: bool = option(default=False, param_decls="--opt", is_flag=True)
+
+        @click.command()
+        @click_options(Settings, "test")
+        def cli(settings):
+            assert settings.opt is value
+
+        if flag is None:
+            result = invoke(cli)
+        else:
+            result = invoke(cli, flag)
+
+        if flag == "--no-opt":
+            assert result.exit_code == 2
+        else:
+            assert result.exit_code == 0
+
+    @pytest.mark.parametrize(
+        'flag, value', [(None, False), ("-x", True), ("--exitfirst", True)]
+    )
+    def test_create_a_short_handle_for_a_flag(self, invoke: Invoke, flag, value):
+        """Create a shorter handle for a command similar to pytest's -x."""
+
+        @settings
+        class Settings:
+            exitfirst: bool = option(
+                default=False, param_decls=("-x", "--exitfirst"), is_flag=True
+            )
+
+        @click.command()
+        @click_options(Settings, "test")
+        def cli(settings):
+            assert settings.exitfirst is value
+
+        if flag is None:
+            result = invoke(cli)
+        else:
+            result = invoke(cli, flag)
+        assert result.exit_code == 0
