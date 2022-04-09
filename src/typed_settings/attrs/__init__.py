@@ -81,6 +81,8 @@ def option(
     order: Optional[bool] = ...,
     on_setattr: Optional["_OnSetAttrArgType"] = ...,
     help: Optional[str] = ...,
+    param_decls: Optional[str] = ...,
+    is_flag: Optional[bool] = ...,
 ) -> Any:
     ...
 
@@ -103,6 +105,8 @@ def option(
     order: Optional[bool] = ...,
     on_setattr: "Optional[_OnSetAttrArgType]" = ...,
     help: Optional[str] = ...,
+    param_decls: Optional[str] = ...,
+    is_flag: Optional[bool] = ...,
 ) -> "_T":
     ...
 
@@ -124,6 +128,8 @@ def option(
     order: Optional[bool] = ...,
     on_setattr: "Optional[_OnSetAttrArgType]" = ...,
     help: Optional[str] = ...,
+    param_decls: Optional[str] = ...,
+    is_flag: Optional[bool] = ...,
 ) -> "_T":
     ...
 
@@ -145,6 +151,8 @@ def option(
     order: Optional[bool] = ...,
     on_setattr: "Optional[_OnSetAttrArgType]" = ...,
     help: Optional[str] = ...,
+    param_decls: Optional[str] = ...,
+    is_flag: Optional[bool] = ...,
 ) -> Any:
     ...
 
@@ -164,12 +172,17 @@ def option(
     order=None,
     on_setattr=None,
     help=None,
+    param_decls=None,
+    is_flag=None,
 ):
-    """An alias to :func:`attrs.field()`"""
-    if help is not None:
-        if metadata is None:
-            metadata = {}
-        metadata.setdefault(METADATA_KEY, {})["help"] = help
+    """An alias to :func:`attr.field()`"""
+    for name, value in [
+        ("help", help), ("param_decls", param_decls), ("is_flag", is_flag)
+    ]:
+        if value is not None:
+            if metadata is None:
+                metadata = {}
+            metadata.setdefault(METADATA_KEY, {})[name] = value
 
     return attrs.field(
         default=default,
@@ -203,6 +216,8 @@ def secret(
     order: Optional[bool] = ...,
     on_setattr: "Optional[_OnSetAttrArgType]" = ...,
     help: Optional[str] = ...,
+    param_decls: Optional[str] = ...,
+    is_flag: Optional[bool] = ...,
 ) -> Any:
     ...
 
@@ -225,6 +240,8 @@ def secret(
     order: Optional[bool] = ...,
     on_setattr: "Optional[_OnSetAttrArgType]" = ...,
     help: Optional[str] = ...,
+    param_decls: Optional[str] = ...,
+    is_flag: Optional[bool] = ...,
 ) -> "_T":
     ...
 
@@ -246,6 +263,8 @@ def secret(
     order: Optional[bool] = ...,
     on_setattr: "Optional[_OnSetAttrArgType]" = ...,
     help: Optional[str] = ...,
+    param_decls: Optional[str] = ...,
+    is_flag: Optional[bool] = ...,
 ) -> "_T":
     ...
 
@@ -267,6 +286,8 @@ def secret(
     order: Optional[bool] = ...,
     on_setattr: "Optional[_OnSetAttrArgType]" = ...,
     help: Optional[str] = ...,
+    param_decls: Optional[str] = ...,
+    is_flag: Optional[bool] = ...,
 ) -> Any:
     ...
 
@@ -286,6 +307,7 @@ def secret(
     order=None,
     on_setattr=None,
     help=None,
+    param_decls=None,
 ):
     """
     An alias to :func:`option()` but with a default repr that hides screts.
@@ -313,10 +335,11 @@ def secret(
         >>> Settings(password="1234")
         Settings(password=***)
     """
-    if help is not None:
-        if metadata is None:
-            metadata = {}
-        metadata.setdefault(METADATA_KEY, {})["help"] = help
+    for name, value in [("help", help), ("param_decls", param_decls)]:
+        if value is not None:
+            if metadata is None:
+                metadata = {}
+            metadata.setdefault(METADATA_KEY, {})[name] = value
 
     return attrs.field(
         default=default,
