@@ -1010,20 +1010,26 @@ class TestPassSettings:
         invoke(cli, "--opt=spam", "cmd", "--sub=eggs")
 
 
-class TestParamDecl:
-    """Tests for influencing the parameter declaration."""
+class TestClickConfig:
+    """Tests for influencing the option declaration."""
 
-    @pytest.mark.parametrize('param_decls', [None, ("--opt/--no-opt")])
     @pytest.mark.parametrize(
-        'flag, value',
-        [(None, True), ("--opt", True), ("--no-opt", False)]
+        "click_config",
+        [None, {"param_decls": ("--opt/--no-opt",)}],
+    )
+    @pytest.mark.parametrize(
+        "flag, value", [(None, True), ("--opt", True), ("--no-opt", False)]
     )
     def test_default_for_flag_has_on_and_off_switch(
-        self, invoke: Invoke, param_decls, flag, value
+        self,
+        invoke: Invoke,
+        click_config: Optional[dict],
+        flag: Optional[str],
+        value: bool,
     ):
         @settings
         class Settings:
-            opt: bool = option(default=True, param_decls=param_decls)
+            opt: bool = option(default=True, click=click_config)
 
         @click.command()
         @click_options(Settings, "test")
@@ -1037,13 +1043,16 @@ class TestParamDecl:
         assert result.exit_code == 0
 
     @pytest.mark.parametrize(
-        'flag, value', [(None, False), ("--opt", True), ("--no-opt", False)]
+        "flag, value", [(None, False), ("--opt", True), ("--no-opt", False)]
     )
-    def test_create_a_flag_without_off_switch(self, invoke: Invoke, flag, value):
+    def test_create_a_flag_without_off_switch(
+        self, invoke: Invoke, flag, value
+    ):
+        click_config = {"param_decls": ("--opt",), "is_flag": True}
 
         @settings
         class Settings:
-            opt: bool = option(default=False, param_decls="--opt", is_flag=True)
+            opt: bool = option(default=False, click=click_config)
 
         @click.command()
         @click_options(Settings, "test")
@@ -1061,16 +1070,17 @@ class TestParamDecl:
             assert result.exit_code == 0
 
     @pytest.mark.parametrize(
-        'flag, value', [(None, False), ("-x", True), ("--exitfirst", True)]
+        "flag, value", [(None, False), ("-x", True), ("--exitfirst", True)]
     )
-    def test_create_a_short_handle_for_a_flag(self, invoke: Invoke, flag, value):
+    def test_create_a_short_handle_for_a_flag(
+        self, invoke: Invoke, flag, value
+    ):
         """Create a shorter handle for a command similar to pytest's -x."""
+        click_config = {"param_decls": ("-x", "--exitfirst"), "is_flag": True}
 
         @settings
         class Settings:
-            exitfirst: bool = option(
-                default=False, param_decls=("-x", "--exitfirst"), is_flag=True
-            )
+            exitfirst: bool = option(default=False, click=click_config)
 
         @click.command()
         @click_options(Settings, "test")

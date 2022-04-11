@@ -48,6 +48,7 @@ __all__ = [
 
 
 METADATA_KEY = "typed_settings"
+CLICK_KEY = "click"
 
 
 class _SecretRepr:
@@ -128,8 +129,7 @@ def option(
     order: Optional[bool] = ...,
     on_setattr: "Optional[_OnSetAttrArgType]" = ...,
     help: Optional[str] = ...,
-    param_decls: Optional[str] = ...,
-    is_flag: Optional[bool] = ...,
+    click: Optional[Dict[str, Any]] = ...,
 ) -> "_T":
     ...
 
@@ -151,8 +151,7 @@ def option(
     order: Optional[bool] = ...,
     on_setattr: "Optional[_OnSetAttrArgType]" = ...,
     help: Optional[str] = ...,
-    param_decls: Optional[str] = ...,
-    is_flag: Optional[bool] = ...,
+    click: Optional[Dict[str, Any]] = ...,
 ) -> Any:
     ...
 
@@ -172,17 +171,10 @@ def option(
     order=None,
     on_setattr=None,
     help=None,
-    param_decls=None,
-    is_flag=None,
+    click=None,
 ):
     """An alias to :func:`attr.field()`"""
-    for name, value in [
-        ("help", help), ("param_decls", param_decls), ("is_flag", is_flag)
-    ]:
-        if value is not None:
-            if metadata is None:
-                metadata = {}
-            metadata.setdefault(METADATA_KEY, {})[name] = value
+    metadata = _get_metadata(metadata, help, click)
 
     return attrs.field(
         default=default,
@@ -216,8 +208,7 @@ def secret(
     order: Optional[bool] = ...,
     on_setattr: "Optional[_OnSetAttrArgType]" = ...,
     help: Optional[str] = ...,
-    param_decls: Optional[str] = ...,
-    is_flag: Optional[bool] = ...,
+    click: Optional[Dict[str, Any]] = ...,
 ) -> Any:
     ...
 
@@ -240,8 +231,7 @@ def secret(
     order: Optional[bool] = ...,
     on_setattr: "Optional[_OnSetAttrArgType]" = ...,
     help: Optional[str] = ...,
-    param_decls: Optional[str] = ...,
-    is_flag: Optional[bool] = ...,
+    click: Optional[Dict[str, Any]] = ...,
 ) -> "_T":
     ...
 
@@ -307,7 +297,7 @@ def secret(
     order=None,
     on_setattr=None,
     help=None,
-    param_decls=None,
+    click=None,
 ):
     """
     An alias to :func:`option()` but with a default repr that hides screts.
@@ -335,11 +325,7 @@ def secret(
         >>> Settings(password="1234")
         Settings(password=***)
     """
-    for name, value in [("help", help), ("param_decls", param_decls)]:
-        if value is not None:
-            if metadata is None:
-                metadata = {}
-            metadata.setdefault(METADATA_KEY, {})[name] = value
+    metadata = _get_metadata(metadata, help, click)
 
     return attrs.field(
         default=default,
@@ -355,6 +341,20 @@ def secret(
         order=order,
         on_setattr=on_setattr,
     )
+
+
+def _get_metadata(
+    metadata: Optional[Dict[str, Any]], help: str, click: Dict[str, Any]
+) -> Dict[str, Any]:
+    click_config = {"help": help}
+    if click:
+        click_config.update(click)
+    if metadata is None:
+        metadata = {}
+    ts_meta = metadata.setdefault(METADATA_KEY, {})
+    ts_meta["help"] = help
+    ts_meta[CLICK_KEY] = click_config
+    return metadata
 
 
 def evolve(inst, **changes):
