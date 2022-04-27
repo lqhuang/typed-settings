@@ -63,6 +63,7 @@ class TestFieldExtensions:
         The "help" and "click" entries are always present in the metadata,
         even if they are not explicitly set.
         """
+
         @settings
         class S:
             o: str = field_func()
@@ -79,6 +80,7 @@ class TestFieldExtensions:
         """
         "help" is stored directly in the meta and in the CLI options dicts.
         """
+
         @settings
         class S:
             o: str = field_func(help="spam")
@@ -108,6 +110,7 @@ class TestFieldExtensions:
         """
         "help" can be overwritten via "click" options.
         """
+
         @settings
         class S:
             o: str = field_func(click={"param_decls": ("-o",)})
@@ -124,6 +127,7 @@ class TestFieldExtensions:
         """
         If metadata is already present, it is not overridden.
         """
+
         @settings
         class S:
             o: str = field_func(

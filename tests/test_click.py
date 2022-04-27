@@ -782,6 +782,29 @@ class TestClickParamTypes:
         cli_options = ["--a", "1", "2", "--a", "3", "4"]
         expected_settings = Settings([(1, 2), (3, 4)])
 
+    class NoTypeParam(ClickParamBase):
+        """
+        Test option without type annotation.
+        """
+
+        @settings
+        class Settings:
+            a = option(default="spam")  # type: ignore
+
+        expected_help = [
+            "  --a TEXT  [default: spam]",
+        ]
+
+        env_vars = {"A": "eggs"}
+        expected_env_var_defaults = [
+            "  --a TEXT  [default: eggs]",
+        ]
+
+        expected_defaults = Settings("spam")  # type: ignore
+
+        cli_options = ["--a=eggs"]
+        expected_settings = Settings(a="eggs")  # type: ignore
+
     def pytest_generate_tests(self, metafunc: Metafunc) -> None:
         params = []
         fixtures = ["cli"] + [

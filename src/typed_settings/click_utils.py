@@ -315,14 +315,17 @@ class TypeHandler:
         )
         self.tuple_types = frozenset({tuple})
 
-    def get_type(self, otype: type, default: t.Any) -> StrDict:
+    def get_type(self, otype: t.Optional[type], default: t.Any) -> StrDict:
         """
         Analyses the option type and returns updated options.
         """
         origin = get_origin(otype)
         args = get_args(otype)
 
-        if origin is None:
+        if otype is None:
+            return self._handle_basic_types(otype, default)
+
+        elif origin is None:
             for target_type, get_type_info in self.types.items():
                 if issubclass(otype, target_type):
                     return get_type_info(otype, default)
@@ -337,7 +340,7 @@ class TypeHandler:
 
             raise TypeError(f"Cannot create click type for: {otype}")
 
-    def _handle_basic_types(self, type: type, default: t.Any):
+    def _handle_basic_types(self, type: t.Optional[type], default: t.Any):
         if default is attr.NOTHING:
             type_info = {"type": type}
         else:
@@ -453,9 +456,7 @@ def _mk_option(
     if default is attr.NOTHING:
         kwargs["required"] = True
 
-    if field.type:  # pragma: no cover
-        kwargs.update(type_handler.get_type(field.type, default))
-
+    kwargs.update(type_handler.get_type(field.type, default))
     kwargs.update(user_config)
 
     return option(*param_decls, **kwargs)
