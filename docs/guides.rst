@@ -679,6 +679,90 @@ The code above is roughly equivalent to:
 The major difference between the two is that Typed Settings passes the complete settings instances and not individual options.
 
 
+Customizing the Generated Options
+---------------------------------
+
+Typed Settings does its best to generate the Click option in the most sensible way.
+However, you can override everything if you want to.
+
+Changing the Param Decls
+^^^^^^^^^^^^^^^^^^^^^^^^
+
+Typed Settings generate a single param declaration for each option: :samp:`--{option-name}`.
+One reason you might want to change this is to add an additional short version (e.g., ``-o``):
+
+.. code-block:: python
+
+    >>> @ts.settings
+    ... class Settings:
+    ...     spam: int = ts.option(default=23, click={"param_decls": ("--spam", "-s")})
+    ...
+    >>> @click.command()
+    ... @ts.click_options(Settings, "example")
+    ... def cli(settings: Settings):
+    ...     print(settings)
+
+    >>> print(runner.invoke(cli, ["--help"]).output)
+    Usage: cli [OPTIONS]
+    <BLANKLINE>
+    Options:
+      -s, --spam INTEGER  [default: 23]
+      --help              Show this message and exit.
+    <BLANKLINE>
+    >>> print(runner.invoke(cli, ["-s", "3"]).output)
+    Settings(spam=3)
+    <BLANKLINE>
+
+Tuning Boolean Flags
+^^^^^^^^^^^^^^^^^^^^
+
+Another use case is changing how binary flags for :func:`bool` typed options are generated.
+By default, Typed Settings generates ``--flag/--no-flag``.
+
+But imagine this example, where our flag is always ``False`` and we only want to allow users to enable it:
+
+.. code-block:: python
+
+    >>> @ts.settings
+    ... class Settings:
+    ...     flag: bool = False
+
+We can achieve this by providing a custom param decl. and the *is_flag* option:
+
+.. code-block:: python
+
+    >>> @ts.settings
+    ... class Settings:
+    ...     flag: bool = ts.option(
+    ...         default=False,
+    ...         help='Turn "flag" on.',
+    ...         click={"param_decls": ("--on", "flag"), "is_flag": True},
+    ...     )
+    ...
+    >>> @click.command()
+    ... @ts.click_options(Settings, "example")
+    ... def cli(settings: Settings):
+    ...     print(settings)
+
+    >>> print(runner.invoke(cli, ["--help"]).output)
+    Usage: cli [OPTIONS]
+    <BLANKLINE>
+    Options:
+      --on    Turn "flag" on.
+      --help  Show this message and exit.
+    <BLANKLINE>
+    >>> print(runner.invoke(cli, ["--on"]).output)
+    Settings(flag=True)
+    <BLANKLINE>
+    >>> print(runner.invoke(cli, []).output)
+    Settings(flag=False)
+    <BLANKLINE>
+
+Note, that we added the param decl. ``flag`` in addition to ``--on``.
+This is required for Click to map the flag to the correct option.
+We would not need that if we named our flag ``--flag``.
+
+
 Configuring Loaders and Converters
 ----------------------------------
 
@@ -724,6 +808,10 @@ It searches all *context* objects from the current one via all parent context un
 
 .. code-block:: python
 
+    >>> @ts.settings
+    ... class Settings:
+    ...     spam: int = 42
+    ...
     >>> @click.group()
     ... @ts.click_options(Settings, "example")
     ... def cli(settings: Settings):

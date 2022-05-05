@@ -89,22 +89,30 @@ They are all also available directly from the :mod:`typed_settings` module.
           matching type, see :func:`.to_union()`)
 
 
-.. function:: option(*, default=NOTHING, validator=None, repr=True, hash=None, init=True, metadata=None, converter=None, factory=None, kw_only=False, eq=None, order=None, on_setattr=None, help=None)
+.. function:: option(*, default=NOTHING, validator=None, repr=True, hash=None, init=True, metadata=None, converter=None, factory=None, kw_only=False, eq=None, order=None, on_setattr=None, help=None, click=None)
 
     An alias to :func:`attrs.field()`
 
-    Additional Parameters
-        **help** (str_): The help string for Click options
+    Additional Parameters:
+      - **help** (str_): The help string for Click options
 
-    .. _str: https://docs.python.org/3/library/functions.html#bool
+      - **click** (dict_): Additional keyword arguments to pass to :func:`click.option()`.
+        They can override *everything* that Typed Settings automatically generated for you.
+        If that dict contains a ``help``, it overrides the value of the *help* argument.
+        In addition, it can contain the key ``param_decls: Sequence(str)`` to override the automatically generated ones.
+
+    .. _dict: https://docs.python.org/3/library/functions.html#dict
+    .. _str: https://docs.python.org/3/library/functions.html#str
 
 
-.. function:: secret(*, default=NOTHING, validator=None, repr=***, hash=None, init=True, metadata=None, converter=None, factory=None, kw_only=False, eq=None, order=None, on_setattr=None, help=None)
+.. function:: secret(*, default=NOTHING, validator=None, repr=***, hash=None, init=True, metadata=None, converter=None, factory=None, kw_only=False, eq=None, order=None, on_setattr=None, help=None, click=None)
 
     An alias to :func:`option()` but with a default repr that hides screts.
 
     When printing a settings instances, secret settings will represented with
     `***` istead of their actual value.
+
+    See :func:`option()` for help on the addional parameters.
 
     Example:
 
