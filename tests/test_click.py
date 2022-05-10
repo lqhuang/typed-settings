@@ -1054,6 +1054,7 @@ class TestClickConfig:
         The attrs default value is correctly used for flag options in all
         variants (no flag, on-flag, off-flag).
         """
+
         @settings
         class Settings:
             opt: bool = option(default=True, click=click_config)
