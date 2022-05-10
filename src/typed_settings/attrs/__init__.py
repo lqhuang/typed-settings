@@ -82,8 +82,7 @@ def option(
     order: Optional[bool] = ...,
     on_setattr: Optional["_OnSetAttrArgType"] = ...,
     help: Optional[str] = ...,
-    param_decls: Optional[str] = ...,
-    is_flag: Optional[bool] = ...,
+    click: Optional[Dict[str, Any]] = ...,
 ) -> Any:
     ...
 
@@ -106,8 +105,7 @@ def option(
     order: Optional[bool] = ...,
     on_setattr: "Optional[_OnSetAttrArgType]" = ...,
     help: Optional[str] = ...,
-    param_decls: Optional[str] = ...,
-    is_flag: Optional[bool] = ...,
+    click: Optional[Dict[str, Any]] = ...,
 ) -> "_T":
     ...
 
@@ -253,8 +251,7 @@ def secret(
     order: Optional[bool] = ...,
     on_setattr: "Optional[_OnSetAttrArgType]" = ...,
     help: Optional[str] = ...,
-    param_decls: Optional[str] = ...,
-    is_flag: Optional[bool] = ...,
+    click: Optional[Dict[str, Any]] = ...,
 ) -> "_T":
     ...
 
@@ -276,8 +273,7 @@ def secret(
     order: Optional[bool] = ...,
     on_setattr: "Optional[_OnSetAttrArgType]" = ...,
     help: Optional[str] = ...,
-    param_decls: Optional[str] = ...,
-    is_flag: Optional[bool] = ...,
+    click: Optional[Dict[str, Any]] = ...,
 ) -> Any:
     ...
 

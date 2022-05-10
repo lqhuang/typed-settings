@@ -426,13 +426,19 @@ def _mk_option(
     """
     user_config = field.metadata.get(METADATA_KEY, {}).get(CLICK_KEY, {})
 
-    param_decls: t.Sequence[str] = user_config.pop("param_decls", ())
-    if not param_decls:
+    param_decls: t.Tuple[str, ...]
+    user_param_decls: t.Union[str, t.Sequence[str]]
+    user_param_decls = user_config.pop("param_decls", ())
+    if not user_param_decls:
         option_name = path.replace(".", "-").replace("_", "-")
         if field.type and field.type is bool:
             param_decls = (f"--{option_name}/--no-{option_name}",)
         else:
             param_decls = (f"--{option_name}",)
+    elif isinstance(user_param_decls, str):
+        param_decls = (user_param_decls,)
+    else:
+        param_decls = tuple(user_param_decls)
 
     def cb(ctx, _param, value):
         if ctx.obj is None:

@@ -1050,6 +1050,10 @@ class TestClickConfig:
         flag: Optional[str],
         value: bool,
     ):
+        """
+        The attrs default value is correctly used for flag options in all
+        variants (no flag, on-flag, off-flag).
+        """
         @settings
         class Settings:
             opt: bool = option(default=True, click=click_config)
@@ -1071,7 +1075,10 @@ class TestClickConfig:
     def test_create_a_flag_without_off_switch(
         self, invoke: Invoke, flag, value
     ):
-        click_config = {"param_decls": ("--opt",), "is_flag": True}
+        """
+        The "off"-flag for flag options can be removed.
+        """
+        click_config = {"param_decls": "--opt", "is_flag": True}
 
         @settings
         class Settings:
@@ -1098,7 +1105,9 @@ class TestClickConfig:
     def test_create_a_short_handle_for_a_flag(
         self, invoke: Invoke, flag, value
     ):
-        """Create a shorter handle for a command similar to pytest's -x."""
+        """
+        Create a shorter handle for a command similar to pytest's -x.
+        """
         click_config = {"param_decls": ("-x", "--exitfirst"), "is_flag": True}
 
         @settings

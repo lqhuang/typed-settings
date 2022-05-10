@@ -99,7 +99,7 @@ They are all also available directly from the :mod:`typed_settings` module.
       - **click** (dict_): Additional keyword arguments to pass to :func:`click.option()`.
         They can override *everything* that Typed Settings automatically generated for you.
         If that dict contains a ``help``, it overrides the value of the *help* argument.
-        In addition, it can contain the key ``param_decls: Sequence(str)`` to override the automatically generated ones.
+        In addition, it can contain the key ``param_decls: str | Sequence(str)`` to override the automatically generated ones.
 
     .. _dict: https://docs.python.org/3/library/functions.html#dict
     .. _str: https://docs.python.org/3/library/functions.html#str
