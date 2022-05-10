@@ -782,6 +782,29 @@ class TestClickParamTypes:
         cli_options = ["--a", "1", "2", "--a", "3", "4"]
         expected_settings = Settings([(1, 2), (3, 4)])
 
+    class NoTypeParam(ClickParamBase):
+        """
+        Test option without type annotation.
+        """
+
+        @settings
+        class Settings:
+            a = option(default="spam")  # type: ignore
+
+        expected_help = [
+            "  --a TEXT  [default: spam]",
+        ]
+
+        env_vars = {"A": "eggs"}
+        expected_env_var_defaults = [
+            "  --a TEXT  [default: eggs]",
+        ]
+
+        expected_defaults = Settings("spam")  # type: ignore
+
+        cli_options = ["--a=eggs"]
+        expected_settings = Settings(a="eggs")  # type: ignore
+
     def pytest_generate_tests(self, metafunc: Metafunc) -> None:
         params = []
         fixtures = ["cli"] + [
@@ -1008,3 +1031,97 @@ class TestPassSettings:
             assert sub == SubSettings("eggs")
 
         invoke(cli, "--opt=spam", "cmd", "--sub=eggs")
+
+
+class TestClickConfig:
+    """Tests for influencing the option declaration."""
+
+    @pytest.mark.parametrize(
+        "click_config",
+        [None, {"param_decls": ("--opt/--no-opt",)}],
+    )
+    @pytest.mark.parametrize(
+        "flag, value", [(None, True), ("--opt", True), ("--no-opt", False)]
+    )
+    def test_default_for_flag_has_on_and_off_switch(
+        self,
+        invoke: Invoke,
+        click_config: Optional[dict],
+        flag: Optional[str],
+        value: bool,
+    ):
+        """
+        The attrs default value is correctly used for flag options in all
+        variants (no flag, on-flag, off-flag).
+        """
+
+        @settings
+        class Settings:
+            opt: bool = option(default=True, click=click_config)
+
+        @click.command()
+        @click_options(Settings, "test")
+        def cli(settings):
+            assert settings.opt is value
+
+        if flag is None:
+            result = invoke(cli)
+        else:
+            result = invoke(cli, flag)
+        assert result.exit_code == 0
+
+    @pytest.mark.parametrize(
+        "flag, value", [(None, False), ("--opt", True), ("--no-opt", False)]
+    )
+    def test_create_a_flag_without_off_switch(
+        self, invoke: Invoke, flag, value
+    ):
+        """
+        The "off"-flag for flag options can be removed.
+        """
+        click_config = {"param_decls": "--opt", "is_flag": True}
+
+        @settings
+        class Settings:
+            opt: bool = option(default=False, click=click_config)
+
+        @click.command()
+        @click_options(Settings, "test")
+        def cli(settings):
+            assert settings.opt is value
+
+        if flag is None:
+            result = invoke(cli)
+        else:
+            result = invoke(cli, flag)
+
+        if flag == "--no-opt":
+            assert result.exit_code == 2
+        else:
+            assert result.exit_code == 0
+
+    @pytest.mark.parametrize(
+        "flag, value", [(None, False), ("-x", True), ("--exitfirst", True)]
+    )
+    def test_create_a_short_handle_for_a_flag(
+        self, invoke: Invoke, flag, value
+    ):
+        """
+        Create a shorter handle for a command similar to pytest's -x.
+        """
+        click_config = {"param_decls": ("-x", "--exitfirst"), "is_flag": True}
+
+        @settings
+        class Settings:
+            exitfirst: bool = option(default=False, click=click_config)
+
+        @click.command()
+        @click_options(Settings, "test")
+        def cli(settings):
+            assert settings.exitfirst is value
+
+        if flag is None:
+            result = invoke(cli)
+        else:
+            result = invoke(cli, flag)
+        assert result.exit_code == 0

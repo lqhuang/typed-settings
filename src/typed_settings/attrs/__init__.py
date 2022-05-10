@@ -48,6 +48,7 @@ __all__ = [
 
 
 METADATA_KEY = "typed_settings"
+CLICK_KEY = "click"
 
 
 class _SecretRepr:
@@ -81,6 +82,7 @@ def option(
     order: Optional[bool] = ...,
     on_setattr: Optional["_OnSetAttrArgType"] = ...,
     help: Optional[str] = ...,
+    click: Optional[Dict[str, Any]] = ...,
 ) -> Any:
     ...
 
@@ -103,6 +105,7 @@ def option(
     order: Optional[bool] = ...,
     on_setattr: "Optional[_OnSetAttrArgType]" = ...,
     help: Optional[str] = ...,
+    click: Optional[Dict[str, Any]] = ...,
 ) -> "_T":
     ...
 
@@ -124,6 +127,7 @@ def option(
     order: Optional[bool] = ...,
     on_setattr: "Optional[_OnSetAttrArgType]" = ...,
     help: Optional[str] = ...,
+    click: Optional[Dict[str, Any]] = ...,
 ) -> "_T":
     ...
 
@@ -145,6 +149,7 @@ def option(
     order: Optional[bool] = ...,
     on_setattr: "Optional[_OnSetAttrArgType]" = ...,
     help: Optional[str] = ...,
+    click: Optional[Dict[str, Any]] = ...,
 ) -> Any:
     ...
 
@@ -164,12 +169,10 @@ def option(
     order=None,
     on_setattr=None,
     help=None,
+    click=None,
 ):
-    """An alias to :func:`attrs.field()`"""
-    if help is not None:
-        if metadata is None:
-            metadata = {}
-        metadata.setdefault(METADATA_KEY, {})["help"] = help
+    """An alias to :func:`attr.field()`"""
+    metadata = _get_metadata(metadata, help, click)
 
     return attrs.field(
         default=default,
@@ -203,6 +206,7 @@ def secret(
     order: Optional[bool] = ...,
     on_setattr: "Optional[_OnSetAttrArgType]" = ...,
     help: Optional[str] = ...,
+    click: Optional[Dict[str, Any]] = ...,
 ) -> Any:
     ...
 
@@ -225,6 +229,7 @@ def secret(
     order: Optional[bool] = ...,
     on_setattr: "Optional[_OnSetAttrArgType]" = ...,
     help: Optional[str] = ...,
+    click: Optional[Dict[str, Any]] = ...,
 ) -> "_T":
     ...
 
@@ -246,6 +251,7 @@ def secret(
     order: Optional[bool] = ...,
     on_setattr: "Optional[_OnSetAttrArgType]" = ...,
     help: Optional[str] = ...,
+    click: Optional[Dict[str, Any]] = ...,
 ) -> "_T":
     ...
 
@@ -267,6 +273,7 @@ def secret(
     order: Optional[bool] = ...,
     on_setattr: "Optional[_OnSetAttrArgType]" = ...,
     help: Optional[str] = ...,
+    click: Optional[Dict[str, Any]] = ...,
 ) -> Any:
     ...
 
@@ -286,6 +293,7 @@ def secret(
     order=None,
     on_setattr=None,
     help=None,
+    click=None,
 ):
     """
     An alias to :func:`option()` but with a default repr that hides screts.
@@ -313,10 +321,7 @@ def secret(
         >>> Settings(password="1234")
         Settings(password=***)
     """
-    if help is not None:
-        if metadata is None:
-            metadata = {}
-        metadata.setdefault(METADATA_KEY, {})["help"] = help
+    metadata = _get_metadata(metadata, help, click)
 
     return attrs.field(
         default=default,
@@ -332,6 +337,20 @@ def secret(
         order=order,
         on_setattr=on_setattr,
     )
+
+
+def _get_metadata(
+    metadata: Optional[Dict[str, Any]], help: str, click: Dict[str, Any]
+) -> Dict[str, Any]:
+    click_config = {"help": help}
+    if click:
+        click_config.update(click)
+    if metadata is None:
+        metadata = {}
+    ts_meta = metadata.setdefault(METADATA_KEY, {})
+    ts_meta["help"] = help
+    ts_meta[CLICK_KEY] = click_config
+    return metadata
 
 
 def evolve(inst, **changes):
