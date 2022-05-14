@@ -6,7 +6,10 @@ Changelog
 1.x.y (yyyy-mm-dd)
 ==================
 
+- ✨ Allow overrideing param decls and parameters for Click options (See `#15`_).
 - ♻️ Replace ``toml`` with ``tomli`` since it is actively maintained.
+
+.. _#15: https://gitlab.com/sscherfke/typed-settings/-/issues/15
 
 
 1.0.1 (2022-04-04)
@@ -20,7 +23,7 @@ Changelog
 
 - ✅ Adjust tests for Click 8.1
 
-.. _#16: https://gitlab.com/sscherfke/typed-settings/-/issues/10
+.. _#16: https://gitlab.com/sscherfke/typed-settings/-/issues/16
 
 
 1.0.0 (2022-03-04)

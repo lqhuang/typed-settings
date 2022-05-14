@@ -3,7 +3,7 @@ Core functionality for loading settings.
 """
 import logging
 from pathlib import Path
-from typing import Any, Dict, Iterable, List, Type, Union
+from typing import Any, Dict, Iterable, List, Sequence, Type, Union
 
 import attr
 import cattr
@@ -189,7 +189,7 @@ def load(
 
 def load_settings(
     cls: Type[T],
-    loaders: List[Loader],
+    loaders: Sequence[Loader],
     converter: cattr.Converter = None,
 ) -> T:
     """
@@ -223,7 +223,7 @@ def load_settings(
 def _load_settings(
     cls: type,
     options: OptionList,
-    loaders: List[Loader],
+    loaders: Sequence[Loader],
 ) -> Dict[str, Any]:
     """
     Loads settings for *options* and returns them as dict.
