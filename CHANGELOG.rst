@@ -6,6 +6,7 @@ Changelog
 1.x.y (yyyy-mm-dd)
 ==================
 
+- ✨ Support Python 3.11
 - ✨ Allow overrideing param decls and parameters for Click options (See `#15`_).
 - ♻️ Replace ``toml`` with ``tomli`` since it is actively maintained.
 
