@@ -130,22 +130,37 @@ def test_set_path():
 
 
 def test_dict_merge():
-    """Dicts must be merged recursively.  Lists are just overridden."""
+    """
+    When dicts are merged, merging only applies to keys for options, not
+    list or dict values.
+    """
+    options = [
+        OptionInfo("1a", None, None),
+        OptionInfo("1b.2a", None, None),
+        OptionInfo("1b.2b.3a", None, None),
+        OptionInfo("1b.2b.3b", None, None),
+        OptionInfo("1c", None, None),
+        OptionInfo("1d", None, None),
+        OptionInfo("1e", None, None),
+    ]
     d1 = {
         "1a": 3,
         "1b": {"2a": "spam", "2b": {"3a": "foo"}},
-        "1c": [{"2a": 3.14}, {"2b": 34.3}],
+        "1c": [{"2a": 3.14}, {"2b": 34.3}],  # Do not merge lists
         "1d": 4,
+        "1e": {"default": "default"},  # Do not merge dicts
     }
     d2 = {
         "1b": {"2a": "eggs", "2b": {"3b": "bar"}},
         "1c": [{"2a": 23}, {"2b": 34.3}],
         "1d": 5,
+        "1e": {"update": "value"},
     }
-    du._merge_dicts(d1, d2)
+    du._merge_dicts(options, d1, d2)
     assert d1 == {
         "1a": 3,
         "1b": {"2a": "eggs", "2b": {"3a": "foo", "3b": "bar"}},
         "1c": [{"2a": 23}, {"2b": 34.3}],
         "1d": 5,
+        "1e": {"update": "value"},
     }

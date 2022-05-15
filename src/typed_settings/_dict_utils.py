@@ -79,17 +79,24 @@ def _set_path(dct: SettingsDict, path: str, val: Any) -> None:
     dct[key] = val
 
 
-def _merge_dicts(d1: SettingsDict, d2: SettingsDict) -> None:
+def _merge_dicts(
+    fields: OptionList, base: SettingsDict, updates: SettingsDict
+) -> None:
     """
-    Recursively merges *d2* into *d1*.  *d1* is modified in place.
+    Merge all paths/keys that are in *fields* from *updates* into *base*.
+
+    The goal is to only merge settings but not settings values that are
+    dictionaries.
 
     Args:
-        d1: The base dict that will be modified.
-        d2: The dict that will be merged into d1, remains unchanged.
-
+        options: The list of option fields.
+        base: Base dictionary that gets modified.
+        update: Dictionary from which the updates are read.
     """
-    for k, v in d2.items():
-        if k in d1 and isinstance(d1[k], dict):
-            _merge_dicts(d1[k], d2[k])
+    for field in fields:
+        try:
+            value = _get_path(updates, field.path)
+        except KeyError:
+            pass
         else:
-            d1[k] = v
+            _set_path(base, field.path, value)

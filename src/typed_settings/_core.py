@@ -245,6 +245,6 @@ def _load_settings(
     loaded_settings = [loader(cls, options) for loader in loaders]
 
     for ls in loaded_settings:
-        _merge_dicts(settings, ls)
+        _merge_dicts(options, settings, ls)
 
     return settings

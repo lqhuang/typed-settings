@@ -6,6 +6,8 @@ Changelog
 1.x.y (yyyy-mm-dd)
 ==================
 
+- 💥 Settings values that are dictionaries are no longer merged when they are provided by different settings sources.
+  They override each other now as other scalar and container types do.
 - ✨ Support Python 3.11
 - ✨ Allow overrideing param decls and parameters for Click options (See `#15`_).
 - ♻️ Replace ``toml`` with ``tomli`` since it is actively maintained.

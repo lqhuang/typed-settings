@@ -221,7 +221,7 @@ class FileLoader:
         merged_settings: SettingsDict = {}
         for path in paths:
             settings = self._load_file(path, settings_cls, options)
-            _merge_dicts(merged_settings, settings)
+            _merge_dicts(options, merged_settings, settings)
         return merged_settings
 
     def _load_file(
