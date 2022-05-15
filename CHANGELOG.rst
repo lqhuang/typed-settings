@@ -9,9 +9,11 @@ Changelog
 - 💥 Settings values that are dictionaries are no longer merged when they are provided by different settings sources.
   They override each other now as other scalar and container types do.
 - ✨ Support Python 3.11
+- ✨ Add support for ``dict`` options to ``click_options()`` (e.g., ``--env PWD_FILE=/pwd --env DEBUG=1``) (See `#5`_).
 - ✨ Allow overrideing param decls and parameters for Click options (See `#15`_).
 - ♻️ Replace ``toml`` with ``tomli`` since it is actively maintained.
 
+.. _#5: https://gitlab.com/sscherfke/typed-settings/-/issues/5
 .. _#15: https://gitlab.com/sscherfke/typed-settings/-/issues/15
 
 

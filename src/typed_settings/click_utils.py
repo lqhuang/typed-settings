@@ -2,7 +2,13 @@
 Utilities for generating Click options
 """
 import typing as t
-from collections.abc import MutableSequence, MutableSet, Sequence
+from collections.abc import (
+    Mapping,
+    MutableMapping,
+    MutableSequence,
+    MutableSet,
+    Sequence,
+)
 from datetime import datetime
 from enum import Enum
 from functools import update_wrapper
@@ -22,6 +28,7 @@ from .loaders import Loader
 CTX_KEY = "settings"
 
 
+Callback = t.Callable[[click.Context, click.Option, t.Any], t.Any]
 AnyFunc = t.Callable[..., t.Any]
 Decorator = t.Callable[[AnyFunc], AnyFunc]
 StrDict = t.Dict[str, t.Any]
@@ -313,7 +320,12 @@ class TypeHandler:
             frozenset,
             MutableSet,
         )
-        self.tuple_types = frozenset({tuple})
+        self.tuple_types = (tuple,)
+        self.mapping_types = (
+            dict,
+            Mapping,
+            MutableMapping,
+        )
 
     def get_type(self, otype: t.Optional[type], default: t.Any) -> StrDict:
         """
@@ -337,6 +349,8 @@ class TypeHandler:
                 return self._handle_list(otype, default, args)
             elif origin in self.tuple_types:
                 return self._handle_tuple(otype, default, args)
+            elif origin in self.mapping_types:
+                return self._handle_dict(otype, default, args)
 
             raise TypeError(f"Cannot create click type for: {otype}")
 
@@ -375,6 +389,26 @@ class TypeHandler:
             if all("default" in d for d in dicts):
                 type_info["default"] = tuple(d["default"] for d in dicts)
             return type_info
+
+    def _handle_dict(
+        self, type: type, default: t.Any, args: t.Tuple[t.Any, ...]
+    ) -> StrDict:
+        def cb(ctx, param, value):
+            if not value:
+                return {}
+            splitted = [v.partition("=") for v in value]
+            items = {k: v for k, _, v in splitted}
+            return items
+
+        type_info = {
+            "metavar": "KEY=VALUE",
+            "multiple": True,
+            "callback": cb,
+        }
+        if default is not attr.NOTHING:
+            default = [f"{k}={v}" for k, v in default.items()]
+            type_info["default"] = default
+        return type_info
 
 
 def _get_default(
@@ -440,19 +474,18 @@ def _mk_option(
     else:
         param_decls = tuple(user_param_decls)
 
-    def cb(ctx, _param, value):
-        if ctx.obj is None:
-            ctx.obj = {}
-        settings = ctx.obj.setdefault(CTX_KEY, {})
-        _set_path(settings, path, value)
-        return value
+    # The option type specifies the default option kwargs
+    kwargs = type_handler.get_type(field.type, default)
 
-    kwargs = {
-        "show_default": True,
-        "callback": cb,
-        "expose_value": False,
-        "help": user_config.pop("help", None) or "",
-    }
+    # The type's kwargs should not be able to set these values since they are
+    # needed for everything to work:
+    kwargs["show_default"] = True
+    kwargs["expose_value"] = False
+    kwargs["callback"] = make_callback(path, kwargs.get("callback"))
+
+    # Get "help" from the user_config *now*, because we may need to update it
+    # below.  Also replace "None" with "".
+    kwargs["help"] = user_config.pop("help", None) or ""
 
     if isinstance(field.repr, _SecretRepr):
         kwargs["show_default"] = False
@@ -462,7 +495,26 @@ def _mk_option(
     if default is attr.NOTHING:
         kwargs["required"] = True
 
-    kwargs.update(type_handler.get_type(field.type, default))
+    # The user has the last word, though.
     kwargs.update(user_config)
 
     return option(*param_decls, **kwargs)
+
+
+def make_callback(path: str, type_callback: t.Optional[Callback]) -> Callback:
+    """
+    Generate a callback that adds option values to the settings instance in the
+    context.  It also calls a type's callback if there should be one.
+    """
+
+    def cb(ctx, param, value):
+        if type_callback is not None:
+            value = type_callback(ctx, param, value)
+
+        if ctx.obj is None:
+            ctx.obj = {}
+        settings = ctx.obj.setdefault(CTX_KEY, {})
+        _set_path(settings, path, value)
+        return value
+
+    return cb

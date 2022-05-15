@@ -782,6 +782,40 @@ class TestClickParamTypes:
         cli_options = ["--a", "1", "2", "--a", "3", "4"]
         expected_settings = Settings([(1, 2), (3, 4)])
 
+    class DictParam(ClickParamBase):
+        """
+        Dict params use "="-spearated key-value pairs and "multiple=True".
+        """
+
+        @settings
+        class Settings:
+            a: Dict[str, str] = {"default": "value"}
+
+        expected_help = [
+            "  --a KEY=VALUE  [default: default=value]",
+        ]
+
+        # A dictionary cannot be loaded with the default converter,
+        # so we skip this test here.
+        env_vars: Dict[str, Any] = {}
+        expected_env_var_defaults = [
+            "  --a KEY=VALUE  [default: default=value]",
+        ]
+
+        expected_defaults = Settings()
+
+        cli_options = [
+            "--a",
+            "key1=val1",
+            "--a",
+            "key-2=val-2",
+            "--a",
+            "key 3=oi oi",
+        ]
+        expected_settings = Settings(
+            {"key1": "val1", "key-2": "val-2", "key 3": "oi oi"}
+        )
+
     class NoTypeParam(ClickParamBase):
         """
         Test option without type annotation.
@@ -884,22 +918,6 @@ class TestClickParamTypes:
         assert result.output == ""
         assert result.exit_code == 0
         assert result.settings == expected_settings
-
-    def test_unsupported_generic(self, cli: Cli[T]):
-        """
-        There is no support yet for dicts.
-        """
-
-        @settings
-        class Settings:
-            opt: Dict[int, int]
-
-        with pytest.raises(TypeError, match="Cannot create click type"):
-
-            @click.command()
-            @click_options(Settings, default_loaders("test"))
-            def cli(settings):
-                pass
 
 
 class TestPassSettings:
