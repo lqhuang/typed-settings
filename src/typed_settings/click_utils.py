@@ -1,6 +1,7 @@
 """
 Utilities for generating Click options
 """
+import itertools
 import typing as t
 from collections.abc import (
     Mapping,
@@ -34,12 +35,47 @@ Decorator = t.Callable[[AnyFunc], AnyFunc]
 StrDict = t.Dict[str, t.Any]
 
 
+class DecoratorFactory(t.Protocol):
+    def get_option_decorator(self) -> t.Callable[..., Decorator]:
+        ...
+
+    def get_group_decorator(self, settings_cls: t.Any) -> Decorator:
+        ...
+
+
+class ClickOptionFactory:
+    def get_option_decorator(self) -> t.Callable[..., Decorator]:
+        return click.option
+
+    def get_group_decorator(self, settings_cls: t.Any) -> Decorator:
+        return lambda f: f
+
+
+class OptionGroupFactory:
+    def get_option_decorator(self) -> t.Callable[..., Decorator]:
+        return optgroup.option
+
+    def get_group_decorator(self, settings_cls: t.Any) -> Decorator:
+        name = settings_cls.__doc__.strip().splitlines()[0]
+        return optgroup.group(name)
+
+
+default_decorator_factory: DecoratorFactory
+try:
+    from click_option_group import optgroup
+
+    default_decorator_factory = OptionGroupFactory()
+except ImportError:
+    default_decorator_factory = ClickOptionFactory()
+
+
 def click_options(
     cls: t.Type[T],
     loaders: t.Union[str, t.Sequence[Loader]],
     converter: t.Optional[cattr.Converter] = None,
     type_handler: "t.Optional[TypeHandler]" = None,
     argname: t.Optional[str] = None,
+    decorator_factory: DecoratorFactory = default_decorator_factory,
 ) -> t.Callable[[t.Callable], t.Callable]:
     """
     Generate :mod:`click` options for a CLI which override settins loaded via
@@ -71,6 +107,10 @@ def click_options(
             This allows a function to be decorated with this function multiple
             times.
 
+        option_groups: Whether or not to use option groups for nested settings.
+            The default is to use them if ``click-option-groups`` is installed and
+            otherweise not.
+
     Return:
         A decorator for a click command.
 
@@ -97,6 +137,10 @@ def click_options(
     """
     cls = attr.resolve_types(cls)
     options = _deep_options(cls)
+    grouped_options = [
+        (g_cls, list(g_opts))
+        for g_cls, g_opts in itertools.groupby(options, key=lambda o: o.cls)
+    ]
 
     if isinstance(loaders, str):
         loaders = default_loaders(loaders)
@@ -133,14 +177,22 @@ def click_options(
         """
         The wrapper that actually decorates a function with all options.
         """
-        for oinfo in reversed(options):
-            default = _get_default(
-                oinfo.field, oinfo.path, settings_dict, converter
-            )
-            option = _mk_option(
-                click.option, oinfo.path, oinfo.field, default, type_handler
-            )
-            f = option(f)
+        option_decorator = decorator_factory.get_option_decorator()
+        for g_cls, g_opts in reversed(grouped_options):
+            for oinfo in reversed(g_opts):
+                default = _get_default(
+                    oinfo.field, oinfo.path, settings_dict, converter
+                )
+                option = _mk_option(
+                    option_decorator,
+                    oinfo.path,
+                    oinfo.field,
+                    default,
+                    type_handler,
+                )
+                f = option(f)
+            f = decorator_factory.get_group_decorator(g_cls)(f)
+
         f = pass_settings(f)
         return f
 
