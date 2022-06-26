@@ -5,27 +5,34 @@ from typing import Any, List
 
 from ._core import default_loaders, load, load_settings
 from ._file_utils import find
-from .attrs import evolve, option, secret, settings
+from .attrs import combine, evolve, option, secret, settings
 from .converters import default_converter, register_strlist_hook
 from .loaders import EnvLoader, FileLoader, TomlFormat
 
 
 __all__ = [
+    # Core
+    "default_loaders",
+    "load",
+    "load_settings",
+    # File utils
+    "find",
+    # Loaders
     "EnvLoader",
     "FileLoader",
     "TomlFormat",
-    "click_options",
-    "default_converter",
-    "default_loaders",
+    # Attrs helpers
+    "combine",
     "evolve",
-    "find",
-    "load",
-    "load_settings",
     "option",
-    "pass_settings",
-    "register_strlist_hook",
     "secret",
     "settings",
+    # Cattrs converters/helpers
+    "default_converter",
+    "register_strlist_hook",
+    # Click utils
+    "click_options",
+    "pass_settings",
 ]
 
 
