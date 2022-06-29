@@ -51,4 +51,5 @@ intersphinx_mapping = {
     "attrs": ("https://www.attrs.org/en/stable/", None),
     "cattrs": ("https://cattrs.readthedocs.io/en/latest/", None),
     "click": ("https://click.palletsprojects.com/en/latest/", None),
+    "click-option-group": ("https://click-option-group.readthedocs.io/en/latest/", None),
 }

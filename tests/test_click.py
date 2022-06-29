@@ -1,3 +1,4 @@
+import sys
 from datetime import datetime, timezone
 from enum import Enum
 from pathlib import Path
@@ -16,6 +17,7 @@ from typing import (
     Tuple,
     Type,
     TypeVar,
+    Union,
 )
 
 import attrs
@@ -108,6 +110,26 @@ def test_simple_cli(invoke):
         assert settings == Settings(3)
 
     invoke(cli, "--o=3")
+
+
+def test_unkown_type(invoke):
+    """
+    "click_options()" uses the default loaders if you just pass an app name.
+    """
+
+    @settings
+    class Settings:
+        o: Union[int, str]
+
+    with pytest.raises(
+        TypeError,
+        match=r"Cannot create click type for: typing.Union\[int, str\]",
+    ):
+
+        @click.command()
+        @click_options(Settings, "test")
+        def cli(settings: Settings) -> None:
+            pass
 
 
 class TestDefaultsLoading:
@@ -789,31 +811,42 @@ class TestClickParamTypes:
 
         @settings
         class Settings:
-            a: Dict[str, str] = {"default": "value"}
+            a: Dict[str, str]  # Test "None" value
+            b: Dict[str, str] = {}  # Test empty value
+            c: Dict[str, str] = {"default": "value"}
 
         expected_help = [
-            "  --a KEY=VALUE  [default: default=value]",
+            "  --a KEY=VALUE  [required]",
+            "  --b KEY=VALUE",
+            "  --c KEY=VALUE  [default: default=value]",
         ]
 
         # A dictionary cannot be loaded with the default converter,
         # so we skip this test here.
         env_vars: Dict[str, Any] = {}
         expected_env_var_defaults = [
-            "  --a KEY=VALUE  [default: default=value]",
+            "  --a KEY=VALUE  [required]",
+            "  --b KEY=VALUE",
+            "  --c KEY=VALUE  [default: default=value]",
         ]
 
-        expected_defaults = Settings()
+        default_options = ["--a=k=v"]
+        expected_defaults = Settings({"k": "v"})
 
         cli_options = [
             "--a",
+            "key0=val0",
+            "--c",
             "key1=val1",
-            "--a",
+            "--c",
             "key-2=val-2",
-            "--a",
+            "--c",
             "key 3=oi oi",
         ]
         expected_settings = Settings(
-            {"key1": "val1", "key-2": "val-2", "key 3": "oi oi"}
+            {"key0": "val0"},
+            {},
+            {"key1": "val1", "key-2": "val-2", "key 3": "oi oi"},
         )
 
     class NoTypeParam(ClickParamBase):
@@ -1143,3 +1176,98 @@ class TestClickConfig:
         else:
             result = invoke(cli, flag)
         assert result.exit_code == 0
+
+
+class TestDecoratorFactory:
+    """
+    Tests for the decorator factory (e.g., for option groups).
+    """
+
+    @pytest.fixture
+    def settings_cls(self) -> type:
+        @settings
+        class Nested1:
+            """
+            Docs for Nested1
+            """
+
+            a: int = 0
+
+        @settings
+        class Nested2:
+            # Deliberately has no docstring!
+            a: int = 0
+
+        @settings
+        class Settings:
+            """
+            Main docs
+            """
+
+            a: int = 0
+            n1: Nested1 = Nested1()
+            n2: Nested2 = Nested2()
+
+        return Settings
+
+    def test_click_option_factory(self, settings_cls: type, invoke: Invoke):
+        """
+        The ClickOptionFactory is the default.
+        """
+
+        @click.command()
+        @click_options(settings_cls, "t")
+        def cli1(settings):
+            pass
+
+        @click.command()
+        @click_options(
+            settings_cls,
+            "t",
+            decorator_factory=click_utils.ClickOptionFactory(),
+        )
+        def cli2(settings):
+            pass
+
+        r1 = invoke(cli1, "--help").output.splitlines()[1:]
+        r2 = invoke(cli2, "--help").output.splitlines()[1:]
+        assert r1 == r2
+
+    def test_option_group_factory(self, settings_cls: type, invoke: Invoke):
+        """
+        Option groups can be created via the OptionGroupFactory
+        """
+
+        @click.command()
+        @click_options(
+            settings_cls,
+            "t",
+            decorator_factory=click_utils.OptionGroupFactory(),
+        )
+        def cli(settings):
+            pass
+
+        result = invoke(cli, "--help").output.splitlines()
+        assert result == [
+            "Usage: cli [OPTIONS]",
+            "",
+            "Options:",
+            "  Main docs: ",
+            "    --a INTEGER       [default: 0]",
+            "  Docs for Nested1: ",
+            "    --n1-a INTEGER    [default: 0]",
+            "  Nested2 options: ",
+            "    --n2-a INTEGER    [default: 0]",
+            "  --help              Show this message and exit.",
+        ]
+
+    def test_not_installed(self, monkeypatch: pytest.MonkeyPatch):
+        """
+        The factory checks if click-option-group is installed.
+        """
+        # Remove if already imported
+        monkeypatch.delitem(sys.modules, "click_option_group", raising=False)
+        # Prevent import:
+        monkeypatch.setattr(sys, "path", [])
+        with pytest.raises(ModuleNotFoundError):
+            click_utils.OptionGroupFactory()

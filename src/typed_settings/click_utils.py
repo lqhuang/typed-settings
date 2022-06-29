@@ -26,6 +26,13 @@ from .converters import default_converter, from_dict
 from .loaders import Loader
 
 
+try:
+    from typing import Protocol
+except ImportError:
+    # Python 3.7
+    from typing import _Protocol as Protocol  # type: ignore
+
+
 CTX_KEY = "settings"
 
 
@@ -35,47 +42,13 @@ Decorator = t.Callable[[AnyFunc], AnyFunc]
 StrDict = t.Dict[str, t.Any]
 
 
-class DecoratorFactory(t.Protocol):
-    def get_option_decorator(self) -> t.Callable[..., Decorator]:
-        ...
-
-    def get_group_decorator(self, settings_cls: t.Any) -> Decorator:
-        ...
-
-
-class ClickOptionFactory:
-    def get_option_decorator(self) -> t.Callable[..., Decorator]:
-        return click.option
-
-    def get_group_decorator(self, settings_cls: t.Any) -> Decorator:
-        return lambda f: f
-
-
-class OptionGroupFactory:
-    def get_option_decorator(self) -> t.Callable[..., Decorator]:
-        return optgroup.option
-
-    def get_group_decorator(self, settings_cls: t.Any) -> Decorator:
-        name = settings_cls.__doc__.strip().splitlines()[0]
-        return optgroup.group(name)
-
-
-default_decorator_factory: DecoratorFactory
-try:
-    from click_option_group import optgroup
-
-    default_decorator_factory = OptionGroupFactory()
-except ImportError:
-    default_decorator_factory = ClickOptionFactory()
-
-
 def click_options(
     cls: t.Type[T],
     loaders: t.Union[str, t.Sequence[Loader]],
     converter: t.Optional[cattr.Converter] = None,
     type_handler: "t.Optional[TypeHandler]" = None,
     argname: t.Optional[str] = None,
-    decorator_factory: DecoratorFactory = default_decorator_factory,
+    decorator_factory: "t.Optional[DecoratorFactory]" = None,
 ) -> t.Callable[[t.Callable], t.Callable]:
     """
     Generate :mod:`click` options for a CLI which override settins loaded via
@@ -107,9 +80,12 @@ def click_options(
             This allows a function to be decorated with this function multiple
             times.
 
-        option_groups: Whether or not to use option groups for nested settings.
-            The default is to use them if ``click-option-groups`` is installed and
-            otherweise not.
+        decorator_factory: A class that generates Click decorators for options
+            and settings classes.  This allows you to, e.g., use
+            `option groups`_ via :class:`OptionGroupFactory`.  The default
+            generates normal Click options via :class:`ClickOptionFactory`.
+
+            .. _option groups: https://click-option-group.readthedocs.io
 
     Return:
         A decorator for a click command.
@@ -134,6 +110,8 @@ def click_options(
        name.
     .. versionchanged:: 1.1.0
        Add the *argname* parameter.
+    .. versionchanged:: 1.1.0
+       Add the *decorator_factory* parameter.
     """
     cls = attr.resolve_types(cls)
     options = _deep_options(cls)
@@ -149,6 +127,7 @@ def click_options(
 
     converter = converter or default_converter()
     type_handler = type_handler or TypeHandler()
+    decorator_factory = decorator_factory or ClickOptionFactory()
 
     def pass_settings(f: AnyFunc) -> Decorator:
         """
@@ -268,6 +247,85 @@ def pass_settings(
         return decorator
 
     return decorator(f)
+
+
+class DecoratorFactory(Protocol):
+    """
+    **Protocol:** Methods that a Click decorator factory must implement.
+
+    The decorators returned by the procol methods are used to construct the
+    Click options and possibly option groups.
+
+    .. versionadded:: 1.1.0
+    """
+
+    def get_option_decorator(self) -> t.Callable[..., Decorator]:
+        """
+        Return the decorator that is used for creating Click options.
+
+        It must be compatible with :func:`click.option()`.
+        """
+        ...
+
+    def get_group_decorator(self, settings_cls: type) -> Decorator:
+        """
+        Return a decorator for the current settings class.
+
+        This can, e.g., be used to group option by settings class.
+        """
+        ...
+
+
+class ClickOptionFactory:
+    """
+    Factory for default Click decorators.
+    """
+
+    def get_option_decorator(self) -> t.Callable[..., Decorator]:
+        """
+        Return :func:`click.option()`.
+        """
+        return click.option
+
+    def get_group_decorator(self, settings_cls: type) -> Decorator:
+        """
+        Return a no-op decorator that leaves the decorated function unchanged.
+        """
+        return lambda f: f
+
+
+class OptionGroupFactory:
+    """
+    Factory got generating Click option groups via
+    https://click-option-group.readthedocs.io.
+    """
+
+    def __init__(self) -> None:
+        try:
+            from click_option_group import optgroup
+        except ImportError as e:
+            raise ModuleNotFoundError(
+                "Module 'click_option_group' not installed.  "
+                "Please run 'python -m pip install click-option-group'"
+            ) from e
+        self.optgroup = optgroup
+
+    def get_option_decorator(self) -> t.Callable[..., Decorator]:
+        """
+        Return :func:`click_option_group.optgroup.option()`.
+        """
+        return self.optgroup.option
+
+    def get_group_decorator(self, settings_cls: type) -> Decorator:
+        """
+        Return a :func:`click_option_group.optgroup.group()` instantiated with
+        the first line of *settings_cls*'s docstring.
+        """
+        try:
+            name = settings_cls.__doc__.strip().splitlines()[0]  # type: ignore
+        except (AttributeError, IndexError):
+            name = f"{settings_cls.__name__} options"
+        return self.optgroup.group(name)
 
 
 def handle_datetime(type: type, default: t.Any) -> StrDict:
@@ -533,7 +591,7 @@ def _mk_option(
     # needed for everything to work:
     kwargs["show_default"] = True
     kwargs["expose_value"] = False
-    kwargs["callback"] = make_callback(path, kwargs.get("callback"))
+    kwargs["callback"] = _make_callback(path, kwargs.get("callback"))
 
     # Get "help" from the user_config *now*, because we may need to update it
     # below.  Also replace "None" with "".
@@ -553,7 +611,7 @@ def _mk_option(
     return option(*param_decls, **kwargs)
 
 
-def make_callback(path: str, type_callback: t.Optional[Callback]) -> Callback:
+def _make_callback(path: str, type_callback: t.Optional[Callback]) -> Callback:
     """
     Generate a callback that adds option values to the settings instance in the
     context.  It also calls a type's callback if there should be one.

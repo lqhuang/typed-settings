@@ -35,6 +35,17 @@ Install and update using `pip <https://pip.pypa.io/en/stable/quickstart/>`_:
 
    $ python -m pip install typed-settings
 
+You can install install dependencies for optional features via
+
+.. code-block:: console
+
+   $ python -m pip install typed-settings[<feature>]
+
+Available features:
+
+- ``typed-settings[click]``: Enable support for Click options
+- ``typed-settings[option-groups]``: Enable support for Click and Click option groups
+
 
 Example
 =======

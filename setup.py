@@ -3,8 +3,14 @@ from setuptools import find_packages, setup
 
 DEPS = ["attrs>=21.3", "cattrs>=1.10", "tomli>=2"]
 DEPS_CLICK = ["click>=7,<9"]
-DEPS_TEST = DEPS_CLICK + ["pytest>=6", "pytest-cov", "coverage[toml]>=5.3"]
-DEPS_LINT = DEPS_CLICK + [
+DEPS_OPTION_GROUPS = DEPS_CLICK + ["click-option-group"]
+DEPS_ALL_FEATURES = DEPS_OPTION_GROUPS
+DEPS_TEST = DEPS_ALL_FEATURES + [
+    "pytest>=6",
+    "pytest-cov",
+    "coverage[toml]>=5.3",
+]
+DEPS_LINT = DEPS_ALL_FEATURES + [
     "bandit",
     "flake8",
     "flake8-bandit",
@@ -14,7 +20,7 @@ DEPS_LINT = DEPS_CLICK + [
     "mypy",
     "types-toml",
 ]
-DEPS_DOCS = DEPS_CLICK + ["furo", "sphinx", "sphinx-autodoc-typehints"]
+DEPS_DOCS = DEPS_ALL_FEATURES + ["furo", "sphinx", "sphinx-autodoc-typehints"]
 DEPS_DEV = DEPS_TEST + DEPS_LINT + DEPS_DOCS + ["nox", "safety"]
 
 
@@ -45,6 +51,7 @@ if __name__ == "__main__":
         install_requires=DEPS,
         extras_require={
             "click": DEPS_CLICK,
+            "option-groups": DEPS_OPTION_GROUPS,
             "test": DEPS_TEST,
             "lint": DEPS_LINT,
             "docs": DEPS_DOCS,
