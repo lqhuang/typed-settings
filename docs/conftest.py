@@ -89,7 +89,9 @@ class ExampleItem(pytest.Item):
                 stderr=subprocess.STDOUT,
                 universal_newlines=True,
                 check=True,
-            ).stdout.strip()
+            ).stdout
+            # Normalize whitespace:
+            output = "\n".join(l.rstrip() for l in output.splitlines())
             if output != expected:
                 raise ValueError(cmd, output, expected)
 

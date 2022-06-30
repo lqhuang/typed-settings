@@ -11,6 +11,7 @@ from typing import (
     overload,
 )
 
+import attr
 import attrs
 
 
@@ -366,14 +367,16 @@ def evolve(inst, **changes):
        ``attrs`` version is not updating values recursively.  Instead, it will
        just replace ``attrs`` instances with a dict.
 
-    :param inst: Instance of a class with ``attrs`` attributes.
-    :param changes: Keyword changes in the new copy.
+    Args:
+        inst: Instance of a class with ``attrs`` attributes.
+        changes: Keyword changes in the new copy.
 
-    :return: A copy of inst with *changes* incorporated.
+    Return:
+        A copy of *inst* with *changes* incorporated.
 
-    :raise TypeError: If *attr_name* couldn't be found in the class
-        ``__init__``.
-    :raise attr.exceptions.NotAnAttrsClassError: If *cls* is not an ``attrs``
+    Raise:
+        TypeError: If *attr_name* couldn't be found in the class ``__init__``.
+        attr.exceptions.NotAnAttrsClassError: If *cls* is not an ``attrs``
         class.
 
     ..  versionadded:: 1.0.0
@@ -394,3 +397,94 @@ def evolve(inst, **changes):
             changes[init_name] = evolve(old_value, **changes[init_name])
 
     return cls(**changes)
+
+
+def combine(name: str, base_cls: type, nested: Dict[str, object]) -> type:
+    """
+    Create a new class called *name* based on *base_class* with additional
+    attributes for *nested* classes.
+
+    The same effect can be achieved by manually composing settings classes.
+    A use case for this method is to combine settings classes from dynamically
+    loaded plugins with the base settings of the main program.
+
+    Args:
+        name: The name for the new class.
+        base_cls: The base class from which to copy all attributes.
+        nested: A mapping of attribute names to (settings) class instances
+            for which to generated additional attributes.  The attribute's
+            type is the instance's type and its default value is the instance
+            itself.  Keys in this dict must not overlap with the attributes
+            of *base_cls*.
+
+    Return:
+        The created class *name*.
+
+    Raise:
+        ValueError: If *nested* contains a key for which *base_cls* already
+            defines an attribute.
+
+    Example:
+
+        .. code-block:: python
+
+           >>> import typed_settings as ts
+           >>>
+           >>> @ts.settings
+           ... class Nested1:
+           ...     a: str = ""
+           >>>
+           >>> @ts.settings
+           ... class Nested2:
+           ...     a: str = ""
+           >>>
+           >>> # Static composition
+           >>> @ts.settings
+           ... class Composed1:
+           ...     a: str = ""
+           ...     n1: Nested1 = Nested1()
+           ...     n2: Nested2 = Nested2()
+           ...
+           >>> Composed1()
+           Composed1(a='', n1=Nested1(a=''), n2=Nested2(a=''))
+           >>>
+           >>> # Dynamic composition
+           >>> @ts.settings
+           ... class BaseSettings:
+           ...     a: str = ""
+           >>>
+           >>> Composed2 = ts.combine(
+           ...     "Composed2",
+           ...     BaseSettings,
+           ...     {"n1": Nested1(), "n2": Nested2()},
+           ... )
+           >>> Composed2()
+           Composed2(a='', n1=Nested1(a=''), n2=Nested2(a=''))
+
+
+    .. versionadded:: 1.1.0
+    """
+
+    attribs = {
+        a.name: attr.attrib(  # type: ignore[misc]
+            default=a.default,
+            validator=a.validator,  # type: ignore[arg-type]
+            repr=a.repr,
+            hash=a.hash,
+            init=a.init,
+            metadata=a.metadata,
+            type=a.type,  # type: ignore[arg-type]
+            converter=a.converter,  # type: ignore[arg-type]
+            kw_only=a.kw_only,
+            eq=a.eq,
+            order=a.order,
+            on_setattr=a.on_setattr,  # type: ignore[arg-type]
+        )
+        for a in attr.fields(base_cls)
+    }
+    for aname, default in nested.items():
+        if aname in attribs:
+            raise ValueError(f"Duplicate attribute for nested class: {aname}")
+        attribs[aname] = attr.attrib(default=default, type=default.__class__)
+
+    return attr.make_class(name, attribs)

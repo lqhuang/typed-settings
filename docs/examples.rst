@@ -13,12 +13,14 @@ Black (pyproject.toml)
    :language: console
 
 
-
 .. _example-pytest:
 
 Pytest
 ======
 
+.. literalinclude:: examples/pytest-plugins/pytest.py
+.. literalinclude:: examples/pytest-plugins/test.console
+   :language: console
 
 
 .. _example-python-gitlab:

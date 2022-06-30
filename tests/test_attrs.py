@@ -7,6 +7,7 @@ from typed_settings.attrs import (
     CLICK_KEY,
     METADATA_KEY,
     SECRET,
+    combine,
     evolve,
     option,
     secret,
@@ -278,3 +279,66 @@ class TestEvolve:
 
         result = evolve(obj1a, param1=obj2b)
         assert result.param1 is obj2b
+
+
+class TestCombine:
+    """
+    Tests for "combine()"
+    """
+
+    def test_combine(self):
+        """
+        A base class and nested classes can be combined into a single, composed
+        class.
+        """
+
+        @attrs.define
+        class Nested1:
+            a: str = ""
+
+        @attrs.define
+        class Nested2:
+            a: str = ""
+
+        # Dynamic composition
+        @attrs.define
+        class BaseSettings:
+            a: str = ""
+
+        Composed = combine(
+            "Composed",
+            BaseSettings,
+            {"n1": Nested1(), "n2": Nested2()},
+        )
+        assert Composed.__name__ == "Composed"
+        assert [
+            (f.name, f.type, f.default) for f in attrs.fields(Composed)
+        ] == [
+            ("a", str, ""),
+            ("n1", Nested1, Nested1()),
+            ("n2", Nested2, Nested2()),
+        ]
+
+    def test_duplicate_attrib(self):
+        """
+        Raise an error if a nested class placed with attrib name that is
+        already used by the base class.
+        """
+
+        @attrs.define
+        class Nested1:
+            a: str = ""
+
+        # Dynamic composition
+        @attrs.define
+        class BaseSettings:
+            a: str = ""
+
+        with pytest.raises(
+            ValueError, match="Duplicate attribute for nested class: a"
+        ):
+            combine(
+                "Composed",
+                BaseSettings,
+                {"a": Nested1()},
+            )

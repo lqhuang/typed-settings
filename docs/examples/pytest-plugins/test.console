@@ -1,0 +1,19 @@
+$ python pytest.py --help
+Usage: pytest.py [OPTIONS] [FILE_OR_DIR]...
+
+Options:
+  Main options:
+    -m TEXT                       only run tests which macht the given
+                                  substring expression
+    -x, --exitfirst               Exit instantly on first error or failed test
+    --stepwise, --sw              Exit on test failure and continue from last
+                                  failing test next time
+  Coverage settings:
+    --cov TEXT
+    --cov-report TEXT
+  Emoji settings:
+    --emoji-enable / --no-emoji-enable
+                                  [default: emoji-enable]
+  --help                          Show this message and exit.
+$ python pytest.py --sw --cov=src --emoji-enable
+Main(marker='', exitfirst=False, stepwise=True, cov=Coverage(src='src', report=''), emoji=Emoji(enable=True))
