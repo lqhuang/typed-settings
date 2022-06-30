@@ -762,6 +762,83 @@ Note, that we added the param decl. ``flag`` in addition to ``--on``.
 This is required for Click to map the flag to the correct option.
 We would not need that if we named our flag ``--flag``.
 
+Option Groups
+^^^^^^^^^^^^^
+
+Options for nested settings classes have a common prefix,
+so you can see that they belong together when you look at a command's ``--help`` output.
+You can use `option groups`_ to make the distinction even clearer.
+
+In order for this to work, Typed Settings lets you customize which decorator function is called for generating Click options.
+It also allows you to specify a decorator that is called with each settings class.
+
+This functionality is specified by the :class:`~typed_settings.click_utils.DecoratorFactory` protocol.
+You can pass an implementation of that protocol to :func:`click_option()` to define the desired behavior.
+
+The default is to use :class:`~typed_settings.click_utils.ClickOptionFactory`.
+With an instance of :class:`~typed_settings.click_utils.OptionGroupFactory`, you can generate option groups:
+
+
+.. code-block:: python
+
+    >>> from typed_settings.click_utils import OptionGroupFactory
+    >>>
+    >>>
+    >>> @ts.settings
+    ... class SpamSettings:
+    ...     """
+    ...     Settings for spam
+    ...     """
+    ...     a: str = ""
+    ...     b: str = ""
+    >>>
+    >>> @ts.settings
+    ... class EggsSettings:
+    ...     """
+    ...     Settings for eggs
+    ...     """
+    ...     a: str = ""
+    ...     c: str = ""
+    ...
+    >>> @ts.settings
+    ... class Main:
+    ...     """
+    ...     Main settings
+    ...     """
+    ...     a: int = 0
+    ...     b: int = 0
+    ...     spam: SpamSettings = SpamSettings()
+    ...     eggs: EggsSettings = EggsSettings()
+    >>>
+    >>> @click.command()
+    ... @ts.click_options(Main, "myapp", decorator_factory=OptionGroupFactory())
+    ... def cli(settings: Main):
+    ...     print(settings)
+
+When we now run our program with ``--help``, we can see the option groups.
+The first line of the settings class' docstring is used as group name:
+
+.. code-block:: python
+
+    >>> print(runner.invoke(cli, ["--help"]).output)  # doctest: +NORMALIZE_WHITESPACE
+    Usage: cli [OPTIONS]
+    <BLANKLINE>
+    Options:
+      Main settings:
+        --a INTEGER        [default: 0]
+        --b INTEGER        [default: 0]
+      Settings for spam:
+        --spam-a TEXT
+        --spam-b TEXT
+      Settings for eggs:
+        --eggs-a TEXT
+        --eggs-c TEXT
+      --help               Show this message and exit.
+    <BLANKLINE>
+
+
+.. _option groups: https://click-option-group.readthedocs.io
+
 
 Configuring Loaders and Converters
 ----------------------------------

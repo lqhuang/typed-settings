@@ -127,6 +127,12 @@ They are all also available directly from the :mod:`typed_settings` module.
         >>> Settings(password="1234")
         Settings(password=***)
 
+
+Helpers
+-------
+
+.. autofunction:: combine
+
 .. autofunction:: evolve
 
 
@@ -141,6 +147,9 @@ Converters
 Click Options
 =============
 
+Decorators
+----------
+
 Decorators for using Typed Settings with and as :mod:`click` options.
 
 .. currentmodule:: typed_settings
@@ -152,4 +161,5 @@ Utilities for generating Click options
 --------------------------------------
 
 .. automodule:: typed_settings.click_utils
-   :members: TypeHandler, DEFAULT_TYPES, handle_datetime, handle_enum
+   :members: DecoratorFactory, ClickOptionFactory, OptionGroupFactory,
+      TypeHandler, DEFAULT_TYPES, handle_datetime, handle_enum
