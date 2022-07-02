@@ -21,12 +21,12 @@ class _Auto:
 
     _singleton = None
 
-    def __new__(cls):
+    def __new__(cls) -> "_Auto":
         if _Auto._singleton is None:
             _Auto._singleton = super(_Auto, cls).__new__(cls)
         return _Auto._singleton
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return "AUTO"
 
 

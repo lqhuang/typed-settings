@@ -330,7 +330,7 @@ class PythonFormat:
         """
         module = self._import_module(path)
 
-        def cls2dict(cls) -> SettingsDict:
+        def cls2dict(cls: type) -> SettingsDict:
             d = dict(cls.__dict__)
             result = {}
             for k, v in d.items():

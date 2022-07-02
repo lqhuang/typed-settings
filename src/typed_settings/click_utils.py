@@ -24,6 +24,7 @@ from ._dict_utils import _deep_options, _get_path, _merge_dicts, _set_path
 from .attrs import CLICK_KEY, METADATA_KEY, _SecretRepr
 from .converters import default_converter, from_dict
 from .loaders import Loader
+from .types import OptionInfo, SettingsDict
 
 
 try:
@@ -40,6 +41,7 @@ Callback = t.Callable[[click.Context, click.Option, t.Any], t.Any]
 AnyFunc = t.Callable[..., t.Any]
 Decorator = t.Callable[[AnyFunc], AnyFunc]
 StrDict = t.Dict[str, t.Any]
+TypeHandlerFunc = t.Callable[[type, t.Any], StrDict]
 
 
 def click_options(
@@ -129,13 +131,36 @@ def click_options(
     type_handler = type_handler or TypeHandler()
     decorator_factory = decorator_factory or ClickOptionFactory()
 
+    wrapper = _get_wrapper(
+        cls,
+        settings_dict,
+        options,
+        grouped_options,
+        converter,
+        type_handler,
+        argname,
+        decorator_factory,
+    )
+    return wrapper
+
+
+def _get_wrapper(
+    cls: t.Type[T],
+    settings_dict: SettingsDict,
+    options: t.List[OptionInfo],
+    grouped_options: t.List[t.Tuple[type, t.List[OptionInfo]]],
+    converter: cattr.Converter,
+    type_handler: "TypeHandler",
+    argname: t.Optional[str],
+    decorator_factory: "DecoratorFactory",
+) -> t.Callable[[t.Callable], t.Callable]:
     def pass_settings(f: AnyFunc) -> Decorator:
         """
         Creates a *cls* instances from the settings dict stored in
         :attr:`click.Context.obj` and passes it to the decorated function *f*.
         """
 
-        def new_func(*args, **kwargs):
+        def new_func(*args: t.Any, **kwargs: t.Any) -> t.Any:
             ctx = click.get_current_context()
             if ctx.obj is None:
                 ctx.obj = {}
@@ -152,7 +177,7 @@ def click_options(
 
         return update_wrapper(new_func, f)
 
-    def wrap(f):
+    def wrap(f: AnyFunc) -> AnyFunc:
         """
         The wrapper that actually decorates a function with all options.
         """
@@ -224,9 +249,9 @@ def pass_settings(
     ctx_key = argname or CTX_KEY
 
     def decorator(f: AnyFunc) -> AnyFunc:
-        def new_func(*args, **kwargs):
+        def new_func(*args: t.Any, **kwargs: t.Any) -> t.Any:
             ctx = click.get_current_context()
-            node = ctx
+            node: t.Optional[click.Context] = ctx
             settings = None
             while node is not None:
                 if isinstance(node.obj, dict) and ctx_key in node.obj:
@@ -357,7 +382,7 @@ def handle_enum(type: t.Type[Enum], default: t.Any) -> StrDict:
 
 
 #: Default handlers for click option types.
-DEFAULT_TYPES = {
+DEFAULT_TYPES: t.Dict[type, TypeHandlerFunc] = {
     datetime: handle_datetime,
     Enum: handle_enum,
 }
@@ -420,7 +445,10 @@ class TypeHandler:
         Dicts are not (yet) supported.
     """
 
-    def __init__(self, types=None):
+    def __init__(
+        self,
+        types: t.Optional[t.Dict[type, TypeHandlerFunc]] = None,
+    ) -> None:
         self.types = types or DEFAULT_TYPES
         self.list_types = (
             list,
@@ -464,7 +492,9 @@ class TypeHandler:
 
             raise TypeError(f"Cannot create click type for: {otype}")
 
-    def _handle_basic_types(self, type: t.Optional[type], default: t.Any):
+    def _handle_basic_types(
+        self, type: t.Optional[type], default: t.Any
+    ) -> StrDict:
         if default is attr.NOTHING:
             type_info = {"type": type}
         else:
@@ -503,7 +533,11 @@ class TypeHandler:
     def _handle_dict(
         self, type: type, default: t.Any, args: t.Tuple[t.Any, ...]
     ) -> StrDict:
-        def cb(ctx, param, value):
+        def cb(
+            ctx: click.Context,
+            param: click.Option,
+            value: t.Optional[t.Iterable[str]],
+        ) -> t.Dict[str, str]:
             if not value:
                 return {}
             splitted = [v.partition("=") for v in value]
@@ -524,7 +558,7 @@ class TypeHandler:
 def _get_default(
     field: attr.Attribute,
     path: str,
-    settings: StrDict,
+    settings: SettingsDict,
     converter: cattr.Converter,
 ) -> t.Any:
     """
@@ -617,7 +651,7 @@ def _make_callback(path: str, type_callback: t.Optional[Callback]) -> Callback:
     context.  It also calls a type's callback if there should be one.
     """
 
-    def cb(ctx, param, value):
+    def cb(ctx: click.Context, param: click.Option, value: t.Any) -> t.Any:
         if type_callback is not None:
             value = type_callback(ctx, param, value)
 

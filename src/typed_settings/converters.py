@@ -66,8 +66,8 @@ def register_attrs_hook_factory(converter: Converter) -> None:
     These instances are then returned as-is and without further processing.
     """
 
-    def allow_attrs_instances(typ):
-        def structure_attrs(val, _):
+    def allow_attrs_instances(typ):  # type: ignore[no-untyped-def]
+        def structure_attrs(val, _):  # type: ignore[no-untyped-def]
             if isinstance(val, typ):
                 return val
             return converter.structure_attrs_fromdict(val, typ)
@@ -132,9 +132,9 @@ def register_strlist_hook(
         converter.register_structure_hook_factory(check, hook_factory)
 
 
-def _generate_hook_factory(structure_func, fn):
-    def gen_func(typ):
-        def str2collection(val, _):
+def _generate_hook_factory(structure_func, fn):  # type: ignore[no-untyped-def]
+    def gen_func(typ):  # type: ignore[no-untyped-def]
+        def str2collection(val, _):  # type: ignore[no-untyped-def]
             if isinstance(val, str):
                 val = fn(val)
             return structure_func(val, typ)

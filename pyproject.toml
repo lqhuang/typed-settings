@@ -24,5 +24,14 @@ line_length = 79
 lines_after_imports = 2
 src_paths = ["src", "tests"]
 
+[tool.mypy]
+ignore_missing_imports = true
+plugins = "mypy_plugin.py"
+show_error_codes = true
+
+[[tool.mypy.overrides]]
+module = "typed_settings.*"
+disallow_untyped_defs = true
+
 [tool.pytest.ini_options]
 addopts = "--doctest-glob='*.md' --doctest-glob='*.rst' --doctest-modules --ignore=docs/_build"

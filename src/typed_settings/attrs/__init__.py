@@ -53,7 +53,7 @@ CLICK_KEY = "click"
 
 
 class _SecretRepr:
-    def __call__(self, _v) -> str:
+    def __call__(self, _v: Any) -> str:
         return "***"
 
     def __repr__(self) -> str:
@@ -155,7 +155,7 @@ def option(
     ...
 
 
-def option(
+def option(  # type: ignore[no-untyped-def]
     *,
     default=attrs.NOTHING,
     validator=None,
@@ -279,7 +279,7 @@ def secret(
     ...
 
 
-def secret(
+def secret(  # type: ignore[no-untyped-def]
     *,
     default=attrs.NOTHING,
     validator=None,
@@ -354,7 +354,7 @@ def _get_metadata(
     return metadata
 
 
-def evolve(inst, **changes):
+def evolve(inst: "_T", **changes: Any) -> "_T":
     """
     Create a new instance, based on *inst* with *changes* applied.
 

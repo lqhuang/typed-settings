@@ -4,7 +4,7 @@ Addtional attrs hooks
 from datetime import datetime
 from enum import Enum
 from functools import partial
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, List
 
 import attrs
 import cattrs
@@ -14,10 +14,10 @@ from ..converters import default_converter
 
 if TYPE_CHECKING:
     try:
-        from attr import _FieldTransformer  # type: ignore
+        from attr import Attribute, _FieldTransformer  # type: ignore
     except ImportError:
         # Just in case the symbols are moved from "attr" to "attrs"
-        from attrs import _FieldTransformer  # type: ignore
+        from attrs import Attribute, _FieldTransformer  # type: ignore
 
 
 __all__ = [
@@ -74,7 +74,9 @@ def make_auto_converter(converter: cattrs.Converter) -> "_FieldTransformer":
 
     """
 
-    def auto_convert(cls, attribs):
+    def auto_convert(
+        cls: type, attribs: List["Attribute[Any]"]
+    ) -> List["Attribute[Any]"]:
         """
         A field transformer that tries to convert all attribs of a class to
         their annotated type.
@@ -104,7 +106,7 @@ It uses the :func:`.default_converter()`.
 """
 
 
-def auto_serialize(_inst, _attrib, value):
+def auto_serialize(_inst: Any, _attrib: "Attribute[Any]", value: Any) -> Any:
     """
     Inverse hook to :func:`auto_convert` for use with :func:`attrs.asdict()`.
 
