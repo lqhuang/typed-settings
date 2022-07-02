@@ -21,6 +21,7 @@ from typed_settings.converters import (
     to_enum,
     to_path,
 )
+from typed_settings.exceptions import InvalidValueError
 
 
 class LeEnum(Enum):
@@ -221,6 +222,21 @@ def test_supported_types(typ, value, expected):
     assert inst.opt == expected
 
 
+@pytest.mark.parametrize("val", [{"foo": 3}, {"opt", "x"}])
+def test_unsupported_values(val):
+    """
+    An InvalidValueError is raised if a settings dict cannot be converted
+    to the settings class.
+    """
+
+    @settings
+    class Settings:
+        opt: int
+
+    with pytest.raises(InvalidValueError):
+        from_dict(val, Settings, default_converter())
+
+
 STRLIST_TEST_DATA = [
     (List[int], [1, 2, 3]),
     (Sequence[int], [1, 2, 3]),
@@ -259,3 +275,12 @@ def test_strlist_hook(input, kw, typ, expected):
     register_strlist_hook(converter, **kw)
     inst = from_dict({"a": input}, Settings, converter)
     assert inst == Settings(expected)
+
+
+def test_strlist_hook_either_arg():
+    """
+    Either "sep" OR "fn" can be passed to "register_str_list_hook()"
+    """
+    converter = default_converter()
+    with pytest.raises(ValueError, match="You may either pass"):
+        register_strlist_hook(converter, sep=":", fn=lambda v: [v])
