@@ -9,7 +9,7 @@ variables:
   PIP_CACHE_DIR: "$CI_PROJECT_DIR/.cache/pip"
 
 default:
-  image: python:3.8
+  image: python:3
   before_script:
     - pip install nox
   cache:
@@ -43,7 +43,7 @@ test:
   stage: test
   parallel:
     matrix:
-      - PY: ["3.7", "3.8", "3.9", "3.10", "3.11.0b1"]
+      - PY: ["3.7", "3.8", "3.9", "3.10", "3.11-rc"]
         PKG_FORMAT: ["src", "whl"]
   image: python:$PY
   script:
