@@ -6,15 +6,40 @@ Changelog
 1.x.y (yyyy-mm-dd)
 ==================
 
+This release mainly focuses on improving the integration with Click_,
+especially if you want to use command groups or write extensible applications like Pytest_.
+
 - 💥 Settings values that are dictionaries are no longer merged when they are provided by different settings sources.
   They override each other now as other scalar and container types do.
-- ✨ Support Python 3.11
-- ✨ Add support for ``dict`` options to ``click_options()`` (e.g., ``--env PWD_FILE=/pwd --env DEBUG=1``) (See `#5`_).
-- ✨ Allow overrideing param decls and parameters for Click options (See `#15`_).
-- ♻️ Replace ``toml`` with ``tomli`` since it is actively maintained.
 
+- ✨ Support Python 3.11
+
+- ✨ Improve Click option generation:
+
+  - Add support for ``dict`` options to ``click_options()`` (e.g., ``--env PWD_FILE=/pwd --env DEBUG=1``) (See `#5`_).
+  - Allow overrideing param decls and parameters for Click options (See `#15`_).
+  - You can configure the argument name of your settings in the CLI function.
+    This allows you to use different settings in nested click commands (See `#15`_).
+  - Add support for Click option groups (See `!6`_).
+  - Add ``combine()`` function to merge multiple settings (e.g., from plug-ins) with a base class.
+
+- 📝 Impove and extend the docs' examples section.
+
+- 📝 Extend the guides and split them into multiple pages.
+
+- ♻️ Replace ``toml`` with ``tomli`` for Python <= 3.10.
+
+- ♻️ Use ``tomllib`` on Python 3.11 and do not depend on ``tomli``.
+
+- ♻️ Require cattrs >= 22.1.0.
+
+- ✅ Increase test coverage to 100% (and enforce it).
+
+.. _!6: https://gitlab.com/sscherfke/typed-settings/-/merge_requests/6
 .. _#5: https://gitlab.com/sscherfke/typed-settings/-/issues/5
 .. _#15: https://gitlab.com/sscherfke/typed-settings/-/issues/15
+.. _click: https://click.palletsprojects.com
+.. _pytest: https://pytest.org
 
 
 1.0.1 (2022-04-04)
