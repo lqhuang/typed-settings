@@ -487,4 +487,6 @@ def combine(name: str, base_cls: type, nested: Dict[str, object]) -> type:
             raise ValueError(f"Duplicate attribute for nested class: {aname}")
         attribs[aname] = attr.attrib(default=default, type=default.__class__)
 
-    return attr.make_class(name, attribs)
+    cls = attr.make_class(name, attribs)
+    cls.__doc__ = base_cls.__doc__
+    return cls

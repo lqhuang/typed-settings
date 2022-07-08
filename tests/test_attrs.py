@@ -342,3 +342,22 @@ class TestCombine:
                 BaseSettings,
                 {"a": Nested1()},
             )
+
+    def test_docstring(self):
+        """
+        The created class copies the costring from the base class
+        """
+
+        @attrs.define
+        class Nested1:
+            a: str = ""
+
+        # Dynamic composition
+        @attrs.define
+        class BaseSettings:
+            """Le doc string"""
+
+            a: str = ""
+
+        Composed = combine("Composed", BaseSettings, {"n1": Nested1()})
+        assert Composed.__doc__ == "Le doc string"
