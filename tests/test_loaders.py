@@ -4,7 +4,6 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 import pytest
-import tomli
 from pytest import MonkeyPatch
 
 from typed_settings._dict_utils import _deep_options
@@ -23,6 +22,7 @@ from typed_settings.loaders import (
     PythonFormat,
     TomlFormat,
     clean_settings,
+    tomllib,
 )
 from typed_settings.types import OptionList
 
@@ -331,7 +331,7 @@ class TestTomlFormat:
         def toml_load(path: Path):
             raise PermissionError()
 
-        monkeypatch.setattr(tomli, "load", toml_load)
+        monkeypatch.setattr(tomllib, "load", toml_load)
 
         config_file = tmp_path.joinpath("settings.toml")
         config_file.write_text(
