@@ -271,5 +271,5 @@ If you have read this far, you should now have a basic understanding of how Type
 
 Depending on what kind of learner you are, you can now either
 
-- continue reading the :doc:`guides` that explain all of Typed Settings' features in-depth or
+- continue reading the :doc:`guides/index` that explain all of Typed Settings' features in-depth or
 - take a lookt at the :doc:`examples` that demonstrate how Typed Settings can be used or how to achieve different kinds of goals.

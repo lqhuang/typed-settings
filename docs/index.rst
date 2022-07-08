@@ -91,7 +91,7 @@ Documentation
    why.rst
    getting-started.rst
    examples.rst
-   guides.rst
+   guides/index.rst
    apiref.rst
    changelog.rst
 
