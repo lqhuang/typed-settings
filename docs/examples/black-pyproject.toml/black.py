@@ -1,3 +1,4 @@
+import sys
 from enum import Enum
 
 import click
@@ -6,6 +7,10 @@ import typed_settings as ts
 
 
 class PyVersion(Enum):
+    """
+    Python versions that we support.
+    """
+
     py37 = "3.7"
     py38 = "3.8"
     py39 = "3.9"
@@ -13,10 +18,15 @@ class PyVersion(Enum):
 
 @ts.settings
 class Settings:
+    """
+    Black settings.
+
+    We limit ourselves to three options.
+    """
+
     line_length: int = 88
     skip_string_normalization: bool = False
-    # target_version: Optional[PyVersion] = None  # Does not yet work
-    target_version: PyVersion = PyVersion.py37
+    target_version: PyVersion = PyVersion.py39  # Better: Auto-detect
 
 
 @click.command()
@@ -29,7 +39,7 @@ class Settings:
         env_prefix=None,
     ),
 )
-def cli(settings):
+def cli(settings: Settings) -> None:
     print(settings)
 
 

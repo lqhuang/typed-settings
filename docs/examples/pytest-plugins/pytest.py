@@ -1,6 +1,5 @@
 from typing import Tuple
 
-import attr
 import click
 import typed_settings as ts
 from typed_settings.click_utils import OptionGroupFactory
@@ -51,10 +50,11 @@ class Base:
     )
 
 
-Main = ts.combine(
-    "Main",
+Settings = ts.combine(
+    "Settings",
     Base,
     {
+        # Imagine, this dict comes from a "load_plugins()" function :)
         "cov": Coverage(),
         "emoji": Emoji(),
     },
@@ -63,8 +63,8 @@ Main = ts.combine(
 
 @click.command()
 @click.argument("file_or_dir", nargs=-1)
-@ts.click_options(Main, "pytest", decorator_factory=OptionGroupFactory())
-def cli(settings: Main, file_or_dir: Tuple[str, ...]):
+@ts.click_options(Settings, "pytest", decorator_factory=OptionGroupFactory())
+def cli(settings: Settings, file_or_dir: Tuple[str, ...]):
     print(settings)
 
 

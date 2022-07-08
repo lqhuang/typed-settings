@@ -6,7 +6,7 @@ Options:
   --skip-string-normalization / --no-skip-string-normalization
                                   [default: no-skip-string-normalization]
   --target-version [py37|py38|py39]
-                                  [default: py37]
+                                  [default: py39]
   --help                          Show this message and exit.
 $ python black.py --skip-string-normalization
-Settings(line_length=79, skip_string_normalization=True, target_version=<PyVersion.py37: '3.7'>)
+Settings(line_length=79, skip_string_normalization=True, target_version=<PyVersion.py39: '3.9'>)

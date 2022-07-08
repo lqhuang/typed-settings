@@ -7,3 +7,8 @@ default = "gitlab-com"
 url = "https://gitlab.com"
 private_token = "a93af93ff0adf9j3"
 api_version = 4
+
+[kde]
+url = "https://invent.kde.org"
+private_token = "0ad73a9e0341cee0"
+api_version = 4

@@ -90,8 +90,8 @@ Documentation
 
    why.rst
    getting-started.rst
-   guides.rst
    examples.rst
+   guides.rst
    apiref.rst
    changelog.rst
 

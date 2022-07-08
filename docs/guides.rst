@@ -2,6 +2,10 @@
 Guides
 ======
 
+This page explains all of Typed Settings' features in detail.
+You should read this page when you know the basics and when you now what exactly you want to build.
+If you need inspiration on how to use the different features, you should stop by the :doc:`../examples` page.
+
 .. currentmodule:: typed_settings
 
 ``load()`` vs. ``load_settings()``

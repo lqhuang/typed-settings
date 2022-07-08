@@ -18,6 +18,10 @@ class Settings:
     index_servers: List[str]
 
 
+settings = ts.load(Settings, "distutils", ["pypirc.toml"])
+repos = {
+    name: ts.load(RepoServer, name, ["pypirc.toml"])
+    for name in settings.index_servers
+}
 REPO_NAME = sys.argv[1]
-repo_server = ts.load(RepoServer, REPO_NAME, ["pypirc.toml"])
-print(repo_server)
+print(repos[REPO_NAME])

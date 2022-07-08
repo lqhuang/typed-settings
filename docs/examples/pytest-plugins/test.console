@@ -2,7 +2,7 @@ $ python pytest.py --help
 Usage: pytest.py [OPTIONS] [FILE_OR_DIR]...
 
 Options:
-  Main options:
+  Main settings:
     -m TEXT                       only run tests which macht the given
                                   substring expression
     -x, --exitfirst               Exit instantly on first error or failed test
@@ -16,4 +16,4 @@ Options:
                                   [default: emoji-enable]
   --help                          Show this message and exit.
 $ python pytest.py --sw --cov=src --emoji-enable
-Main(marker='', exitfirst=False, stepwise=True, cov=Coverage(src='src', report=''), emoji=Emoji(enable=True))
+Settings(marker='', exitfirst=False, stepwise=True, cov=Coverage(src='src', report=''), emoji=Emoji(enable=True))
