@@ -3,7 +3,7 @@ import logging
 from pathlib import Path
 from typing import Any, Dict, List
 
-import cattr
+import cattrs
 import pytest
 
 from typed_settings import _core
@@ -288,7 +288,7 @@ class TestLoadSettings:
 
         monkeypatch.setenv("TEST_OPT", "42")
 
-        converter = cattr.GenConverter()
+        converter = cattrs.GenConverter()
         converter.register_structure_hook(Test, lambda v, t: Test(int(v)))
 
         result = _core.load_settings(Settings, [EnvLoader("TEST_")], converter)

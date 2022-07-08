@@ -4,7 +4,7 @@ Internal data structures.
 from enum import Enum
 from typing import Any, List, MutableMapping, TypeVar
 
-import attr
+import attrs
 
 
 T = TypeVar("T")
@@ -36,7 +36,7 @@ Sentinel to indicate the lack of a value when ``None`` is ambiguous.
 """
 
 
-@attr.frozen
+@attrs.frozen
 class OptionInfo:
     """
     Information about (possibly nested) option attributes.
@@ -49,9 +49,9 @@ class OptionInfo:
     Dotted path to the option name relative to the root settings class.
     """
 
-    field: attr.Attribute
+    field: attrs.Attribute
     """
-    :class:`attr.Attribute` instance for the option.
+    :class:`attrs.Attribute` instance for the option.
     """
 
     cls: type

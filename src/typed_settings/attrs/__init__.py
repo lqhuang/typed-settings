@@ -11,7 +11,7 @@ from typing import (
     overload,
 )
 
-import attr
+import attr  # The old namespaces is needed in "combine()"
 import attrs
 
 
@@ -172,7 +172,7 @@ def option(  # type: ignore[no-untyped-def]
     help=None,
     click=None,
 ):
-    """An alias to :func:`attr.field()`"""
+    """An alias to :func:`attrs.field()`"""
     metadata = _get_metadata(metadata, help, click)
 
     return attrs.field(
@@ -376,7 +376,7 @@ def evolve(inst: "_T", **changes: Any) -> "_T":
 
     Raise:
         TypeError: If *attr_name* couldn't be found in the class ``__init__``.
-        attr.exceptions.NotAnAttrsClassError: If *cls* is not an ``attrs``
+        attrs.exceptions.NotAnAttrsClassError: If *cls* is not an ``attrs``
         class.
 
     ..  versionadded:: 1.0.0

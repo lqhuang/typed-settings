@@ -12,7 +12,7 @@ except ImportError:
     # Python 3.7
     from typing import _Protocol as Protocol  # type: ignore
 
-import attr
+import attrs
 import tomli
 
 from ._dict_utils import _merge_dicts, _set_path
@@ -119,7 +119,7 @@ class InstanceLoader:
                 f'"self.instance" is not an instance of {settings_cls}: '
                 f"{type(self.instance)}"
             )
-        return attr.asdict(self.instance)
+        return attrs.asdict(self.instance)
 
 
 class EnvLoader:

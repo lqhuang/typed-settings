@@ -14,8 +14,8 @@ from datetime import datetime
 from enum import Enum
 from functools import update_wrapper
 
-import attr
-import cattr
+import attrs
+import cattrs
 import click
 
 from ._compat import get_args, get_origin
@@ -47,7 +47,7 @@ TypeHandlerFunc = t.Callable[[type, t.Any], StrDict]
 def click_options(
     cls: t.Type[T],
     loaders: t.Union[str, t.Sequence[Loader]],
-    converter: t.Optional[cattr.Converter] = None,
+    converter: t.Optional[cattrs.Converter] = None,
     type_handler: "t.Optional[TypeHandler]" = None,
     argname: t.Optional[str] = None,
     decorator_factory: "t.Optional[DecoratorFactory]" = None,
@@ -67,7 +67,7 @@ def click_options(
             :func:`~typed_settings.default_loaders()` to get the defalt
             loaders.
 
-        converter: An optional :class:`cattr.Converter` used for converting
+        converter: An optional :class:`cattrs.Converter` used for converting
             option values to the required type.
 
             By default, :data:`typed_settings.attrs.converter` is used.
@@ -115,7 +115,7 @@ def click_options(
     .. versionchanged:: 1.1.0
        Add the *decorator_factory* parameter.
     """
-    cls = attr.resolve_types(cls)
+    cls = attrs.resolve_types(cls)
     options = _deep_options(cls)
     grouped_options = [
         (g_cls, list(g_opts))
@@ -149,7 +149,7 @@ def _get_wrapper(
     settings_dict: SettingsDict,
     options: t.List[OptionInfo],
     grouped_options: t.List[t.Tuple[type, t.List[OptionInfo]]],
-    converter: cattr.Converter,
+    converter: cattrs.Converter,
     type_handler: "TypeHandler",
     argname: t.Optional[str],
     decorator_factory: "DecoratorFactory",
@@ -363,7 +363,7 @@ def handle_datetime(type: type, default: t.Any) -> StrDict:
             ["%Y-%m-%d", "%Y-%m-%dT%H:%M:%S", "%Y-%m-%dT%H:%M:%S%z"]
         ),
     }
-    if default is not attr.NOTHING:
+    if default is not attrs.NOTHING:
         type_info["default"] = default.isoformat()
     return type_info
 
@@ -374,7 +374,7 @@ def handle_enum(type: t.Type[Enum], default: t.Any) -> StrDict:
     default.
     """
     type_info = {"type": click.Choice(list(type.__members__))}
-    if default is not attr.NOTHING:
+    if default is not attrs.NOTHING:
         # Convert Enum instance to string
         type_info["default"] = default.name
 
@@ -412,7 +412,7 @@ class TypeHandler:
                 type_info = {
                     "type": ClickType(...)
                 }
-                if default is not attr.NOTHING:
+                if default is not attrs.NOTHING:
                     type_info["default"] = default.stringify()
                 return type_info
 
@@ -495,7 +495,7 @@ class TypeHandler:
     def _handle_basic_types(
         self, type: t.Optional[type], default: t.Any
     ) -> StrDict:
-        if default is attr.NOTHING:
+        if default is attrs.NOTHING:
             type_info = {"type": type}
         else:
             type_info = {"type": type, "default": default}
@@ -505,8 +505,8 @@ class TypeHandler:
         self, type: type, default: t.Any, args: t.Tuple[t.Any, ...]
     ) -> StrDict:
         # lists and list-like tuple
-        type_info = self.get_type(args[0], attr.NOTHING)
-        if default is not attr.NOTHING:
+        type_info = self.get_type(args[0], attrs.NOTHING)
+        if default is not attrs.NOTHING:
             default = [self.get_type(args[0], d)["default"] for d in default]
             type_info["default"] = default
         type_info["multiple"] = True
@@ -519,8 +519,8 @@ class TypeHandler:
             return self._handle_list(type, default, args)
         else:
             # "struct" variant of tuple
-            if default is attr.NOTHING:
-                default = [attr.NOTHING] * len(args)
+            if default is attrs.NOTHING:
+                default = [attrs.NOTHING] * len(args)
             dicts = [self.get_type(a, d) for a, d in zip(args, default)]
             type_info = {
                 "type": tuple(d["type"] for d in dicts),
@@ -549,17 +549,17 @@ class TypeHandler:
             "multiple": True,
             "callback": cb,
         }
-        if default is not attr.NOTHING:
+        if default is not attrs.NOTHING:
             default = [f"{k}={v}" for k, v in default.items()]
             type_info["default"] = default
         return type_info
 
 
 def _get_default(
-    field: attr.Attribute,
+    field: attrs.Attribute,
     path: str,
     settings: SettingsDict,
-    converter: cattr.Converter,
+    converter: cattrs.Converter,
 ) -> t.Any:
     """
     Returns the proper default value for an attribute.
@@ -580,7 +580,7 @@ def _get_default(
         if field.type:
             default = converter.structure(default, field.type)
 
-    if isinstance(default, attr.Factory):  # type: ignore
+    if isinstance(default, attrs.Factory):  # type: ignore
         if default.takes_self:
             # There is no instance yet.  Passing ``None`` migh be more correct
             # than passing a fake instance, because it raises an error instead
@@ -595,7 +595,7 @@ def _get_default(
 def _mk_option(
     option: t.Callable[..., Decorator],
     path: str,
-    field: attr.Attribute,
+    field: attrs.Attribute,
     default: t.Any,
     type_handler: TypeHandler,
 ) -> Decorator:
@@ -633,10 +633,10 @@ def _mk_option(
 
     if isinstance(field.repr, _SecretRepr):
         kwargs["show_default"] = False
-        if default is not attr.NOTHING:  # pragma: no cover
+        if default is not attrs.NOTHING:  # pragma: no cover
             kwargs["help"] = f"{kwargs['help']}  [default: {field.repr('')}]"
 
-    if default is attr.NOTHING:
+    if default is attrs.NOTHING:
         kwargs["required"] = True
 
     # The user has the last word, though.

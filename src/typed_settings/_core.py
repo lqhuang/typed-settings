@@ -5,8 +5,8 @@ import logging
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Sequence, Type, Union
 
-import attr
-import cattr
+import attrs
+import cattrs
 
 from ._dict_utils import _deep_options, _merge_dicts, _set_path
 from .attrs import METADATA_KEY
@@ -190,7 +190,7 @@ def load(
 def load_settings(
     cls: Type[T],
     loaders: Sequence[Loader],
-    converter: cattr.Converter = None,
+    converter: cattrs.Converter = None,
 ) -> T:
     """
     Load settings defined by the class *cls* and return an instance of it.
@@ -198,7 +198,7 @@ def load_settings(
     Args:
         cls: Attrs class with options (and default values).
         loaders: A list of settings :class:`Loader`'s.
-        converter: An optional :class:`cattr.Converter` used for converting
+        converter: An optional :class:`cattrs.Converter` used for converting
             option values to the required type.
 
             By default, :data:`typed_settings.attrs.converter` is used.
@@ -236,9 +236,9 @@ def _load_settings(
     # Populate dict with default settings.  This avoids problems with nested
     # settings classes for which no settings are loaded.
     for opt in options:
-        if opt.field.default is attr.NOTHING:
+        if opt.field.default is attrs.NOTHING:
             continue
-        if isinstance(opt.field.default, attr.Factory):  # type: ignore
+        if isinstance(opt.field.default, attrs.Factory):  # type: ignore
             continue
         _set_path(settings, opt.path, opt.field.default)
 

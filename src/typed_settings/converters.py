@@ -8,33 +8,18 @@ from typing import Any, Callable, Optional, Type, Union
 
 from attrs import has
 from cattrs import Converter, GenConverter
-
-
-try:
-    from cattr._compat import (  # type: ignore
-        is_frozenset,
-        is_mutable_set,
-        is_sequence,
-        is_tuple,
-    )
-except ImportError:
-    from cattrs._compat import (  # type: ignore
-        is_frozenset,
-        is_mutable_set,
-        is_sequence,
-        is_tuple,
-    )
+from cattrs._compat import is_frozenset, is_mutable_set, is_sequence, is_tuple
 
 from .exceptions import InvalidValueError
 from .types import ET, SettingsDict, T
 
 
-def default_converter() -> GenConverter:
+def default_converter() -> Converter:
     """
     Get an instanceof the default converter used by Typed Settings.
 
     Return:
-        A :class:`cattrs.GenConverter` configured with addional hooks for
+        A :class:`cattrs.Converter` configured with addional hooks for
         loading the follwing types:
 
         - :class:`bool` using :func:`.to_bool()`

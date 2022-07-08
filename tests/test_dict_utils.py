@@ -1,14 +1,14 @@
-import attr
+import attrs
 import pytest
 
 from typed_settings import _dict_utils as du
 from typed_settings.types import OptionInfo
 
 
-def mkattr(name: str, typ: type) -> attr.Attribute:
+def mkattr(name: str, typ: type) -> attrs.Attribute:
     """Creates an Attribute with *name* and *type*."""
-    return attr.Attribute(  # type: ignore
-        name, attr.NOTHING, None, True, None, None, True, False, type=typ
+    return attrs.Attribute(  # type: ignore
+        name, attrs.NOTHING, None, True, None, None, True, False, type=typ
     )
 
 
@@ -16,16 +16,16 @@ class TestDeepOptions:
     """Tests for _deep_options()."""
 
     def test_deep_options(self):
-        @attr.dataclass
+        @attrs.define
         class GrandChild:
             x: int
 
-        @attr.dataclass
+        @attrs.define
         class Child:
             x: float
             y: GrandChild
 
-        @attr.dataclass
+        @attrs.define
         class Parent:
             x: str
             y: Child
@@ -42,7 +42,7 @@ class TestDeepOptions:
     def test_unresolved_types(self):
         """Raise a NameError when types cannot be resolved."""
 
-        @attr.dataclass
+        @attrs.define
         class C:
             name: str
             x: "X"  # type: ignore  # noqa: F821
@@ -56,7 +56,7 @@ class TestDeepOptions:
         raised when we try to resolve all types.  This is good enough.
         """
 
-        @attr.dataclass
+        @attrs.define
         class Node:
             name: str
             child: "Node"
@@ -70,12 +70,12 @@ class TestDeepOptions:
         nonetheless.  This is not Dark!
         """
 
-        @attr.dataclass
+        @attrs.define
         class Child:
             name: str
             parent: "Parent"
 
-        @attr.dataclass
+        @attrs.define
         class Parent:
             name: str
             child: "Child"
