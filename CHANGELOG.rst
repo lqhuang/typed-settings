@@ -3,7 +3,7 @@ Changelog
 =========
 
 
-1.x.y (yyyy-mm-dd)
+1.1.0 (2022-07-09)
 ==================
 
 This release mainly focuses on improving the integration with Click_,
@@ -17,7 +17,7 @@ especially if you want to use command groups or write extensible applications li
 - ✨ Improve Click option generation:
 
   - Add support for ``dict`` options to ``click_options()`` (e.g., ``--env PWD_FILE=/pwd --env DEBUG=1``) (See `#5`_).
-  - Allow overrideing param decls and parameters for Click options (See `#15`_).
+  - Allow overriding param decls and parameters for Click options (See `#15`_).
   - You can configure the argument name of your settings in the CLI function.
     This allows you to use different settings in nested click commands (See `#15`_).
   - Add support for Click option groups (See `!6`_).
