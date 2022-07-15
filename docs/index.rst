@@ -65,7 +65,7 @@ This is a very simple example that demonstrates how you can load settings from e
    settings = ts.load(
        cls=Settings,
        appname="example",
-       config_files=ts.find("settings.toml"),  # Paths can also be set via env var
+       config_files=(ts.find("settings.toml"),),  # Paths can also be set via env var
    )
    print(settings)
 
