@@ -1259,11 +1259,13 @@ class TestDecoratorFactory:
             """
 
             a: int = 0
+            an1: int = option(init=False)
 
         @settings
         class Nested2:
             # Deliberately has no docstring!
             a: int = 0
+            an2: int = option(init=False)
 
         @settings
         class Settings:
@@ -1272,6 +1274,7 @@ class TestDecoratorFactory:
             """
 
             a: int = 0
+            a1: int = option(init=False)
             n1: Nested1 = Nested1()
             n2: Nested2 = Nested2()
 
