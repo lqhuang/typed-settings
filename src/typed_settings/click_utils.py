@@ -119,7 +119,9 @@ def click_options(
        Add the *decorator_factory* parameter.
     """
     cls = attrs.resolve_types(cls)
-    options = _deep_options(cls)
+    options = [
+        opt for opt in _deep_options(cls) if opt.field.init is not False
+    ]
     grouped_options = [
         (g_cls, list(g_opts))
         for g_cls, g_opts in itertools.groupby(options, key=lambda o: o.cls)
