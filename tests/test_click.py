@@ -1259,13 +1259,11 @@ class TestDecoratorFactory:
             """
 
             a: int = 0
-            an1: int = option(init=False)
 
         @settings
         class Nested2:
             # Deliberately has no docstring!
             a: int = 0
-            an2: int = option(init=False)
 
         @settings
         class Settings:
@@ -1274,7 +1272,36 @@ class TestDecoratorFactory:
             """
 
             a: int = 0
-            a1: int = option(init=False)
+            n1: Nested1 = Nested1()
+            n2: Nested2 = Nested2()
+
+        return Settings
+
+    @pytest.fixture
+    def settings_init_false_csl(self) -> type:
+        @settings
+        class Nested1:
+            """
+            Docs for Nested1
+            """
+
+            a: int = 0
+            nb1: int = option(init=False)
+
+        @settings
+        class Nested2:
+            # Deliberately has no docstring!
+            a: int = 0
+            nb2: int = option(init=False)
+
+        @settings
+        class Settings:
+            """
+            Main docs
+            """
+
+            a: int = 0
+            na: int = option(init=False)
             n1: Nested1 = Nested1()
             n2: Nested2 = Nested2()
 
@@ -1341,3 +1368,33 @@ class TestDecoratorFactory:
         monkeypatch.setattr(sys, "path", [])
         with pytest.raises(ModuleNotFoundError):
             click_utils.OptionGroupFactory()
+
+    def test_no_init_no_option(
+        self, settings_init_false_csl: type, invoke: Invoke
+    ):
+        """
+        No option is generated for an attribute if "init=False".
+        """
+
+        @click.command()
+        @click_options(
+            settings_init_false_csl,
+            "t",
+            decorator_factory=click_utils.OptionGroupFactory(),
+        )
+        def cli(settings):
+            pass
+
+        result = invoke(cli, "--help").output.splitlines()
+        assert result == [
+            "Usage: cli [OPTIONS]",
+            "",
+            "Options:",
+            "  Main docs: ",
+            "    --a INTEGER       [default: 0]",
+            "  Docs for Nested1: ",
+            "    --n1-a INTEGER    [default: 0]",
+            "  Nested2 options: ",
+            "    --n2-a INTEGER    [default: 0]",
+            "  --help              Show this message and exit.",
+        ]
