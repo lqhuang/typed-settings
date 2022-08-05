@@ -697,7 +697,7 @@ def _mk_option(
 def _make_callback(path: str, type_callback: t.Optional[Callback]) -> Callback:
     """
     Generate a callback that adds option values to the settings instance in the
-    context.  It also calls a type's callback if there should be one.
+    context. It also calls a type's callback if there should be one.
     """
 
     def cb(ctx: click.Context, param: click.Option, value: t.Any) -> t.Any:
