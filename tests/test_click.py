@@ -1,4 +1,5 @@
 import sys
+import unittest.mock as mock
 from datetime import datetime, timezone
 from enum import Enum
 from pathlib import Path
@@ -1243,6 +1244,33 @@ class TestClickConfig:
         else:
             result = invoke(cli, flag)
         assert result.exit_code == 0
+
+    @pytest.mark.parametrize("flag, value", [(None, False), ("--arg", True)])
+    def test_user_callback_is_executed(self, invoke: Invoke, flag, value):
+        """
+        User callback function is executed as well as
+        the option is added to settings.
+        """
+
+        cb = mock.MagicMock(return_value=value)
+
+        click_config = {"callback": cb}
+
+        @settings
+        class Settings:
+            arg: bool = option(default=False, click=click_config)
+
+        @click.command()
+        @click_options(Settings, "test")
+        def cli(settings):
+            assert settings.arg is value
+
+        if flag is None:
+            result = invoke(cli)
+        else:
+            result = invoke(cli, flag)
+        assert result.exit_code == 0
+        cb.assert_called_once()
 
 
 class TestDecoratorFactory:
