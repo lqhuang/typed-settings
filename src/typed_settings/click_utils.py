@@ -1,7 +1,6 @@
 """
 Utilities for generating Click options
 """
-import itertools
 import typing as t
 from collections.abc import (
     Mapping,
@@ -20,8 +19,14 @@ import click
 from attr._make import _Nothing as NothingType
 
 from ._compat import get_args, get_origin
-from ._core import _load_settings, default_loaders
-from ._dict_utils import _deep_options, _get_path, _merge_dicts, _set_path
+from ._core import T, _load_settings, default_loaders
+from ._dict_utils import (
+    _deep_options,
+    _get_path,
+    _group_options,
+    _merge_dicts,
+    _set_path,
+)
 from .attrs import CLICK_KEY, METADATA_KEY, _SecretRepr
 from .converters import BaseConverter, default_converter, from_dict
 from .loaders import Loader
@@ -119,6 +124,7 @@ def click_options(
        Add the *decorator_factory* parameter.
     """
     cls = attrs.resolve_types(cls)
+<<<<<<< HEAD
     options = [
         opt for opt in _deep_options(cls) if opt.field.init is not False
     ]
@@ -126,6 +132,10 @@ def click_options(
         (g_cls, list(g_opts))
         for g_cls, g_opts in itertools.groupby(options, key=lambda o: o.cls)
     ]
+=======
+    options = _deep_options(cls)
+    grouped_options = _group_options(cls, options)
+>>>>>>> 6ac2723 (Extract and fix group_options function)
 
     if isinstance(loaders, str):
         loaders = default_loaders(loaders)

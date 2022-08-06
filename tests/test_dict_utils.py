@@ -84,6 +84,139 @@ class TestDeepOptions:
             du._deep_options(Parent)
 
 
+class TestGroupOptions:
+    def test_only_scalars(self):
+        """
+        If there are only scalar settings, create s single group.
+        """
+
+        @attrs.define
+        class Parent:
+            a: str
+            b: int
+
+        opts = du._deep_options(Parent)
+        grouped = du._group_options(Parent, opts)
+        assert grouped == [
+            (Parent, opts[0:2]),
+        ]
+
+    def test_nested(self):
+        """
+        Create one group for the parent class' attributs and one for each
+        nested class.
+        """
+
+        @attrs.define
+        class Child:
+            x: float
+            y: int
+
+        @attrs.define
+        class Child2:
+            x: str
+            y: str
+
+        @attrs.define
+        class Parent:
+            a: int
+            b: float
+            c: Child
+            d: Child2
+
+        opts = du._deep_options(Parent)
+        grouped = du._group_options(Parent, opts)
+        assert grouped == [
+            (Parent, opts[0:2]),
+            (Child, opts[2:4]),
+            (Child2, opts[4:6]),
+        ]
+
+    def test_mixed(self):
+        """
+        If the parent class' attributes are not orderd, multiple groups for
+        the main class are genererated.
+        """
+
+        @attrs.define
+        class Child:
+            x: float
+
+        @attrs.define
+        class Child2:
+            x: str
+
+        @attrs.define
+        class Parent:
+            a: int
+            c: Child
+            b: float
+            d: Child2
+
+        opts = du._deep_options(Parent)
+        grouped = du._group_options(Parent, opts)
+        assert grouped == [
+            (Parent, opts[0:1]),
+            (Child, opts[1:2]),
+            (Parent, opts[2:3]),
+            (Child2, opts[3:4]),
+        ]
+
+    def test_duplicate_nested_cls(self):
+        """
+        If the same nested class appears multiple times (in direct succession),
+        create *different* groups for each attribute.
+        """
+
+        @attrs.define
+        class Child:
+            x: float
+            y: int
+
+        @attrs.define
+        class Parent:
+            b: Child
+            c: Child
+
+        opts = du._deep_options(Parent)
+        grouped = du._group_options(Parent, opts)
+        assert grouped == [
+            (Child, opts[0:2]),
+            (Child, opts[2:4]),
+        ]
+
+    def test_deep_nesting(self):
+        """
+        Grouping options only takes top level nested classes into account.
+        """
+
+        @attrs.define
+        class GrandChild:
+            x: int
+
+        @attrs.define
+        class Child:
+            x: float
+            y: GrandChild
+
+        @attrs.define
+        class Child2:
+            x: GrandChild
+            y: GrandChild
+
+        @attrs.define
+        class Parent:
+            c: Child
+            d: Child2
+
+        opts = du._deep_options(Parent)
+        grouped = du._group_options(Parent, opts)
+        assert grouped == [
+            (Child, opts[0:2]),
+            (Child2, opts[2:4]),
+        ]
+
+
 @pytest.mark.parametrize(
     "path, expected",
     [
