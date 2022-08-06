@@ -12,7 +12,7 @@ DEPS_TEST = DEPS_ALL_FEATURES + [
 ]
 DEPS_LINT = DEPS_ALL_FEATURES + [
     "bandit",
-    "flake8",
+    "flake8>=4.0.0,<5.0.0",
     "flake8-bandit",
     "flake8-black",
     "flake8-bugbear",
