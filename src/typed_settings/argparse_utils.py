@@ -15,7 +15,7 @@ from ._core import _load_settings, default_loaders
 from ._dict_utils import _deep_options, _set_path
 from .converters import default_converter, from_dict
 from .loaders import Loader
-from .types import OptionInfo, SettingsDict, T
+from .types import OptionInfo, OptionList, SettingsDict, T
 
 
 WrapppedFunc = t.Callable[[T], t.Any]
@@ -31,7 +31,7 @@ CliFn = t.Callable[[T], t.Optional[int]]
 DecoratedCliFn = t.Callable[[], t.Optional[int]]
 
 
-def mkcli(
+def cli(
     cls: t.Type[T],
     loaders: t.Union[str, t.Sequence[Loader]],
     converter: t.Optional[cattrs.Converter] = None,
@@ -40,6 +40,11 @@ def mkcli(
     # decorator_factory: "t.Optional[DecoratorFactory]" = None,
     **parser_kwargs: t.Any,
 ) -> t.Callable[[CliFn], DecoratedCliFn]:
+    """
+    Generate an argument parser for the options of the given settings class
+    and pass an instance of it to the decorated function.
+    """
+    # Only clean up the users' arguments and let _get_decorator() to the work.
     cls = attrs.resolve_types(cls)
     if isinstance(loaders, str):
         loaders = default_loaders(loaders)
@@ -54,25 +59,30 @@ def _get_decorator(
     converter: cattrs.Converter,
     **parser_kwargs: t.Any,
 ) -> t.Callable[[CliFn], DecoratedCliFn]:
-    options = _deep_options(cls)
-    grouped_options = [
-        (g_cls, list(g_opts))
-        for g_cls, g_opts in itertools.groupby(options, key=lambda o: o.cls)
-    ]
+    """
+    Build the CLI decorator based on the user's config.
+    """
 
     def decorator(func: CliFn) -> DecoratedCliFn:
-        if "description" not in parser_kwargs:
-            try:
-                docstr = func.__doc__.strip().splitlines()[0]  # type: ignore
-                parser_kwargs["description"] = docstr
-            except (AttributeError, IndexError):
-                pass
+        """
+        Create an argument parsing wrapper for *func*.
 
-        settings_dict = _load_settings(cls, options, loaders)
-        parser = _mk_parser(grouped_options, settings_dict, **parser_kwargs)
+        The wrapper
+
+        - loads settings as default option values
+        - creates an argument parser with an option for each setting
+        - parses the command line options
+        - passes the updated settings instance to the decorated function
+        """
 
         @wraps(func)
         def cli_wrapper() -> t.Optional[int]:
+            options = _deep_options(cls)
+            settings_dict = _load_settings(cls, options, loaders)
+            if "description" not in parser_kwargs and func.__doc__:
+                parser_kwargs["description"] = func.__doc__.strip()
+            parser = _mk_parser(options, settings_dict, **parser_kwargs)
+
             args = parser.parse_args()
             settings = _ns2settings(args, cls, options, converter)
             return func(settings)
@@ -83,10 +93,17 @@ def _get_decorator(
 
 
 def _mk_parser(
-    grouped_options: t.List[t.Tuple[type, t.List[OptionInfo]]],
+    options: OptionList,
     settings_dict: SettingsDict,
     **parser_kwargs: t.Any,
 ) -> argparse.ArgumentParser:
+    """
+    Create an :class:`argparse.ArgumentParser` for all options.
+    """
+    grouped_options = [
+        (g_cls, list(g_opts))
+        for g_cls, g_opts in itertools.groupby(options, key=lambda o: o.cls)
+    ]
     parser = argparse.ArgumentParser(**parser_kwargs)
     parser.add_argument(
         "--x",
@@ -112,6 +129,10 @@ def _ns2settings(
     options: t.List[OptionInfo],
     converter: cattrs.Converter,
 ) -> T:
+    """
+    Convert the :class:`argparse.Namespace` to an instance of the settings
+    class and return it.
+    """
     settings_dict: SettingsDict = {}
     for option_info in options:
         value = getattr(namespace, option_info.path.replace(".", "_"))
@@ -120,13 +141,15 @@ def _ns2settings(
     return settings
 
 
-@mkcli(Settings, "myapp")
-def cli(settings: Settings) -> None:
+@cli(Settings, "myapp")
+def main(settings: Settings) -> None:
     """
     My cli
+
+    Spam eggs
     """
     print(settings)
 
 
 if __name__ == "__main__":
-    cli()
+    main()
