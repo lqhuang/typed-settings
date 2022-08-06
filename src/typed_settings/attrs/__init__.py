@@ -8,6 +8,7 @@ from typing import (
     Dict,
     Mapping,
     Optional,
+    Type,
     overload,
 )
 
@@ -19,6 +20,7 @@ if TYPE_CHECKING:
     try:
         from attr import (  # type: ignore
             _T,
+            AttrsInstance,
             _ConverterType,
             _OnSetAttrArgType,
             _ReprArgType,
@@ -28,11 +30,15 @@ if TYPE_CHECKING:
         # Just in case the symbols are moved from "attr" to "attrs"
         from attrs import (  # type: ignore
             _T,
+            AttrsInstance,
             _ConverterType,
             _OnSetAttrArgType,
             _ReprArgType,
             _ValidatorArgType,
         )
+
+    AttrsClass = Type[AttrsInstance]
+
 
 from .hooks import auto_convert
 
@@ -46,7 +52,6 @@ __all__ = [
     "secret",
     "settings",
 ]
-
 
 METADATA_KEY = "typed_settings"
 CLICK_KEY = "click"
@@ -354,7 +359,7 @@ def _get_metadata(
     return metadata
 
 
-def evolve(inst: "_T", **changes: Any) -> "_T":
+def evolve(inst: "AttrsInstance", **changes: Any) -> "AttrsInstance":
     """
     Create a new instance, based on *inst* with *changes* applied.
 
@@ -399,7 +404,9 @@ def evolve(inst: "_T", **changes: Any) -> "_T":
     return cls(**changes)
 
 
-def combine(name: str, base_cls: type, nested: Dict[str, object]) -> type:
+def combine(
+    name: str, base_cls: "AttrsClass", nested: Dict[str, "AttrsInstance"]
+) -> "AttrsClass":
     """
     Create a new class called *name* based on *base_class* with additional
     attributes for *nested* classes.

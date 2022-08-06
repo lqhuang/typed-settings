@@ -12,7 +12,7 @@ from ._dict_utils import _deep_options, _merge_dicts, _set_path
 from .attrs import METADATA_KEY
 from .converters import default_converter, from_dict
 from .loaders import EnvLoader, FileLoader, Loader, TomlFormat
-from .types import AUTO, OptionList, T, _Auto
+from .types import AUTO, ST, OptionList, SettingsClass, _Auto
 
 
 LOGGER = logging.getLogger(METADATA_KEY)
@@ -98,14 +98,14 @@ def default_loaders(
 
 
 def load(
-    cls: Type[T],
+    cls: Type[ST],
     appname: str,
     config_files: Iterable[Union[str, Path]] = (),
     *,
     config_file_section: Union[str, _Auto] = AUTO,
     config_files_var: Union[None, str, _Auto] = AUTO,
     env_prefix: Union[None, str, _Auto] = AUTO,
-) -> T:
+) -> ST:
     """
     Load settings for *appname* and return an instance of *cls*
 
@@ -188,10 +188,10 @@ def load(
 
 
 def load_settings(
-    cls: Type[T],
+    cls: Type[ST],
     loaders: Sequence[Loader],
     converter: cattrs.Converter = None,
-) -> T:
+) -> ST:
     """
     Load settings defined by the class *cls* and return an instance of it.
 
@@ -221,7 +221,7 @@ def load_settings(
 
 
 def _load_settings(
-    cls: type,
+    cls: SettingsClass,
     options: OptionList,
     loaders: Sequence[Loader],
 ) -> Dict[str, Any]:

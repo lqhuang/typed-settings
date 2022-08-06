@@ -19,12 +19,12 @@ import cattrs
 import click
 
 from ._compat import get_args, get_origin
-from ._core import T, _load_settings, default_loaders
+from ._core import _load_settings, default_loaders
 from ._dict_utils import _deep_options, _get_path, _merge_dicts, _set_path
 from .attrs import CLICK_KEY, METADATA_KEY, _SecretRepr
 from .converters import default_converter, from_dict
 from .loaders import Loader
-from .types import OptionInfo, SettingsDict
+from .types import ST, OptionInfo, SettingsClass, SettingsDict
 
 
 try:
@@ -45,7 +45,7 @@ TypeHandlerFunc = t.Callable[[type, t.Any], StrDict]
 
 
 def click_options(
-    cls: t.Type[T],
+    cls: t.Type[ST],
     loaders: t.Union[str, t.Sequence[Loader]],
     converter: t.Optional[cattrs.Converter] = None,
     type_handler: "t.Optional[TypeHandler]" = None,
@@ -145,7 +145,7 @@ def click_options(
 
 
 def _get_wrapper(
-    cls: t.Type[T],
+    cls: t.Type[ST],
     settings_dict: SettingsDict,
     options: t.List[OptionInfo],
     grouped_options: t.List[t.Tuple[type, t.List[OptionInfo]]],
@@ -312,7 +312,7 @@ class ClickOptionFactory:
         """
         return click.option
 
-    def get_group_decorator(self, settings_cls: type) -> Decorator:
+    def get_group_decorator(self, settings_cls: SettingsClass) -> Decorator:
         """
         Return a no-op decorator that leaves the decorated function unchanged.
         """
@@ -341,7 +341,7 @@ class OptionGroupFactory:
         """
         return self.optgroup.option
 
-    def get_group_decorator(self, settings_cls: type) -> Decorator:
+    def get_group_decorator(self, settings_cls: SettingsClass) -> Decorator:
         """
         Return a :func:`click_option_group.optgroup.group()` instantiated with
         the first line of *settings_cls*'s docstring.

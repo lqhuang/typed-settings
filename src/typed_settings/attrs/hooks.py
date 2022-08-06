@@ -10,6 +10,7 @@ import attrs
 import cattrs
 
 from ..converters import default_converter
+from ..types import SettingsClass
 
 
 if TYPE_CHECKING:
@@ -75,7 +76,7 @@ def make_auto_converter(converter: cattrs.Converter) -> "_FieldTransformer":
     """
 
     def auto_convert(
-        cls: type, attribs: List["Attribute[Any]"]
+        cls: SettingsClass, attribs: List["Attribute[Any]"]
     ) -> List["Attribute[Any]"]:
         """
         A field transformer that tries to convert all attribs of a class to

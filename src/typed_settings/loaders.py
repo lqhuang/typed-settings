@@ -27,7 +27,7 @@ from .exceptions import (
     InvalidOptionsError,
     UnknownFormatError,
 )
-from .types import OptionList, SettingsDict
+from .types import OptionList, SettingsClass, SettingsDict
 
 
 LOGGER = logging.getLogger("typed_settings")
@@ -45,7 +45,7 @@ class Loader(Protocol):
     """
 
     def __call__(
-        self, settings_cls: type, options: OptionList
+        self, settings_cls: SettingsClass, options: OptionList
     ) -> SettingsDict:
         """
         Load settings for the given options.
@@ -73,7 +73,7 @@ class FileFormat(Protocol):
     """
 
     def __call__(
-        self, path: Path, settings_cls: type, options: OptionList
+        self, path: Path, settings_cls: SettingsClass, options: OptionList
     ) -> SettingsDict:
         """
         Load settings from a given file and return them as a dict.
@@ -107,7 +107,7 @@ class InstanceLoader:
         self.instance = instance
 
     def __call__(
-        self, settings_cls: type, options: OptionList
+        self, settings_cls: SettingsClass, options: OptionList
     ) -> SettingsDict:
         """
         Load settings for the given options.
@@ -139,7 +139,7 @@ class EnvLoader:
         self.prefix = prefix
 
     def __call__(
-        self, settings_cls: type, options: OptionList
+        self, settings_cls: SettingsClass, options: OptionList
     ) -> SettingsDict:
         """
         Load settings for the given options.
@@ -203,7 +203,7 @@ class FileLoader:
         self.formats = formats
 
     def __call__(
-        self, settings_cls: type, options: OptionList
+        self, settings_cls: SettingsClass, options: OptionList
     ) -> SettingsDict:
         """
         Load settings for the given options.
@@ -232,7 +232,7 @@ class FileLoader:
     def _load_file(
         self,
         path: Path,
-        settings_cls: type,
+        settings_cls: SettingsClass,
         options: OptionList,
     ) -> SettingsDict:
         """
@@ -316,7 +316,7 @@ class PythonFormat:
         return text.lower()
 
     def __call__(
-        self, path: Path, settings_cls: type, options: OptionList
+        self, path: Path, settings_cls: SettingsClass, options: OptionList
     ) -> SettingsDict:
         """
         Load settings from a Python file and return them as a dict.
@@ -387,7 +387,7 @@ class TomlFormat:
         self.section = section
 
     def __call__(
-        self, path: Path, settings_cls: type, options: OptionList
+        self, path: Path, settings_cls: SettingsClass, options: OptionList
     ) -> SettingsDict:
         """
         Load settings from a TOML file and return them as a dict.

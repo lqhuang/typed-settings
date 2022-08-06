@@ -2,10 +2,11 @@ import sys
 
 
 if sys.version_info[:2] >= (3, 8):
-    from typing import get_args, get_origin
+    from typing import Protocol, get_args, get_origin
 else:
     import collections.abc
     from typing import Generic, _GenericAlias
+    from typing import _Protocol as Protocol
 
     def get_origin(tp):
         # Backported from py38
@@ -28,4 +29,4 @@ else:
         return ()
 
 
-__all__ = ["get_args", "get_origin"]
+__all__ = ["Protocol", "get_args", "get_origin"]

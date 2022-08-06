@@ -2,10 +2,10 @@ from typing import Any
 
 from attr import fields, has, resolve_types
 
-from .types import OptionInfo, OptionList, SettingsDict
+from .types import OptionInfo, OptionList, SettingsClass, SettingsDict
 
 
-def _deep_options(cls: type) -> OptionList:
+def _deep_options(cls: SettingsClass) -> OptionList:
     """
     Recursively iterates *cls* and nested attrs classes and returns a flat
     list of *(path, Attribute, type)* tuples.

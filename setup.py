@@ -1,7 +1,7 @@
 from setuptools import find_packages, setup
 
 
-DEPS = ["attrs>=21.3", "cattrs>=22.1", "tomli>=2; python_version<'3.11'"]
+DEPS = ["attrs>=22.1", "cattrs>=22.1", "tomli>=2; python_version<'3.11'"]
 DEPS_CLICK = ["click>=7,<9"]
 DEPS_OPTION_GROUPS = DEPS_CLICK + ["click-option-group"]
 DEPS_ALL_FEATURES = DEPS_OPTION_GROUPS

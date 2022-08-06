@@ -2,13 +2,24 @@
 Internal data structures.
 """
 from enum import Enum
-from typing import Any, List, MutableMapping, TypeVar
+from typing import Any, ClassVar, List, MutableMapping, Type, TypeVar
 
 import attrs
+
+from ._compat import Protocol
+
+
+# A protocol to be able to statically accept an attrs class.
+# Copied from attrs b/c they only have this in their *.pyi file.
+class AttrsInstance(Protocol):
+    __attrs_attrs__: ClassVar[Any]
 
 
 T = TypeVar("T")
 ET = TypeVar("ET", bound=Enum)
+ST = TypeVar("ST", bound=AttrsInstance)  # SettingsInstance
+SettingsClass = Type[AttrsInstance]
+SettingsInstance = AttrsInstance
 SettingsDict = MutableMapping[str, Any]
 
 
