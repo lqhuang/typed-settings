@@ -93,7 +93,9 @@ Documentation
    examples.rst
    guides/index.rst
    apiref.rst
+   development.rst
    changelog.rst
+   license.rst
 
 
 
