@@ -551,7 +551,7 @@ class TypeHandler:
         if isinstance(default, tuple):
             if not len(default) == len(args):
                 raise TypeError(
-                    f"Default value must be of len {len(args)}: len(default)"
+                    f"Default value must be of len {len(args)}: {len(default)}"
                 )
             use_default = True
         else:

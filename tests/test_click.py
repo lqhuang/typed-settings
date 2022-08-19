@@ -506,7 +506,7 @@ class TestClickParamTypes:
             super().__init_subclass__(**kwargs)
             cls._classes.append(cls)
 
-    class ClickBoolParam(ClickParamBase):
+    class TestClickBoolParam(ClickParamBase):
         """
         Test boolean flags.
         """
@@ -542,7 +542,7 @@ class TestClickParamTypes:
         cli_options = ["--no-a", "--no-b", "--c"]
         expected_settings = Settings(a=False, b=False, c=True, d=None, e=None)
 
-    class IntFloatStrParam(ClickParamBase):
+    class TestIntFloatStrParam(ClickParamBase):
         """
         Test int, float and str cli_options.
         """
@@ -584,7 +584,7 @@ class TestClickParamTypes:
         cli_options = ["--a=eggs", "--b=pwd", "--c=3", "--d=3.1"]
         expected_settings = Settings(a="eggs", b="pwd", c=3, d=3.1, e=None)
 
-    class DateTimeParam(ClickParamBase):
+    class TestDateTimeParam(ClickParamBase):
         """
         Test datetime cli_options.
         """
@@ -634,7 +634,7 @@ class TestClickParamTypes:
             datetime(2020, 5, 4, 13, 37, tzinfo=timezone.utc),
         )
 
-    class EnumParam(ClickParamBase):
+    class TestEnumParam(ClickParamBase):
         """
         Test enum cli_options
         """
@@ -664,7 +664,7 @@ class TestClickParamTypes:
         cli_options = ["--a=spam", "--c=eggs"]
         expected_settings = Settings(LeEnum.spam, None, LeEnum.eggs)
 
-    class PathParam(ClickParamBase):
+    class TestPathParam(ClickParamBase):
         """
         Test Path cli_options
         """
@@ -690,7 +690,7 @@ class TestClickParamTypes:
         cli_options = ["--a=/spam"]
         expected_settings = Settings(Path("/spam"))
 
-    class NestedParam(ClickParamBase):
+    class TestNestedParam(ClickParamBase):
         """
         Test cli_options for nested settings
         """
@@ -720,7 +720,7 @@ class TestClickParamTypes:
         cli_options = ["--n-a=eggs", "--n-b=3"]
         expected_settings = Settings(Settings.Nested("eggs", 3))
 
-    class ListParam(ClickParamBase):
+    class TestListParam(ClickParamBase):
         """
         Lists (and friends) use "multiple=True".
         """
@@ -794,7 +794,7 @@ class TestClickParamTypes:
             frozenset({6}),
         )
 
-    class TupleParam(ClickParamBase):
+    class TestTupleParam(ClickParamBase):
         """
         Tuples are handled either like the list variant with multiple=True or
         like the struct variant with nargs=x.
@@ -824,7 +824,26 @@ class TestClickParamTypes:
         cli_options = ["--a=1", "--a=2", "--b", "1", "2.3", "spam"]
         expected_settings = Settings((1, 2), (1, 2.3, "spam"))
 
-    class NestedTupleParam(ClickParamBase):
+        def test_wrong_default_length(self):
+            """
+            Default values for tuples must have the exact shape defined in by
+            their type.
+
+            Too long tuples are automatically truncated (by attrs or click),
+            but too short default values are an error.
+            """
+
+            @settings
+            class Settings:
+                a: Tuple[int, int, int] = (0, 1)
+
+            run = make_cli(Settings)
+            with pytest.raises(
+                TypeError, match="Default value must be of len 3: 2"
+            ):
+                run("--help")
+
+    class TestNestedTupleParam(ClickParamBase):
         """
         Lists of tuples use "multiple=True" and "nargs=x".
         """
@@ -849,7 +868,7 @@ class TestClickParamTypes:
         cli_options = ["--a", "1", "2", "--a", "3", "4"]
         expected_settings = Settings([(1, 2), (3, 4)])
 
-    class DictParam(ClickParamBase):
+    class TestDictParam(ClickParamBase):
         """
         Dict params use "="-spearated key-value pairs and "multiple=True".
         """
@@ -897,7 +916,7 @@ class TestClickParamTypes:
             {"key1": "val1", "key-2": "val-2", "key 3": "oi oi"},
         )
 
-    class NoTypeParam(ClickParamBase):
+    class TestNoTypeParam(ClickParamBase):
         """
         Test option without type annotation.
         """

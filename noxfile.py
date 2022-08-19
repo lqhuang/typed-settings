@@ -48,8 +48,9 @@ def test(session, pkg_format):
 def coverage_report(session):
     session.install(".[test]")
     session.run("coverage", "combine")
-    session.run("coverage", "xml")
-    session.run("coverage", "html")
+    # Only let the "report" command fail under 100%
+    session.run("coverage", "xml", "--fail-under=0")
+    session.run("coverage", "html", "--fail-under=0")
     session.run("coverage", "report")
 
 
