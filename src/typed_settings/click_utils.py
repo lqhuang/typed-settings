@@ -17,6 +17,7 @@ from functools import update_wrapper
 import attrs
 import cattrs
 import click
+from attr._make import _Nothing as NothingType
 
 from ._compat import get_args, get_origin
 from ._core import _load_settings, default_loaders
@@ -24,7 +25,7 @@ from ._dict_utils import _deep_options, _get_path, _merge_dicts, _set_path
 from .attrs import CLICK_KEY, METADATA_KEY, _SecretRepr
 from .converters import default_converter, from_dict
 from .loaders import Loader
-from .types import ST, OptionInfo, SettingsClass, SettingsDict
+from .types import ST, OptionInfo, SettingsClass, SettingsDict, T
 
 
 try:
@@ -37,11 +38,13 @@ except ImportError:
 CTX_KEY = "settings"
 
 
+NoneType = type(None)
+DefaultType = t.Union[None, NothingType, T]
 Callback = t.Callable[[click.Context, click.Option, t.Any], t.Any]
 AnyFunc = t.Callable[..., t.Any]
 Decorator = t.Callable[[AnyFunc], AnyFunc]
 StrDict = t.Dict[str, t.Any]
-TypeHandlerFunc = t.Callable[[type, t.Any], StrDict]
+TypeHandlerFunc = t.Callable[[type, t.Any, bool], StrDict]
 
 
 def click_options(
@@ -353,30 +356,36 @@ class OptionGroupFactory:
         return self.optgroup.group(name)
 
 
-def handle_datetime(type: type, default: t.Any) -> StrDict:
+def handle_datetime(type: type, default: t.Any, is_optional: bool) -> StrDict:
     """
     Use :class:`click.DateTime` as option type and convert the default value
     to an ISO string.
     """
-    type_info = {
+    type_info: StrDict = {
         "type": click.DateTime(
             ["%Y-%m-%d", "%Y-%m-%dT%H:%M:%S", "%Y-%m-%dT%H:%M:%S%z"]
         ),
     }
-    if default is not attrs.NOTHING:
+    if default:
         type_info["default"] = default.isoformat()
+    elif is_optional:
+        type_info["default"] = None
     return type_info
 
 
-def handle_enum(type: t.Type[Enum], default: t.Any) -> StrDict:
+def handle_enum(
+    type: t.Type[Enum], default: t.Any, is_optional: bool
+) -> StrDict:
     """
     Use :class:`EnumChoice` as option type and use the enum value's name as
     default.
     """
-    type_info = {"type": click.Choice(list(type.__members__))}
-    if default is not attrs.NOTHING:
+    type_info: StrDict = {"type": click.Choice(list(type.__members__))}
+    if default:
         # Convert Enum instance to string
         type_info["default"] = default.name
+    elif is_optional:
+        type_info["default"] = None
 
     return type_info
 
@@ -471,75 +480,111 @@ class TypeHandler:
         """
         origin = get_origin(otype)
         args = get_args(otype)
+        otype, default, origin, args, is_optional = _check_if_optional(
+            otype, default, origin, args
+        )
 
         if otype is None:
-            return self._handle_basic_types(otype, default)
+            return self._handle_basic_types(otype, default, is_optional)
 
         elif origin is None:
             for target_type, get_type_info in self.types.items():
                 if issubclass(otype, target_type):
-                    return get_type_info(otype, default)
+                    return get_type_info(otype, default, is_optional)
 
-            return self._handle_basic_types(otype, default)
+            return self._handle_basic_types(otype, default, is_optional)
 
         else:
             if origin in self.list_types:
-                return self._handle_list(otype, default, args)
+                return self._handle_list(otype, default, args, is_optional)
             elif origin in self.tuple_types:
-                return self._handle_tuple(otype, default, args)
+                return self._handle_tuple(otype, default, args, is_optional)
             elif origin in self.mapping_types:
-                return self._handle_dict(otype, default, args)
+                return self._handle_dict(otype, default, args, is_optional)
 
             raise TypeError(f"Cannot create click type for: {otype}")
 
     def _handle_basic_types(
-        self, type: t.Optional[type], default: t.Any
+        self,
+        type: t.Optional[type],
+        default: t.Any,
+        is_optional: bool,
     ) -> StrDict:
-        if default is attrs.NOTHING:
-            type_info = {"type": type}
-        else:
-            type_info = {"type": type, "default": default}
+        type_info: StrDict = {"type": type}
+        if default is not attrs.NOTHING:
+            type_info["default"] = default
+        if type and issubclass(type, bool):
+            type_info["is_flag"] = True
+
         return type_info
 
     def _handle_list(
-        self, type: type, default: t.Any, args: t.Tuple[t.Any, ...]
+        self,
+        type: type,
+        default: t.Any,
+        args: t.Tuple[t.Any, ...],
+        is_optional: bool,
     ) -> StrDict:
         # lists and list-like tuple
         type_info = self.get_type(args[0], attrs.NOTHING)
-        if default is not attrs.NOTHING:
+        if isinstance(default, t.Collection):
             default = [self.get_type(args[0], d)["default"] for d in default]
             type_info["default"] = default
+        elif is_optional:
+            type_info["default"] = None
         type_info["multiple"] = True
         return type_info
 
     def _handle_tuple(
-        self, type: type, default: t.Any, args: t.Tuple[t.Any, ...]
+        self,
+        type: type,
+        default: t.Any,
+        args: t.Tuple[t.Any, ...],
+        is_optional: bool,
     ) -> StrDict:
         if len(args) == 2 and args[1] == ...:
-            return self._handle_list(type, default, args)
+            # "Immutable list" variant of tuple
+            return self._handle_list(type, default, args, is_optional)
+
+        # "struct" variant of tuple
+        use_default = False
+        if isinstance(default, tuple):
+            if not len(default) == len(args):
+                raise TypeError(
+                    f"Default value must be of len {len(args)}: len(default)"
+                )
+            use_default = True
         else:
-            # "struct" variant of tuple
-            if default is attrs.NOTHING:
-                default = [attrs.NOTHING] * len(args)
-            dicts = [self.get_type(a, d) for a, d in zip(args, default)]
-            type_info = {
-                "type": tuple(d["type"] for d in dicts),
-                "nargs": len(dicts),
-            }
-            if all("default" in d for d in dicts):
-                type_info["default"] = tuple(d["default"] for d in dicts)
-            return type_info
+            default = [default] * len(args)
+
+        dicts = [self.get_type(a, d) for a, d in zip(args, default)]
+
+        if not use_default and is_optional:
+            default = None
+            use_default = True
+
+        type_info = {
+            "type": tuple(d["type"] for d in dicts),
+            "nargs": len(dicts),
+        }
+        if use_default:
+            type_info["default"] = default
+        return type_info
 
     def _handle_dict(
-        self, type: type, default: t.Any, args: t.Tuple[t.Any, ...]
+        self,
+        type: type,
+        default: t.Any,
+        args: t.Tuple[t.Any, ...],
+        is_optional: bool,
     ) -> StrDict:
         def cb(
             ctx: click.Context,
             param: click.Option,
             value: t.Optional[t.Iterable[str]],
-        ) -> t.Dict[str, str]:
+        ) -> t.Optional[t.Dict[str, str]]:
             if not value:
-                return {}
+                return None if is_optional else {}
             splitted = [v.partition("=") for v in value]
             items = {k: v for k, _, v in splitted}
             return items
@@ -549,9 +594,11 @@ class TypeHandler:
             "multiple": True,
             "callback": cb,
         }
-        if default is not attrs.NOTHING:
+        if isinstance(default, t.Mapping):
             default = [f"{k}={v}" for k, v in default.items()]
             type_info["default"] = default
+        elif is_optional:
+            type_info["default"] = None
         return type_info
 
 
@@ -604,12 +651,15 @@ def _mk_option(
     """
     user_config = field.metadata.get(METADATA_KEY, {}).get(CLICK_KEY, {})
 
+    # The option type specifies the default option kwargs
+    kwargs = type_handler.get_type(field.type, default)
+
     param_decls: t.Tuple[str, ...]
     user_param_decls: t.Union[str, t.Sequence[str]]
     user_param_decls = user_config.pop("param_decls", ())
     if not user_param_decls:
         option_name = path.replace(".", "-").replace("_", "-")
-        if field.type and field.type is bool:
+        if kwargs.get("is_flag"):
             param_decls = (f"--{option_name}/--no-{option_name}",)
         else:
             param_decls = (f"--{option_name}",)
@@ -617,9 +667,6 @@ def _mk_option(
         param_decls = (user_param_decls,)
     else:
         param_decls = tuple(user_param_decls)
-
-    # The option type specifies the default option kwargs
-    kwargs = type_handler.get_type(field.type, default)
 
     # The type's kwargs should not be able to set these values since they are
     # needed for everything to work:
@@ -633,10 +680,10 @@ def _mk_option(
 
     if isinstance(field.repr, _SecretRepr):
         kwargs["show_default"] = False
-        if default is not attrs.NOTHING:  # pragma: no cover
+        if "default" in kwargs:  # pragma: no cover
             kwargs["help"] = f"{kwargs['help']}  [default: {field.repr('')}]"
 
-    if default is attrs.NOTHING:
+    if "default" not in kwargs:
         kwargs["required"] = True
 
     # The user has the last word, though.
@@ -662,3 +709,30 @@ def _make_callback(path: str, type_callback: t.Optional[Callback]) -> Callback:
         return value
 
     return cb
+
+
+def _check_if_optional(
+    otype: t.Optional[type],
+    default: t.Any,
+    origin: t.Any,
+    args: t.Tuple[t.Any, ...],
+) -> t.Tuple[t.Optional[type], t.Any, t.Any, t.Tuple[t.Any, ...], bool]:
+    """
+    Check if *otype* is optional and return the actual type for it and a flag
+    indicating the optionality.
+
+    If it is optional and the default value is *NOTHING*, use ``None`` as new
+    default.
+    """
+    is_optional = origin is t.Union and len(args) == 2 and NoneType in args
+    if is_optional:
+        if default is attrs.NOTHING:
+            default = None
+
+        # "idx" is the index of the not-NoneType:
+        idx = (args.index(NoneType) + 1) % 2
+        otype = args[idx]
+        origin = get_origin(otype)
+        args = get_args(otype)
+
+    return otype, default, origin, args, is_optional

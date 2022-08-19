@@ -511,16 +511,20 @@ class TestClickParamTypes:
         Test boolean flags.
         """
 
-        @settings
+        @settings(kw_only=True)
         class Settings:
             a: bool
             b: bool = True
             c: bool = False
+            d: Optional[bool]
+            e: Optional[bool] = None
 
         expected_help = [
             "  --a / --no-a  [required]",
             "  --b / --no-b  [default: b]",
             "  --c / --no-c  [default: no-c]",
+            "  --d / --no-d",
+            "  --e / --no-e",
         ]
 
         env_vars = {"A": "1", "B": "0"}
@@ -528,31 +532,40 @@ class TestClickParamTypes:
             "  --a / --no-a  [default: a]",
             "  --b / --no-b  [default: no-b]",
             "  --c / --no-c  [default: no-c]",
+            "  --d / --no-d",
+            "  --e / --no-e",
         ]
 
         default_options = ["--a"]
-        expected_defaults = Settings(True, True, False)
+        expected_defaults = Settings(a=True, b=True, c=False, d=None, e=None)
 
         cli_options = ["--no-a", "--no-b", "--c"]
-        expected_settings = Settings(False, False, True)
+        expected_settings = Settings(a=False, b=False, c=True, d=None, e=None)
 
     class IntFloatStrParam(ClickParamBase):
         """
         Test int, float and str cli_options.
         """
 
-        @settings
+        @settings(kw_only=True)
         class Settings:
             a: str = option(default="spam")
             b: str = secret(default="spam")
             c: int = 0
             d: float = 0
+            # Test explicit and implicit "Optional" variants
+            e: Optional[str]
+            f: Union[None, int] = None
+            g: Union[int, None] = 0
 
         expected_help = [
             "  --a TEXT     [default: spam]",
             "  --b TEXT     [default: ***]",
             "  --c INTEGER  [default: 0]",
             "  --d FLOAT    [default: 0.0]",
+            "  --e TEXT",
+            "  --f INTEGER",
+            "  --g INTEGER  [default: 0]",
         ]
 
         env_vars = {"A": "eggs", "B": "bacon", "C": "42", "D": "3.14"}
@@ -561,12 +574,15 @@ class TestClickParamTypes:
             "  --b TEXT     [default: ***]",
             "  --c INTEGER  [default: 42]",
             "  --d FLOAT    [default: 3.14]",
+            "  --e TEXT",
+            "  --f INTEGER",
+            "  --g INTEGER  [default: 0]",
         ]
 
-        expected_defaults = Settings()
+        expected_defaults = Settings(e=None)
 
         cli_options = ["--a=eggs", "--b=pwd", "--c=3", "--d=3.1"]
-        expected_settings = Settings(a="eggs", b="pwd", c=3, d=3.1)
+        expected_settings = Settings(a="eggs", b="pwd", c=3, d=3.1, e=None)
 
     class DateTimeParam(ClickParamBase):
         """
@@ -578,6 +594,7 @@ class TestClickParamTypes:
             a: datetime = datetime.fromtimestamp(0, timezone.utc)
             b: datetime = datetime.fromtimestamp(0, timezone.utc)
             c: datetime = datetime.fromtimestamp(0, timezone.utc)
+            d: Optional[datetime] = None
 
         expected_help = [
             "  --a [%Y-%m-%d|%Y-%m-%dT%H:%M:%S|%Y-%m-%dT%H:%M:%S%z]",
@@ -586,6 +603,7 @@ class TestClickParamTypes:
             "                                  [default: 1970-01-01T00:00:00+00:00]",  # noqa: E501
             "  --c [%Y-%m-%d|%Y-%m-%dT%H:%M:%S|%Y-%m-%dT%H:%M:%S%z]",
             "                                  [default: 1970-01-01T00:00:00+00:00]",  # noqa: E501
+            "  --d [%Y-%m-%d|%Y-%m-%dT%H:%M:%S|%Y-%m-%dT%H:%M:%S%z]",
         ]
 
         env_vars = {
@@ -600,6 +618,7 @@ class TestClickParamTypes:
             "                                  [default: 2021-05-04T13:37:00]",  # noqa: E501
             "  --c [%Y-%m-%d|%Y-%m-%dT%H:%M:%S|%Y-%m-%dT%H:%M:%S%z]",
             "                                  [default: 2021-05-04T00:00:00]",  # noqa: E501
+            "  --d [%Y-%m-%d|%Y-%m-%dT%H:%M:%S|%Y-%m-%dT%H:%M:%S%z]",
         ]
 
         expected_defaults = Settings()
@@ -623,24 +642,27 @@ class TestClickParamTypes:
         @settings
         class Settings:
             a: LeEnum
-            b: LeEnum = LeEnum.spam
+            b: Optional[LeEnum]
+            c: LeEnum = LeEnum.spam
 
         expected_help = [
             "  --a [spam|eggs]  [required]",
-            "  --b [spam|eggs]  [default: spam]",
+            "  --b [spam|eggs]",
+            "  --c [spam|eggs]  [default: spam]",
         ]
 
-        env_vars = {"A": "spam", "B": "eggs"}
+        env_vars = {"A": "spam", "C": "eggs"}
         expected_env_var_defaults = [
             "  --a [spam|eggs]  [default: spam]",
-            "  --b [spam|eggs]  [default: eggs]",
+            "  --b [spam|eggs]",
+            "  --c [spam|eggs]  [default: eggs]",
         ]
 
         default_options = ["--a=spam"]
-        expected_defaults = Settings(a=LeEnum.spam)
+        expected_defaults = Settings(a=LeEnum.spam, b=None)
 
-        cli_options = ["--a=spam", "--b=eggs"]
-        expected_settings = Settings(LeEnum.spam, LeEnum.eggs)
+        cli_options = ["--a=spam", "--c=eggs"]
+        expected_settings = Settings(LeEnum.spam, None, LeEnum.eggs)
 
     class PathParam(ClickParamBase):
         """
@@ -650,11 +672,18 @@ class TestClickParamTypes:
         @settings
         class Settings:
             a: Path = Path("/")
+            b: Optional[Path] = None
 
-        expected_help = ["  --a PATH  [default: /]"]
+        expected_help = [
+            "  --a PATH  [default: /]",
+            "  --b PATH",
+        ]
 
         env_vars = {"A": "/spam/eggs"}
-        expected_env_var_defaults = ["  --a PATH  [default: /spam/eggs]"]
+        expected_env_var_defaults = [
+            "  --a PATH  [default: /spam/eggs]",
+            "  --b PATH",
+        ]
 
         expected_defaults = Settings()
 
@@ -699,52 +728,65 @@ class TestClickParamTypes:
         @settings
         class Settings:
             a: List[int]
-            b: Sequence[datetime] = [datetime(2020, 5, 4)]
-            c: MutableSequence[int] = []
-            d: Set[int] = set()
-            e: MutableSet[int] = set()
-            f: FrozenSet[int] = frozenset()
+            b: Optional[List[int]]
+            c: Optional[List[int]] = None
+            d: Optional[List[int]] = []
+            e: Sequence[datetime] = [datetime(2020, 5, 4)]
+            f: MutableSequence[int] = []
+            g: Set[int] = set()
+            h: MutableSet[int] = set()
+            i: FrozenSet[int] = frozenset()
 
         expected_help = [
             "  --a INTEGER                     [required]",
-            "  --b [%Y-%m-%d|%Y-%m-%dT%H:%M:%S|%Y-%m-%dT%H:%M:%S%z]",
-            "                                  [default: 2020-05-04T00:00:00]",
+            "  --b INTEGER",
             "  --c INTEGER",
             "  --d INTEGER",
-            "  --e INTEGER",
+            "  --e [%Y-%m-%d|%Y-%m-%dT%H:%M:%S|%Y-%m-%dT%H:%M:%S%z]",
+            "                                  [default: 2020-05-04T00:00:00]",
             "  --f INTEGER",
+            "  --g INTEGER",
+            "  --h INTEGER",
+            "  --i INTEGER",
         ]
 
         env_vars = {
             "A": "1:2",
-            "B": "2021-01-01:2021-01-02",  # Dates with times wont work here!
+            "E": "2021-01-01:2021-01-02",  # Dates with times wont work here!
         }
         expected_env_var_defaults = [
             "  --a INTEGER                     [default: 1, 2]",
-            "  --b [%Y-%m-%d|%Y-%m-%dT%H:%M:%S|%Y-%m-%dT%H:%M:%S%z]",
-            "                                  [default: 2021-01-01T00:00:00,",
-            "                                  2021-01-02T00:00:00]",
+            "  --b INTEGER",
             "  --c INTEGER",
             "  --d INTEGER",
-            "  --e INTEGER",
+            "  --e [%Y-%m-%d|%Y-%m-%dT%H:%M:%S|%Y-%m-%dT%H:%M:%S%z]",
+            "                                  [default: 2021-01-01T00:00:00,",
+            "                                  2021-01-02T00:00:00]",
             "  --f INTEGER",
+            "  --g INTEGER",
+            "  --h INTEGER",
+            "  --i INTEGER",
         ]
 
         default_options = ["--a=1"]
-        expected_defaults = Settings(a=[1])
+        # click always gives us an empty list, never "None"
+        expected_defaults = Settings(a=[1], b=[], c=[])
 
         cli_options = [
             "--a=1",
             "--a=2",
-            "--b=2020-01-01",
-            "--b=2020-01-02",
-            "--c=3",
-            "--d=4",
-            "--e=5",
-            "--f=6",
+            "--e=2020-01-01",
+            "--e=2020-01-02",
+            "--f=3",
+            "--g=4",
+            "--h=5",
+            "--i=6",
         ]
         expected_settings = Settings(
             [1, 2],
+            [],  # click always gives us an empty list, never "None"
+            [],  # click always gives us an empty list, never "None"
+            [],
             [datetime(2020, 1, 1), datetime(2020, 1, 2)],
             [3],
             {4},
@@ -762,16 +804,19 @@ class TestClickParamTypes:
         class Settings:
             a: Tuple[int, ...] = (0,)
             b: Tuple[int, float, str] = (0, 0.0, "")
+            c: Optional[Tuple[int, float, str]] = None
 
         expected_help = [
             "  --a INTEGER                  [default: 0]",
             "  --b <INTEGER FLOAT TEXT>...  [default: 0, 0.0, ]",
+            "  --c <INTEGER FLOAT TEXT>...",
         ]
 
         env_vars = {"A": "1:2", "B": "42:3.14:spam"}
         expected_env_var_defaults = [
             "  --a INTEGER                  [default: 1, 2]",
             "  --b <INTEGER FLOAT TEXT>...  [default: 42, 3.14, spam]",
+            "  --c <INTEGER FLOAT TEXT>...",
         ]
 
         expected_defaults = Settings()
@@ -814,11 +859,13 @@ class TestClickParamTypes:
             a: Dict[str, str]  # Test "None" value
             b: Dict[str, str] = {}  # Test empty value
             c: Dict[str, str] = {"default": "value"}
+            d: Optional[Dict[str, str]] = None
 
         expected_help = [
             "  --a KEY=VALUE  [required]",
             "  --b KEY=VALUE",
             "  --c KEY=VALUE  [default: default=value]",
+            "  --d KEY=VALUE",
         ]
 
         # A dictionary cannot be loaded with the default converter,
@@ -828,6 +875,7 @@ class TestClickParamTypes:
             "  --a KEY=VALUE  [required]",
             "  --b KEY=VALUE",
             "  --c KEY=VALUE  [default: default=value]",
+            "  --d KEY=VALUE",
         ]
 
         default_options = ["--a=k=v"]
