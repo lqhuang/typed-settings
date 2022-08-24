@@ -119,7 +119,9 @@ def click_options(
        Add the *decorator_factory* parameter.
     """
     cls = attrs.resolve_types(cls)
-    options = _deep_options(cls)
+    options = [
+        opt for opt in _deep_options(cls) if opt.field.init is not False
+    ]
     grouped_options = [
         (g_cls, list(g_opts))
         for g_cls, g_opts in itertools.groupby(options, key=lambda o: o.cls)
@@ -672,7 +674,9 @@ def _mk_option(
     # needed for everything to work:
     kwargs["show_default"] = True
     kwargs["expose_value"] = False
-    kwargs["callback"] = _make_callback(path, kwargs.get("callback"))
+    kwargs["callback"] = _make_callback(
+        path, kwargs.get("callback"), user_config.pop("callback", None)
+    )
 
     # Get "help" from the user_config *now*, because we may need to update it
     # below.  Also replace "None" with "".
@@ -692,15 +696,23 @@ def _mk_option(
     return option(*param_decls, **kwargs)
 
 
-def _make_callback(path: str, type_callback: t.Optional[Callback]) -> Callback:
+def _make_callback(
+    path: str,
+    type_callback: t.Optional[Callback],
+    user_callback: t.Optional[Callback],
+) -> Callback:
     """
     Generate a callback that adds option values to the settings instance in the
-    context.  It also calls a type's callback if there should be one.
+    context.
+
+    It also calls a type's callback if there should be one.
     """
 
     def cb(ctx: click.Context, param: click.Option, value: t.Any) -> t.Any:
         if type_callback is not None:
             value = type_callback(ctx, param, value)
+        if user_callback is not None:
+            value = user_callback(ctx, param, value)
 
         if ctx.obj is None:
             ctx.obj = {}

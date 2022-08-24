@@ -20,7 +20,8 @@ def find(
     Args:
         filename: The name of the file to find.
         stop_dir: Stop searching if the current search dir equals this one.
-        stop_file: Stop searching if the current search dir contains this file.
+        stop_files: Stop searching if the current search dir contains
+         this file.
 
     Returns:
         The resolved path to *filename* if found, else ``Path(filename)``.
