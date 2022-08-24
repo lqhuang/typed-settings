@@ -429,7 +429,74 @@ You can add one via :func:`ts.option()` and :func:`ts.secret()`:
     <BLANKLINE>
 
 
-Extending supported types
+Optional and Union Types
+========================
+
+Using optional options (with type :samp:`Optional[{T}]`) is generelly supported for scalar types and containers.
+
+.. code-block:: python
+
+    >>> from typing import List, Optional
+    >>>
+    >>> @ts.settings
+    ... class Settings:
+    ...     a: Optional[int]
+    ...     b: Optional[List[int]]
+    ...
+    >>> @click.command()
+    ... @ts.click_options(Settings, "example")
+    ... def cli(settings: Settings):
+    ...     print(settings)
+    ...
+    >>> print(runner.invoke(cli, ["--help"]).output)
+    Usage: cli [OPTIONS]
+    <BLANKLINE>
+    Options:
+      --a INTEGER
+      --b INTEGER
+      --help       Show this message and exit.
+    <BLANKLINE>
+    >>> print(runner.invoke(cli, []).output)
+    Settings(a=None, b=[])
+    <BLANKLINE>
+
+.. note::
+
+   Click will always give us an empty list, even if the default for an optional list is ``None``.
+
+However, optional nested settings do not work:
+
+.. code-block:: python
+
+    >>> @ts.settings
+    ... class Nested:
+    ...    a: int
+    ...    b: Optional[int]
+    ...
+    >>> @ts.settings
+    ... class Settings:
+    ...     n: Nested
+    ...     o: Optional[Nested]
+    ...
+    >>> @click.command()
+    ... @ts.click_options(Settings, "example")
+    ... def cli(settings: Settings):
+    ...     print(settings)
+    ...
+    >>> print(runner.invoke(cli, ["--help"]).output)
+    Usage: cli [OPTIONS]
+    <BLANKLINE>
+    Options:
+      --n-a INTEGER  [required]
+      --n-b INTEGER
+      --o NESTED
+      --help         Show this message and exit.
+    <BLANKLINE>
+
+Unions other than :code:`Optional` are also not supported.
+
+
+Extending Supported Types
 =========================
 
 Typed Settings and it's Click utilities support the data types for the most common use cases out-of-the-box
@@ -478,14 +545,16 @@ If (and only if) there is a default value for our option, we want to use it.
 
     >>> from typed_settings.click_utils import DEFAULT_TYPES, StrDict, TypeHandler
     >>>
-    >>> def handle_rgb(_type: type, default: object) -> StrDict:
+    >>> def handle_rgb(_type: type, default: object, is_optional: bool) -> StrDict:
     ...     type_info = {
     ...         "type": int,
     ...         "nargs": 3,
     ...         "metavar": "R G B",
     ...     }
-    ...     if default is not attrs.NOTHING:
+    ...     if default:
     ...         type_info["default"] = dataclasses.astuple(default)
+    ...     elif is_optional:
+    ...         type_info["default"] = None
     ...     return type_info
 
 We now update the dict with built-in type handlers with our own and

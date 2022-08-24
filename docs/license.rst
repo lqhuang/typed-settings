@@ -5,6 +5,6 @@ License
 Typed Settings is released under the MIT_ license:
 
 .. literalinclude:: ../LICENSE
-   :language: None
+   :language: none
 
 .. _MIT: https://choosealicense.com/licenses/mit/

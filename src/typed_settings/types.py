@@ -16,7 +16,7 @@ class AttrsInstance(Protocol):
 
 
 T = TypeVar("T")
-ET = TypeVar("ET", bound=Enum)
+ET = TypeVar("ET", bound=Enum)  # Enum type
 ST = TypeVar("ST", bound=AttrsInstance)  # SettingsInstance
 SettingsClass = Type[AttrsInstance]
 SettingsInstance = AttrsInstance
