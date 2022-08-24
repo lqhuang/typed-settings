@@ -37,6 +37,7 @@ from typed_settings import (
     secret,
     settings,
 )
+from typed_settings.types import SettingsClass
 
 
 T = TypeVar("T")
@@ -1245,8 +1246,10 @@ class TestClickConfig:
             result = invoke(cli, flag)
         assert result.exit_code == 0
 
-    @pytest.mark.parametrize("flag, value", [(None, False), ("--arg", True)])
-    def test_user_callback_is_executed(self, invoke: Invoke, flag, value):
+    @pytest.mark.parametrize("args, value", [([], False), (["--arg"], True)])
+    def test_user_callback_is_executed(
+        self, invoke: Invoke, args: List[str], value: bool
+    ) -> None:
         """
         User callback function is executed as well as
         the option is added to settings.
@@ -1265,10 +1268,7 @@ class TestClickConfig:
         def cli(settings):
             assert settings.arg is value
 
-        if flag is None:
-            result = invoke(cli)
-        else:
-            result = invoke(cli, flag)
+        result = invoke(cli, *args)
         assert result.exit_code == 0
         cb.assert_called_once()
 
@@ -1306,28 +1306,19 @@ class TestDecoratorFactory:
         return Settings
 
     @pytest.fixture
-    def settings_init_false_csl(self) -> type:
+    def settings_init_false_csl(self) -> SettingsClass:
         @settings
         class Nested1:
-            """
-            Docs for Nested1
-            """
-
             a: int = 0
             nb1: int = option(init=False)
 
         @settings
         class Nested2:
-            # Deliberately has no docstring!
             a: int = 0
             nb2: int = option(init=False)
 
         @settings
         class Settings:
-            """
-            Main docs
-            """
-
             a: int = 0
             na: int = option(init=False)
             n1: Nested1 = Nested1()
@@ -1418,9 +1409,9 @@ class TestDecoratorFactory:
             "Usage: cli [OPTIONS]",
             "",
             "Options:",
-            "  Main docs: ",
+            "  Settings options: ",
             "    --a INTEGER       [default: 0]",
-            "  Docs for Nested1: ",
+            "  Nested1 options: ",
             "    --n1-a INTEGER    [default: 0]",
             "  Nested2 options: ",
             "    --n2-a INTEGER    [default: 0]",
