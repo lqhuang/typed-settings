@@ -260,6 +260,43 @@ The first line of the settings class' docstring is used as group name:
 
 .. _option groups: https://click-option-group.readthedocs.io
 
+Derived attributes
+------------------------
+
+Typed Settings supports `attrs derived attributes <attrs_derived_attributes_>`_ which value can be set
+dynamically during ``__attrs_post_init__()``. These attributes are then excluded from ``click_options``.
+
+Use ``ts.option(init=False)`` to exclude the attribute.
+
+
+.. _attrs_derived_attributes: https://www.attrs.org/en/stable/init.html#derived-attributes
+
+.. code-block:: python
+
+    >>> @ts.settings
+    ... class Settings:
+    ...     spam: int = ts.option(default=23)
+    ...     computed_spam: int = ts.option(init=False)
+    ...
+    ...     def __attrs_post_init__(self):
+    ...             self.computed_spam = self.spam + 19
+    ...
+    >>> @click.command()
+    ... @ts.click_options(Settings, "example")
+    ... def cli(settings: Settings):
+    ...     print(settings)
+
+    >>> print(runner.invoke(cli, ["--help"]).output)
+    Usage: cli [OPTIONS]
+    <BLANKLINE>
+    Options:
+      --spam INTEGER  [default: 23]
+      --help          Show this message and exit.
+    <BLANKLINE>
+    >>> print(runner.invoke(cli).output)
+    Settings(spam=23, computed_spam=42)
+    <BLANKLINE>
+
 
 Configuring Loaders and Converters
 ==================================
