@@ -154,20 +154,6 @@ class TestEvolve:
     Copied from attrs and adjusted/reduced.
     """
 
-    @pytest.fixture(scope="session", name="C")
-    def fixture_C(self):
-        """
-        Return a simple but fully featured attrs class with an x and a y
-        attribute.
-        """
-
-        @attrs.define
-        class C(object):
-            x: str
-            y: str
-
-        return C
-
     def test_validator_failure(self):
         """
         TypeError isn't swallowed when validation fails within evolve.

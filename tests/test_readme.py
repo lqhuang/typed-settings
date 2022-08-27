@@ -46,7 +46,7 @@ def load_readme() -> List[Tuple[str, List[str]]]:
         if example_title:
             examples[example_title].append(line)
 
-    raise AssertionError("We should not have gotten here")
+    raise AssertionError("We should not have gotten here")  # pragma: no cover
 
 
 @pytest.fixture
@@ -63,7 +63,7 @@ def example(request, tmp_path):
     """
     example_lines = request.param
     code_lines = None
-    for line in example_lines:
+    for line in example_lines:  # pragma: no cover
         if line.startswith("```") and len(line) > 3:
             code_lines = []
             continue
@@ -98,7 +98,7 @@ def test_readme(example, tmp_path):
     All commands in the *console* block of an example produce the exact same
     results as shown in the example.
     """
-    for cmd, expected in example.items():
+    for cmd, expected in example.items():  # pragma: no-cover
         result = subprocess.run(
             cmd,
             shell=True,

@@ -77,7 +77,6 @@ def test_find(args, start, expected, tmp_path, monkeypatch):
 
     monkeypatch.chdir(tmp_path.joinpath(start))
     if len(args) > 1:
-        if isinstance(args[1], str):
-            args[1] = tmp_path.joinpath(args[1])
+        args[1] = tmp_path.joinpath(args[1])
     result = fu.find(*args)
     assert result == tmp_path.joinpath(expected)

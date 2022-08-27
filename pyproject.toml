@@ -17,7 +17,7 @@ show_missing = true
 [tool.coverage.run]
 branch = true
 parallel = true
-source = ["typed_settings"]
+source_pkgs = ["typed_settings", "tests"]
 
 [tool.isort]
 profile = "black"

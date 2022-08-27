@@ -131,7 +131,7 @@ def test_unkown_type(invoke):
         @click.command()
         @click_options(Settings, "test")
         def cli(settings: Settings) -> None:
-            pass
+            ...
 
 
 class TestDefaultsLoading:
@@ -197,7 +197,7 @@ class TestDefaultsLoading:
         @click.command()
         @click_options(Settings, default_loaders("test"))
         def cli(settings):
-            pass
+            ...
 
         result = invoke(cli)
         assert result.output == (
@@ -221,7 +221,7 @@ class TestDefaultsLoading:
         @click.command()
         @click_options(Settings, default_loaders("test"))
         def cli(settings):
-            pass
+            ...
 
         result = invoke(cli, "--help")
         assert result.output == (
@@ -246,7 +246,7 @@ class TestDefaultsLoading:
         @click.command()
         @click_options(Settings, default_loaders("test"))
         def cli(settings):
-            pass
+            ...
 
         result = invoke(cli, "--help")
         assert result.output == (
@@ -286,7 +286,7 @@ class TestDefaultsLoading:
             default_loaders("test", [tmp_path.joinpath("settings.toml")]),
         )
         def cli(settings):
-            print(settings)
+            ...
 
         result = invoke(cli, "--help")
         assert result.output == (
@@ -432,7 +432,7 @@ class TestSettingsPassing:
         @click_options(A, "test-a", argname="sa")
         @click_options(B, "test-b", argname="sb")
         def cli(*, sa: A, sb: B) -> None:
-            pass
+            ...
 
         result = invoke(cli, "--help")
         assert result.output == (
@@ -1334,7 +1334,7 @@ class TestDecoratorFactory:
         @click.command()
         @click_options(settings_cls, "t")
         def cli1(settings):
-            pass
+            ...
 
         @click.command()
         @click_options(
@@ -1343,7 +1343,7 @@ class TestDecoratorFactory:
             decorator_factory=click_utils.ClickOptionFactory(),
         )
         def cli2(settings):
-            pass
+            ...
 
         r1 = invoke(cli1, "--help").output.splitlines()[1:]
         r2 = invoke(cli2, "--help").output.splitlines()[1:]
@@ -1361,7 +1361,7 @@ class TestDecoratorFactory:
             decorator_factory=click_utils.OptionGroupFactory(),
         )
         def cli(settings):
-            pass
+            ...
 
         result = invoke(cli, "--help").output.splitlines()
         assert result == [
@@ -1402,7 +1402,7 @@ class TestDecoratorFactory:
             decorator_factory=click_utils.OptionGroupFactory(),
         )
         def cli(settings):
-            pass
+            ...
 
         result = invoke(cli, "--help").output.splitlines()
         assert result == [
