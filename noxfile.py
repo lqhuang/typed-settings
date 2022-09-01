@@ -14,14 +14,12 @@ from packaging.requirements import Requirement
 PROJECT_DIR = pathlib.Path(__file__).parent
 LINT_PATHS = [
     [
-        "noxfile.py",
+        "./noxfile.py",
         "src/",
         "tests/",
     ],
     [
         "docs/conf.py",
-    ],
-    [
         "docs/conftest.py",
     ],
     [
@@ -37,9 +35,9 @@ DEPS_MATRIX = {
 
 @nox.session
 def build(session: nox.Session) -> None:
-    session.install("build", "check-wheel-contents")
+    session.install("hatch", "check-wheel-contents")
     session.run("rm", "-rf", "build", "dist", external=True)
-    session.run("python", "-m", "build", "--sdist", "--wheel", ".")
+    session.run("hatch", "build")  # , external=True)
     session.run("check-wheel-contents", *glob.glob("dist/*.whl"))
 
 

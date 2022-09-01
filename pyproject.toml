@@ -1,29 +1,165 @@
 [build-system]
-requires = ["setuptools >= 40.6.0", "wheel"]
-build-backend = "setuptools.build_meta"
+requires = [
+    "hatchling>=1.5.0",
+]
+build-backend = "hatchling.build"
+
+[project]
+name = "typed-settings"
+version = "1.1.0"
+description = "Typed settings based on attrs classes"
+readme = "README.md"
+license = "MIT"
+requires-python = ">=3.7"
+authors = [
+    { name = "Stefan Scherfke", email = "stefan@sofa-rockers.org" },
+]
+keywords = [
+    "configuration",
+    "options",
+    "settings",
+    "types",
+    "validation",
+]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Environment :: Console",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Natural Language :: English",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3.7",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: Implementation :: CPython",
+    "Programming Language :: Python :: Implementation :: PyPy",
+    "Programming Language :: Python",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+]
+dependencies = [
+    "attrs>=22.1",
+    "cattrs>=22.1",
+    "tomli>=2; python_version<'3.11'",
+]
+
+[project.optional-dependencies]
+click = [
+    "click>=7,<9",
+]
+option-groups = [
+    "click-option-group",
+    "click>=7,<9",
+]
+all = [  # All features
+    "typed-settings[click,option-groups]",
+]
+docs = [
+    "typed-settings[all]",
+    "furo",
+    "sphinx",
+    "sphinx-autodoc-typehints",
+]
+lint = [
+    "typed-settings[all]",
+    "bandit",
+    "flake8-bandit",
+    "flake8-black",
+    "flake8-bugbear",
+    "flake8-isort",
+    "flake8>=4.0.0,<5.0.0",
+    "mypy",
+    "types-toml",
+]
+test = [
+    "typed-settings[all]",
+    "coverage[toml]>=5.3",
+    "pytest-cov",
+    "pytest>=6",
+]
+dev = [  # Everything needed for development
+    "typed-settings[docs,lint,test]",
+    "nox",
+    "safety",
+]
+
+[project.urls]
+Homepage = "https://gitlab.com/sscherfke/typed-settings"
+Documentation = "https://typed-settings.readthedocs.io"
+Changelog = "https://typed-settings.readthedocs.io/en/latest/changelog.html"
+"Bug Tracker" = "https://gitlab.com/sscherfke/typed-settings/-/issues"
+"Source Code" = "https://gitlab.com/sscherfke/typed-settings"
 
 [tool.black]
 line-length = 79
 
 [tool.coverage.paths]
-source = ["src", ".nox/*/site-packages"]
+source = [
+    "src",
+    ".nox/*/site-packages",
+]
 
 [tool.coverage.report]
-# exclude_lines = ["pragma: no cover", "...", "if TYPE_CHECKING"]
-exclude_lines = ["pragma: no cover", "\\.\\.\\.", "if TYPE_CHECKING"]
+exclude_lines = [
+    "pragma: no cover",
+    "\\.\\.\\.",
+    "if TYPE_CHECKING",
+]
 fail_under = 100
 show_missing = true
 
 [tool.coverage.run]
 branch = true
 parallel = true
-source_pkgs = ["typed_settings", "tests"]
+source_pkgs = [
+    "typed_settings",
+    "tests",
+]
+
+[tool.hatch.build.targets.sdist]
+include = [
+    "/docs",
+    "/src",
+    "/tests",
+]
+
+[tool.hatch.build.targets.wheel]
+
+[tool.hatch.envs.default]
+features = ["dev"]
+post-install-commands = [
+    "pre-commit install --install-hooks",
+]
+
+[tool.hatch.envs.default.scripts]
+test = "pytest {args:docs src tests}"
+cov = "pytest --cov --cov-config=pyproject.toml --cov-report=term-missing {args:docs src tests}"
+lint = [
+  "flake8 docs/ src/ tests/ ./noxfile.py",
+  "mypy src/ tests/ ./noxfile.py",
+  "mypy docs/conf.py docs/conftest.py",
+  "mypy docs/examples",
+]
+fix = [
+  "isort {args:.}",
+  "black {args:.}",
+]
+docs = [
+  "make -C docs html",
+]
+clean-docs = [
+  "make -C docs clean html",
+]
 
 [tool.isort]
 profile = "black"
 line_length = 79
 lines_after_imports = 2
-src_paths = ["src", "tests"]
+src_paths = [
+    "src",
+    "tests",
+]
 
 [tool.mypy]
 ignore_missing_imports = true

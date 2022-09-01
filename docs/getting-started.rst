@@ -20,6 +20,18 @@ Install *typed-settings* into your virtualenv_:
    ...
    Successfully installed ... typed-settings-x.y.z
 
+You can install dependencies for optional features via
+
+.. code-block:: console
+
+   $ python -m pip install typed-settings[<feature>]
+
+Available features:
+
+- ``typed-settings[click]``: Enable support for Click options
+- ``typed-settings[option-groups]``: Enable support for Click and Click option groups
+- ``typed-settings[all]``: Install all optional requirements
+
 
 Basic Settings Definition and Loading
 =====================================

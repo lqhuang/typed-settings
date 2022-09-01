@@ -2,9 +2,13 @@
 Development
 ===========
 
-Typed Settings uses the well-known workflow with pip_ / setuptools_ and virtualenv_.
+Typed Settings uses Hatch_ for environment management, building and publishing.
+However, you can also use pip_  and virtualenv_, if you like.
+
+It uses nox_ to run the linters and tests against a matrix of different dependency and Python versions.
+Nox is similar to tox_ but uses Python to describe all tasks.
+
 It also uses `pre-commit`_ to lint the code you're going to commit.
-Sou you don't need to learn anything too fancy. ;-)
 
 
 Setting up a Development Environment
@@ -18,6 +22,15 @@ Setting up a Development Environment
       $ cd typed-settings
 
 #. Create a virtual environment in your preferred ways:
+
+   - Using Hatch_:
+
+
+     .. code-block:: console
+
+        $ hatch shell
+
+     This not only creates and activates an environment but also installs/updates all development dependencies and pre-commit.
 
    - Using virtualenvwrapper_:
 
@@ -39,47 +52,69 @@ Setting up a Development Environment
         $ python -m venv .env
         $ source .env/bin/activate
 
-#. Install all development requirements and Typed Settings itself in development mode:
+#. If you did not use Hatch,
+   install all development requirements and Typed Settings itself in development mode:
 
    .. code-block:: console
 
-      (typed-settings)$ pip install -e .[dev]
+      (typed-settings)$ pip install -e .[dev]  # Not needed with hatch
       (typed-settings)$ pre-commit install --install-hooks
 
 
-Linting and Testing
-===================
+Linting
+=======
 
 Typed Settings uses flake8_ with a few plug-ins (e.g., bandit_) and mypy_ for linting:
 
 .. code-block:: console
 
-   (typed-settings)$ flake8 src tests
-   (typed-settings)$ mypy src tests
+   (typed-settings)$ flake8 PATH...
+   (typed-settings)$ mypy PATH...
+   (typed-settings)$ # or
+   (typed-settings)$ hatch run lint
+
 
 Black_ and Isort_ are used for code formatting:
 
 .. code-block:: console
 
-   (typed-settings)$ black src tests
-   (typed-settings)$ isort src tests
+   (typed-settings)$ black PATH...
+   (typed-settings)$ isort PATH...
+   (typed-settings)$ # or
+   (typed-settings)$ hatch run fix [PATH...]
 
 `Pre-commit`_ also runs all linters and formatters with all changed files every time you want to commit something.
 
+Testing
+=======
+
 You run the tests with pytest_.
-It is configured to also run doctests in :file:`docs/` and to tests the examples in that directory,
+It is configured to also run doctests in :file:`src/` and :file:`docs/` and to test the examples in that directory,
 so do not only run it on :file:`tests/`.
 
 .. code-block:: console
 
    (typed-settings)$ pytest
+   (typed-settings)$ # or
+   (typed-settings)$ hatch run test
 
-You can also use nox_ to run tests and linters for all supported python versions at the same time.
-Nox is similar to tox_ but uses python to describe all tasks:
+Hatch provides a shortcut for quickly running the tests and measure the coverage:
+
+.. code-block:: console
+
+   (typed-settings)$ hatch run cov
+
+You will not get to 100% with this though, since some compatibilty code will not be executed.
+
+You can also use nox_ to run tests for all supported Python versions at the same time.
+This should get you to 100% coverage.
+
+Just run ``nox`` to build a package, test it, and lint it:
 
 .. code-block:: console
 
    (typed-settings)$ nox
+
 
 
 Docs
@@ -92,8 +127,14 @@ There's a makefile that you can invoke to build the documentation:
 .. code-block:: console
 
    (typed-settings)$ make -C docs html
+   (typed-settings)$ # or
+   (typed-settings)$ hatch run docs
+   (typed-settings)$
    (typed-settings)$ make -C docs clean html  # Clean rebuild
-   (typed-settings)$ open docs/_build/html/index  # Use "xdg-open" on Linux
+   (typed-settings)$ # or
+   (typed-settings)$ hatch run clean-docs
+   (typed-settings)$
+   (typed-settings)$ open docs/_build/html/index.html  # Use "xdg-open" on Linux
 
 
 Commits
@@ -129,7 +170,7 @@ To prepare a release:
    Use an emoji for each line.
    The changelog contains a legend at the bottom where you can look-up the proper emoji.
 
-#. Update the version in :file:`setup.py`.
+#. Update the version in :file:`pyproject.toml`.
 
 #. Commit using the message :samp:`Bump version from {a.b.c} to {x.y.z}`.
 
@@ -147,6 +188,7 @@ To prepare a release:
 .. _cicd-pipeline: https://gitlab.com/sscherfke/typed-settings/-/pipelines
 .. _commit-message: https://cbea.ms/git-commit/
 .. _flake8: https://pypi.org/project/flake8/
+.. _hatch: https://hatch.pypa.io/latest/
 .. _isort: https://pypi.org/project/isort/
 .. _mypy: https://pypi.org/project/mypy/
 .. _nox: https://pypi.org/project/nox/
@@ -154,7 +196,6 @@ To prepare a release:
 .. _pre-commit: https://pypi.org/project/pre-commit/
 .. _pytest: https://pypi.org/project/pytest/
 .. _restructuredtext: https://www.sphinx-doc.org/en/master/usage/restructuredtext/basics.html
-.. _setuptools: https://pypi.org/project/setuptools/
 .. _sphinx: https://pypi.org/project/sphinx/
 .. _tox: https://pypi.org/project/tox/
 .. _venv: https://docs.python.org/3/library/venv.html
