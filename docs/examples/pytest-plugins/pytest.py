@@ -1,6 +1,7 @@
 from typing import Tuple
 
 import click
+
 import typed_settings as ts
 from typed_settings.click_utils import OptionGroupFactory
 
@@ -64,7 +65,10 @@ Settings = ts.combine(
 @click.command()
 @click.argument("file_or_dir", nargs=-1)
 @ts.click_options(Settings, "pytest", decorator_factory=OptionGroupFactory())
-def cli(settings: Settings, file_or_dir: Tuple[str, ...]):
+def cli(
+    settings: Settings,  # type: ignore[valid-type]
+    file_or_dir: Tuple[str, ...],
+):
     print(settings)
 
 

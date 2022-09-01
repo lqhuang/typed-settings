@@ -15,12 +15,14 @@ from typing import (
 import attr  # The old namespaces is needed in "combine()"
 import attrs
 
+from ..types import AttrsInstance
+from .hooks import auto_convert
+
 
 if TYPE_CHECKING:
     try:
         from attr import (  # type: ignore
             _T,
-            AttrsInstance,
             _ConverterType,
             _OnSetAttrArgType,
             _ReprArgType,
@@ -30,17 +32,11 @@ if TYPE_CHECKING:
         # Just in case the symbols are moved from "attr" to "attrs"
         from attrs import (  # type: ignore
             _T,
-            AttrsInstance,
             _ConverterType,
             _OnSetAttrArgType,
             _ReprArgType,
             _ValidatorArgType,
         )
-
-    AttrsClass = Type[AttrsInstance]
-
-
-from .hooks import auto_convert
 
 
 __all__ = [
@@ -55,6 +51,8 @@ __all__ = [
 
 METADATA_KEY = "typed_settings"
 CLICK_KEY = "click"
+
+AttrsClass = Type[AttrsInstance]
 
 
 class _SecretRepr:

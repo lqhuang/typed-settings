@@ -91,7 +91,7 @@ class ExampleItem(pytest.Item):
                 check=True,
             ).stdout
             # Normalize whitespace:
-            output = "\n".join(l.rstrip() for l in output.splitlines())
+            output = "\n".join(line.rstrip() for line in output.splitlines())
             if output != expected:
                 raise ValueError(cmd, output, expected)
 

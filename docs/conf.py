@@ -2,8 +2,8 @@ try:
     from importlib.metadata import version as get_version
 except ImportError:
     # py37 - Just create a mock for testing:
-    def get_version(_):
-        return '0.0.0'
+    def get_version(_):  # type: ignore[misc]
+        return "0.0.0"
 
 
 project = "Typed Settings"
@@ -51,5 +51,8 @@ intersphinx_mapping = {
     "attrs": ("https://www.attrs.org/en/stable/", None),
     "cattrs": ("https://cattrs.readthedocs.io/en/latest/", None),
     "click": ("https://click.palletsprojects.com/en/latest/", None),
-    "click-option-group": ("https://click-option-group.readthedocs.io/en/latest/", None),
+    "click-option-group": (
+        "https://click-option-group.readthedocs.io/en/latest/",
+        None,
+    ),
 }

@@ -17,7 +17,7 @@ from typed_settings import _file_utils as fu
             id="found-from-subdirs-stop-project",
         ),
         pytest.param(
-            ["s.toml", fu.ROOT_DIR, ["setup.py"]],
+            ["s.toml", fu.ROOT_DIR, ["pyproject.toml"]],
             "src/a/x",
             "s.toml",
             id="found-from-subdirs-stop-existing-file",
@@ -72,7 +72,7 @@ def test_find(args, start, expected, tmp_path, monkeypatch):
     """find() always returns a path, never raises something."""
     for p in [".git", "src/a/x", "src/a/y"]:
         tmp_path.joinpath(p).mkdir(parents=True, exist_ok=True)
-    for p in ["setup.py", "s.toml", "src/stop"]:
+    for p in ["pyproject.toml", "s.toml", "src/stop"]:
         tmp_path.joinpath(p).touch()
 
     monkeypatch.chdir(tmp_path.joinpath(start))
