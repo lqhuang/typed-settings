@@ -4,5 +4,5 @@ max-complexity = 10
 max-line-length = 79
 per-file-ignores =
     docs/conftest.py:S101,S404,S602
-    setup.py:E501
+    noxfile.py:S101
     tests/*:B950,S101,S404,S602

@@ -44,13 +44,14 @@ test:
   parallel:
     matrix:
       - PY: ["3.7", "3.8", "3.9", "3.10", "3.11-rc"]
+        DEPS_VERSION: ["min_deps_version", "latest_deps_version"]
         PKG_FORMAT: ["src", "whl"]
   image: python:$PY
   script:
     # "%%-*" strips the longest possible match of "-*" from the right:
     - >-
-      nox --forcecolor -s "test-${PY%%-*}($PKG_FORMAT)" --
-      --junit-xml=report-${PY%%-*}-${PKG_FORMAT}.xml
+      nox --forcecolor -s "test-${PY%%-*}($PKG_FORMAT, $DEPS_VERSION)" --
+      --junit-xml=report-${PY%%-*}-${PKG_FORMAT}-${DEPS_VERSION}.xml
   artifacts:
     paths:
       - ".coverage"
