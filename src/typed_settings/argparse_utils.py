@@ -105,6 +105,36 @@ def _mk_parser(
         for g_cls, g_opts in itertools.groupby(options, key=lambda o: o.cls)
     ]
     parser = argparse.ArgumentParser(**parser_kwargs)
+    for g_cls, g_opts in grouped_options:
+        group = parser.add_group(g_cls.__name__, f"{g_cls.__name} options")
+        for oinfo in g_opts:
+            flags, cfg = _mk_argument(
+                oinfo.path, oinfo.field, default, type_handler
+            )
+            group.add_argument(*flags, **cfg)
+    return parser
+
+
+def _mk_argument(
+    path: str,
+    field: attrs.Attribute,
+    default: t.Any,
+    type_handler: TypeHandler,
+) -> t.Tuple[t.List[str], t.Dict[str, t.Any]]:
+    # add_argument(
+    #     name or flags...,
+    #     action,
+    #     nargs,
+    #     const,
+    #     default,
+    #     type,
+    #     choices,
+    #     required,
+    #     help,
+    #     metavar,
+    #     dest,
+    # )
+    argparse.BooleanOptionalAction
     parser.add_argument(
         "--x",
         type=int,
@@ -120,7 +150,6 @@ def _mk_parser(
         # default=max,
         # help="sum the integers (default: find the max)",
     )
-    return parser
 
 
 def _ns2settings(
@@ -139,6 +168,98 @@ def _ns2settings(
         _set_path(settings_dict, option_info.path, value)
     settings = from_dict(settings_dict, settings_cls, converter)
     return settings
+
+
+class BooleanOptionalAction(argparse.Action):
+    def __init__(
+        self,
+        option_strings,
+        dest,
+        default=None,
+        type=None,
+        choices=None,
+        required=False,
+        help=None,
+        metavar=None,
+    ):
+
+        _option_strings = []
+        for option_string in option_strings:
+            _option_strings.append(option_string)
+
+            if option_string.startswith("--"):
+                option_string = "--no-" + option_string[2:]
+                _option_strings.append(option_string)
+
+        if (
+            help is not None
+            and default is not None
+            and default is not SUPPRESS
+        ):
+            help += " (default: %(default)s)"
+
+        super().__init__(
+            option_strings=_option_strings,
+            dest=dest,
+            nargs=0,
+            default=default,
+            type=type,
+            choices=choices,
+            required=required,
+            help=help,
+            metavar=metavar,
+        )
+
+    def __call__(self, parser, namespace, values, option_string=None):
+        if option_string in self.option_strings:
+            setattr(
+                namespace, self.dest, not option_string.startswith("--no-")
+            )
+
+    def format_usage(self):
+        return " | ".join(self.option_strings)
+
+
+class DictItemAction(argparse.Action):
+    def __init__(
+        self,
+        option_strings,
+        dest,
+        nargs=None,
+        const=None,
+        default=None,
+        type=None,
+        choices=None,
+        required=False,
+        help=None,
+        metavar=None,
+    ):
+        if nargs == 0:
+            raise ValueError(
+                "nargs for append actions must be != 0; if arg "
+                "strings are not supplying the value to append, "
+                "the append const action may be more appropriate"
+            )
+        if const is not None and nargs != OPTIONAL:
+            raise ValueError("nargs must be %r to supply const" % OPTIONAL)
+        super(_AppendAction, self).__init__(
+            option_strings=option_strings,
+            dest=dest,
+            nargs=nargs,
+            const=const,
+            default=default,
+            type=type,
+            choices=choices,
+            required=required,
+            help=help,
+            metavar=metavar,
+        )
+
+    def __call__(self, parser, namespace, values, option_string=None):
+        items = getattr(namespace, self.dest, None)
+        items = dict(items)
+        items.append(values)
+        setattr(namespace, self.dest, items)
 
 
 @cli(Settings, "myapp")
