@@ -19,7 +19,7 @@ import click
 from attr._make import _Nothing as NothingType
 
 from ._compat import get_args, get_origin
-from ._core import T, _load_settings, default_loaders
+from ._core import _load_settings, default_loaders
 from ._dict_utils import (
     _deep_options,
     _get_path,
@@ -124,18 +124,8 @@ def click_options(
        Add the *decorator_factory* parameter.
     """
     cls = attrs.resolve_types(cls)
-<<<<<<< HEAD
-    options = [
-        opt for opt in _deep_options(cls) if opt.field.init is not False
-    ]
-    grouped_options = [
-        (g_cls, list(g_opts))
-        for g_cls, g_opts in itertools.groupby(options, key=lambda o: o.cls)
-    ]
-=======
     options = _deep_options(cls)
     grouped_options = _group_options(cls, options)
->>>>>>> 6ac2723 (Extract and fix group_options function)
 
     if isinstance(loaders, str):
         loaders = default_loaders(loaders)
@@ -471,6 +461,7 @@ class TypeHandler:
         types: t.Optional[t.Dict[type, TypeHandlerFunc]] = None,
     ) -> None:
         self.types = types or DEFAULT_TYPES
+        self.handler = ClickHandler(self.types)
         self.list_types = (
             list,
             Sequence,
@@ -508,7 +499,9 @@ class TypeHandler:
 
         else:
             if origin in self.list_types:
-                return self._handle_list(otype, default, args, is_optional)
+                return self._handle_collection(
+                    otype, default, args, is_optional
+                )
             elif origin in self.tuple_types:
                 return self._handle_tuple(otype, default, args, is_optional)
             elif origin in self.mapping_types:
@@ -522,15 +515,10 @@ class TypeHandler:
         default: t.Any,
         is_optional: bool,
     ) -> StrDict:
-        type_info: StrDict = {"type": type}
-        if default is not attrs.NOTHING:
-            type_info["default"] = default
-        if type and issubclass(type, bool):
-            type_info["is_flag"] = True
-
+        type_info = self.handler.handle_basic_types(type, default, is_optional)
         return type_info
 
-    def _handle_list(
+    def _handle_collection(
         self,
         type: type,
         default: t.Any,
@@ -541,10 +529,12 @@ class TypeHandler:
         type_info = self.get_type(args[0], attrs.NOTHING)
         if isinstance(default, t.Collection):
             default = [self.get_type(args[0], d)["default"] for d in default]
-            type_info["default"] = default
-        elif is_optional:
-            type_info["default"] = None
-        type_info["multiple"] = True
+        else:
+            default = None
+
+        type_info = self.handler.handle_collection(
+            type_info, default, is_optional
+        )
         return type_info
 
     def _handle_tuple(
@@ -556,7 +546,7 @@ class TypeHandler:
     ) -> StrDict:
         if len(args) == 2 and args[1] == ...:
             # "Immutable list" variant of tuple
-            return self._handle_list(type, default, args, is_optional)
+            return self._handle_collection(type, default, args, is_optional)
 
         # "struct" variant of tuple
         use_default = False
@@ -573,12 +563,7 @@ class TypeHandler:
             default = None
             use_default = True
 
-        type_info = {
-            "type": tuple(d["type"] for d in dicts),
-            "nargs": len(dicts),
-        }
-        if use_default:
-            type_info["default"] = default
+        type_info = self.handler.handle_tuple(dicts, default, use_default)
         return type_info
 
     def _handle_dict(
@@ -587,6 +572,68 @@ class TypeHandler:
         default: t.Any,
         args: t.Tuple[t.Any, ...],
         is_optional: bool,
+    ) -> StrDict:
+        type_info = self.handler.handle_dict(default, is_optional)
+        return type_info
+
+
+class ClickHandler:
+    def __init__(self, extra_types: t.Dict[type, TypeHandlerFunc]) -> None:
+        self.extra_types = extra_types
+
+    def handle_basic_types(
+        self,
+        type: t.Optional[type],
+        default: t.Any,
+        is_optional: bool,
+    ) -> StrDict:
+        type_info: StrDict = {"type": type}
+        if default is not attrs.NOTHING:
+            type_info["default"] = default
+        if type and issubclass(type, bool):
+            type_info["is_flag"] = True
+
+        # {type, default, is_flag} => {type, default, action=BooleanOptionalAction}
+
+        return type_info
+
+    def handle_collection(
+        self,
+        type_info,
+        default: t.Optional[t.Sequence],
+        is_optional: bool,
+    ) -> StrDict:
+        if isinstance(default, t.Collection):
+            type_info["default"] = default
+        elif is_optional:
+            type_info["default"] = None
+        type_info["multiple"] = True
+
+        # {type, default, multiple} => {type, default, action="append"}
+
+        return type_info
+
+    def handle_tuple(
+        self,
+        dicts,
+        default,
+        use_default,
+    ) -> StrDict:
+        type_info = {
+            "type": tuple(d["type"] for d in dicts),
+            "nargs": len(dicts),
+        }
+        if use_default:
+            type_info["default"] = default
+
+        # {type, default, nargs} => {type, default, nargs}
+
+        return type_info
+
+    def handle_dict(
+        self,
+        default,
+        is_optional,
     ) -> StrDict:
         def cb(
             ctx: click.Context,
@@ -609,6 +656,9 @@ class TypeHandler:
             type_info["default"] = default
         elif is_optional:
             type_info["default"] = None
+
+        # {metavar, default, multiple, callback} => {metavar, default, }
+
         return type_info
 
 
@@ -655,7 +705,7 @@ def _get_default(
 
 
 def _mk_option(
-    option: t.Callable[..., Decorator],
+    option_fn: t.Callable[..., Decorator],
     path: str,
     field: attrs.Attribute,
     default: t.Any,
@@ -706,7 +756,7 @@ def _mk_option(
     # The user has the last word, though.
     kwargs.update(user_config)
 
-    return option(*param_decls, **kwargs)
+    return option_fn(*param_decls, **kwargs)
 
 
 def _make_callback(
