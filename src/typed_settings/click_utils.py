@@ -124,7 +124,9 @@ def click_options(
        Add the *decorator_factory* parameter.
     """
     cls = attrs.resolve_types(cls)
-    options = _deep_options(cls)
+    options = [
+        opt for opt in _deep_options(cls) if opt.field.init is not False
+    ]
     grouped_options = _group_options(cls, options)
 
     if isinstance(loaders, str):
