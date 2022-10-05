@@ -10,7 +10,6 @@ from typing import (
     Collection,
     Dict,
     Iterable,
-    List,
     Mapping,
     Optional,
     Sequence,
@@ -34,8 +33,8 @@ from ._dict_utils import (
     _set_path,
 )
 from .attrs import CLICK_KEY, METADATA_KEY, _SecretRepr
+from .cli_utils import StrDict, TypeArgsMaker, TypeHandlerFunc
 from .converters import BaseConverter, default_converter, from_dict
-from .cli_utils import TypeArgsMaker, TypeHandlerFunc, StrDict
 from .loaders import Loader
 from .types import ST, OptionInfo, SettingsClass, SettingsDict, T
 
@@ -430,12 +429,21 @@ class ClickHandler:
 
     def handle_collection(
         self,
-        kwargs: StrDict,
+        # kwargs: StrDict,
+        type_args_maker: TypeArgsMaker,
+        types: Tuple[Any, ...],
         default: Optional[Collection[Any]],
         is_optional: bool,
     ) -> StrDict:
+        kwargs = type_args_maker.get_kwargs(types[0], attrs.NOTHING)
+
         if isinstance(default, Collection):
-            kwargs["default"] = default
+            default = type_args_maker.get_defaults(types[0], default)
+        else:
+            default = None
+
+        if isinstance(default, Collection):
+            kwargs["default"] = type_args_maker.get_defaults(types[0], default)
         elif is_optional:
             kwargs["default"] = None
         kwargs["multiple"] = True
@@ -446,16 +454,20 @@ class ClickHandler:
 
     def handle_tuple(
         self,
-        types: Tuple[type],
+        type_args_maker: TypeArgsMaker,
+        types: Tuple[Any, ...],
         default: Any,
         is_optional: bool,
     ) -> StrDict:
         kwargs = {
             "type": types,
             "nargs": len(types),
+            "default": default,
         }
         if isinstance(default, tuple):
-            kwargs["default"] = default
+            kwargs["default"] = tuple(
+                type_args_maker.get_defaults(types, default)
+            )
         elif is_optional:
             kwargs["default"] = None
 
@@ -465,7 +477,8 @@ class ClickHandler:
 
     def handle_mapping(
         self,
-        args,
+        type_args_maker: TypeArgsMaker,
+        types: Tuple[Any, ...],
         default,
         is_optional,
     ) -> StrDict:

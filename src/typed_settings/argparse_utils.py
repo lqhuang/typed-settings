@@ -3,8 +3,21 @@ Utilities for generating an :mod:`argparse` based CLI.
 """
 import argparse
 import itertools
-import typing as t
 from functools import wraps
+from typing import (
+    Any,
+    Callable,
+    Collection,
+    Dict,
+    Iterable,
+    List,
+    Mapping,
+    Optional,
+    Sequence,
+    Tuple,
+    Type,
+    Union,
+)
 
 import attrs
 import cattrs
@@ -13,12 +26,13 @@ import typed_settings as ts
 
 from ._core import _load_settings, default_loaders
 from ._dict_utils import _deep_options, _set_path
+from .cli_utils import StrDict, TypeArgsMaker, TypeHandlerFunc
 from .converters import default_converter, from_dict
 from .loaders import Loader
 from .types import OptionInfo, OptionList, SettingsDict, T
 
 
-WrapppedFunc = t.Callable[[T], t.Any]
+WrapppedFunc = Callable[[T], Any]
 
 
 @ts.settings
@@ -27,19 +41,132 @@ class Settings:
     y: str = ""
 
 
-CliFn = t.Callable[[T], t.Optional[int]]
-DecoratedCliFn = t.Callable[[], t.Optional[int]]
+CliFn = Callable[[T], Optional[int]]
+DecoratedCliFn = Callable[[], Optional[int]]
+
+#: Default handlers for click option types.
+DEFAULT_TYPES: Dict[type, TypeHandlerFunc] = {
+    # datetime: handle_datetime,
+    # Enum: handle_enum,
+}
+
+
+class ArgparseHandler:
+    def __init__(
+        self, extra_types: Optional[Dict[type, TypeHandlerFunc]] = None
+    ) -> None:
+        self.extra_types = extra_types or DEFAULT_TYPES
+
+    def get_scalar_handlers(self) -> Dict[type, TypeHandlerFunc]:
+        return self.extra_types
+
+    def handle_scalar(
+        self,
+        type: Optional[type],
+        default: Any,
+        is_optional: bool,
+    ) -> StrDict:
+        kwargs: StrDict = {"type": type}
+        if default is not attrs.NOTHING:
+            kwargs["default"] = default
+        if type and issubclass(type, bool):
+            kwargs["action"] = argparse.BooleanOptionalAction
+
+        return kwargs
+
+    def handle_collection(
+        self,
+        # kwargs: StrDict,
+        type_args_maker: TypeArgsMaker,
+        types: Tuple[Any, ...],
+        default: Optional[Collection[Any]],
+        is_optional: bool,
+    ) -> StrDict:
+        kwargs = type_args_maker.get_kwargs(types[0], attrs.NOTHING)
+
+        if isinstance(default, Collection):
+            # Call get_kwargs() to get proper default value formatting
+            default = [
+                type_args_maker.get_kwargs(types[0], d)["default"]
+                for d in default
+            ]
+        else:
+            default = None
+
+        if isinstance(default, Collection):
+            kwargs["default"] = default
+        elif is_optional:
+            kwargs["default"] = None
+        kwargs["action"] = "append"
+
+        return kwargs
+
+    def handle_tuple(
+        self,
+        type_args_maker: TypeArgsMaker,
+        types: Tuple[Any, ...],
+        default: Any,
+        is_optional: bool,
+    ) -> StrDict:
+        kwargs = {
+            "type": types,
+            "nargs": len(types),
+        }
+        if isinstance(default, tuple):
+            kwargs["default"] = tuple(
+                type_args_maker.get_kwargs(t, d)["default"]
+                for t, d in zip(types, default)
+            )
+        elif is_optional:
+            kwargs["default"] = None
+
+        # {type, default, nargs} => {type, default, nargs}
+
+        return kwargs
+
+    def handle_mapping(
+        self,
+        type_args_maker: TypeArgsMaker,
+        types: Tuple[Any, ...],
+        default,
+        is_optional,
+    ) -> StrDict:
+        def cb(
+            ctx: click.Context,
+            param: click.Option,
+            value: Optional[Iterable[str]],
+        ) -> Optional[Dict[str, str]]:
+            if not value:
+                return None if is_optional else {}
+            splitted = [v.partition("=") for v in value]
+            items = {k: v for k, _, v in splitted}
+            return items
+
+        kwargs = {
+            "metavar": "KEY=VALUE",
+            "multiple": True,
+            "callback": cb,
+        }
+        if isinstance(default, Mapping):
+            default = [f"{k}={v}" for k, v in default.items()]
+            kwargs["default"] = default
+        elif is_optional:
+            kwargs["default"] = None
+
+        # {metavar, default, multiple, callback} => {metavar, default, }
+
+        return kwargs
 
 
 def cli(
-    cls: t.Type[T],
-    loaders: t.Union[str, t.Sequence[Loader]],
-    converter: t.Optional[cattrs.Converter] = None,
-    # type_handler: "t.Optional[TypeHandler]" = None,
-    # argname: t.Optional[str] = None,
-    # decorator_factory: "t.Optional[DecoratorFactory]" = None,
-    **parser_kwargs: t.Any,
-) -> t.Callable[[CliFn], DecoratedCliFn]:
+    cls: Type[T],
+    loaders: Union[str, Sequence[Loader]],
+    converter: Optional[cattrs.Converter] = None,
+    # type_handler: "Optional[TypeHandler]" = None,
+    # argname: Optional[str] = None,
+    # decorator_factory: "Optional[DecoratorFactory]" = None,
+    **parser_kwargs: Any,
+) -> Callable[[CliFn], DecoratedCliFn]:
     """
     Generate an argument parser for the options of the given settings class
     and pass an instance of it to the decorated function.
@@ -54,11 +181,11 @@ def cli(
 
 
 def _get_decorator(
-    cls: t.Type[T],
-    loaders: t.Sequence[Loader],
+    cls: Type[T],
+    loaders: Sequence[Loader],
     converter: cattrs.Converter,
-    **parser_kwargs: t.Any,
-) -> t.Callable[[CliFn], DecoratedCliFn]:
+    **parser_kwargs: Any,
+) -> Callable[[CliFn], DecoratedCliFn]:
     """
     Build the CLI decorator based on the user's config.
     """
@@ -76,7 +203,7 @@ def _get_decorator(
         """
 
         @wraps(func)
-        def cli_wrapper() -> t.Optional[int]:
+        def cli_wrapper() -> Optional[int]:
             options = _deep_options(cls)
             settings_dict = _load_settings(cls, options, loaders)
             if "description" not in parser_kwargs and func.__doc__:
@@ -95,7 +222,7 @@ def _get_decorator(
 def _mk_parser(
     options: OptionList,
     settings_dict: SettingsDict,
-    **parser_kwargs: t.Any,
+    **parser_kwargs: Any,
 ) -> argparse.ArgumentParser:
     """
     Create an :class:`argparse.ArgumentParser` for all options.
@@ -118,9 +245,9 @@ def _mk_parser(
 def _mk_argument(
     path: str,
     field: attrs.Attribute,
-    default: t.Any,
+    default: Any,
     type_handler: "TypeHandler",
-) -> t.Tuple[t.List[str], t.Dict[str, t.Any]]:
+) -> Tuple[List[str], Dict[str, Any]]:
     # add_argument(
     #     name or flags...,
     #     action,
@@ -154,8 +281,8 @@ def _mk_argument(
 
 def _ns2settings(
     namespace: argparse.Namespace,
-    settings_cls: t.Type[T],
-    options: t.List[OptionInfo],
+    settings_cls: Type[T],
+    options: List[OptionInfo],
     converter: cattrs.Converter,
 ) -> T:
     """
