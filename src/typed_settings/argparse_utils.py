@@ -119,7 +119,7 @@ def _mk_argument(
     path: str,
     field: attrs.Attribute,
     default: t.Any,
-    type_handler: TypeHandler,
+    type_handler: "TypeHandler",
 ) -> t.Tuple[t.List[str], t.Dict[str, t.Any]]:
     # add_argument(
     #     name or flags...,
