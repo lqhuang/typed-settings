@@ -1,3 +1,4 @@
+import re
 import sys
 from datetime import datetime, timezone
 from enum import Enum
@@ -779,7 +780,26 @@ class TestClickParamTypes:
         cli_options = ["--a=1", "--a=2", "--b", "1", "2.3", "spam"]
         expected_settings = Settings((1, 2), (1, 2.3, "spam"))
 
-    class NestedTupleParam(ClickParamBase):
+        def test_wrong_default_length(self):
+            """
+            Default values for tuples must have the exact shape defined in by
+            their type.
+
+            Too long tuples are automatically truncated (by attrs or click),
+            but too short default values are an error.
+            """
+
+            @settings
+            class Settings:
+                a: Tuple[int, int, int] = (0, 1)
+
+            run = make_cli(Settings)
+
+            p = "Invalid default for type typing.Tuple[int, int, int]: (0, 1)"
+            with pytest.raises(ValueError, match=re.escape(p)):
+                run("--help")
+
+    class TestNestedTupleParam(ClickParamBase):
         """
         Lists of tuples use "multiple=True" and "nargs=x".
         """

@@ -7,19 +7,28 @@ from pathlib import Path
 from typing import Any, Callable, Optional, Type, Union
 
 from attrs import has
-from cattrs import Converter, GenConverter
+
+
+try:
+    # cattrs >= 22.2.0
+    from cattrs import BaseConverter, Converter
+except ImportError:
+    # cattrs < 22.2.0
+    from cattrs import Converter as BaseConverter  # type: ignore
+    from cattrs import GenConverter as Converter  # type: ignore
+
 from cattrs._compat import is_frozenset, is_mutable_set, is_sequence, is_tuple
 
 from .exceptions import InvalidValueError
 from .types import ET, SettingsDict, T
 
 
-def default_converter() -> Converter:
+def default_converter() -> BaseConverter:
     """
     Get an instanceof the default converter used by Typed Settings.
 
     Return:
-        A :class:`cattrs.Converter` configured with addional hooks for
+        A :class:`cattrs.BaseConverter` configured with addional hooks for
         loading the follwing types:
 
         - :class:`bool` using :func:`.to_bool()`
@@ -35,7 +44,7 @@ def default_converter() -> Converter:
     This converter can also be used as a base for converters with custom
     structure hooks.
     """
-    converter = GenConverter()
+    converter = Converter()
     register_attrs_hook_factory(converter)
     register_strlist_hook(converter, ":")
     for t, h in DEFAULT_STRUCTURE_HOOKS:
@@ -43,7 +52,7 @@ def default_converter() -> Converter:
     return converter
 
 
-def register_attrs_hook_factory(converter: Converter) -> None:
+def register_attrs_hook_factory(converter: BaseConverter) -> None:
     """
     Register a hook factory that allows using instances of attrs classes where
     cattrs would normally expect a dictionary.
@@ -63,7 +72,7 @@ def register_attrs_hook_factory(converter: Converter) -> None:
 
 
 def register_strlist_hook(
-    converter: Converter,
+    converter: BaseConverter,
     sep: Optional[str] = None,
     fn: Optional[Callable[[str], list]] = None,
 ) -> None:
@@ -129,7 +138,9 @@ def _generate_hook_factory(structure_func, fn):  # type: ignore[no-untyped-def]
     return gen_func
 
 
-def from_dict(settings: SettingsDict, cls: Type[T], converter: Converter) -> T:
+def from_dict(
+    settings: SettingsDict, cls: Type[T], converter: BaseConverter
+) -> T:
     """
     Convert a settings dict to an attrs class instance using a cattrs
     converter.

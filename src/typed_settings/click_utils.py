@@ -22,7 +22,7 @@ from ._compat import get_args, get_origin
 from ._core import T, _load_settings, default_loaders
 from ._dict_utils import _deep_options, _get_path, _merge_dicts, _set_path
 from .attrs import CLICK_KEY, METADATA_KEY, _SecretRepr
-from .converters import default_converter, from_dict
+from .converters import BaseConverter, default_converter, from_dict
 from .loaders import Loader
 from .types import OptionInfo, SettingsDict
 
@@ -47,7 +47,7 @@ TypeHandlerFunc = t.Callable[[type, t.Any], StrDict]
 def click_options(
     cls: t.Type[T],
     loaders: t.Union[str, t.Sequence[Loader]],
-    converter: t.Optional[cattrs.Converter] = None,
+    converter: t.Optional[BaseConverter] = None,
     type_handler: "t.Optional[TypeHandler]" = None,
     argname: t.Optional[str] = None,
     decorator_factory: "t.Optional[DecoratorFactory]" = None,
@@ -67,7 +67,7 @@ def click_options(
             :func:`~typed_settings.default_loaders()` to get the defalt
             loaders.
 
-        converter: An optional :class:`cattrs.Converter` used for converting
+        converter: An optional :class:`.BaseConverter` used for converting
             option values to the required type.
 
             By default, :data:`typed_settings.attrs.converter` is used.
@@ -149,7 +149,7 @@ def _get_wrapper(
     settings_dict: SettingsDict,
     options: t.List[OptionInfo],
     grouped_options: t.List[t.Tuple[type, t.List[OptionInfo]]],
-    converter: cattrs.Converter,
+    converter: BaseConverter,
     type_handler: "TypeHandler",
     argname: t.Optional[str],
     decorator_factory: "DecoratorFactory",
@@ -559,7 +559,7 @@ def _get_default(
     field: attrs.Attribute,
     path: str,
     settings: SettingsDict,
-    converter: cattrs.Converter,
+    converter: BaseConverter,
 ) -> t.Any:
     """
     Returns the proper default value for an attribute.
@@ -578,7 +578,12 @@ def _get_default(
         # the proper type.
         # See: https://gitlab.com/sscherfke/typed-settings/-/issues/11
         if field.type:
-            default = converter.structure(default, field.type)
+            try:
+                default = converter.structure(default, field.type)
+            except cattrs.BaseValidationError as e:
+                raise ValueError(
+                    f"Invalid default for type {field.type}: {default}"
+                ) from e
 
     if isinstance(default, attrs.Factory):  # type: ignore
         if default.takes_self:
