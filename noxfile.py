@@ -45,11 +45,12 @@ def test(session, pkg_format):
 
 
 @nox.session(name="coverage-report")
-def coverage_report(session):
+def coverage_report(session: nox.Session) -> None:
     session.install(".[test]")
     session.run("coverage", "combine")
-    session.run("coverage", "xml")
-    session.run("coverage", "html")
+    # Only let the "report" command fail under 100%
+    session.run("coverage", "xml", "--fail-under=0")
+    session.run("coverage", "html", "--fail-under=0")
     session.run("coverage", "report")
 
 
