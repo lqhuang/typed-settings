@@ -1,3 +1,4 @@
+import re
 import sys
 import unittest.mock as mock
 from datetime import datetime, timezone
@@ -840,9 +841,9 @@ class TestClickParamTypes:
                 a: Tuple[int, int, int] = (0, 1)
 
             run = make_cli(Settings)
-            with pytest.raises(
-                TypeError, match="Default value must be of len 3: 2"
-            ):
+
+            p = "Invalid default for type typing.Tuple[int, int, int]: (0, 1)"
+            with pytest.raises(ValueError, match=re.escape(p)):
                 run("--help")
 
     class TestNestedTupleParam(ClickParamBase):

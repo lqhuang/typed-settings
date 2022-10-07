@@ -7,9 +7,8 @@ from functools import partial
 from typing import TYPE_CHECKING, Any, List
 
 import attrs
-import cattrs
 
-from ..converters import default_converter
+from ..converters import BaseConverter, default_converter
 from ..types import SettingsClass
 
 
@@ -28,7 +27,7 @@ __all__ = [
 ]
 
 
-def make_auto_converter(converter: cattrs.Converter) -> "_FieldTransformer":
+def make_auto_converter(converter: BaseConverter) -> "_FieldTransformer":
     """
     Creates and returns an auto-converter `field transformer`_.
 
@@ -53,7 +52,7 @@ def make_auto_converter(converter: cattrs.Converter) -> "_FieldTransformer":
             >>> import attrs
             >>> import cattrs
             >>>
-            >>> converter = cattrs.GenConverter()
+            >>> converter = cattrs.Converter()
             >>> converter.register_structure_hook(
             ...     datetime, lambda v, _t: datetime.fromisoformat(v)
             ... )

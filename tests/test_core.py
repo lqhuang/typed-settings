@@ -3,13 +3,16 @@ import logging
 from pathlib import Path
 from typing import Any, Dict, List
 
-import cattrs
 import pytest
 
 from typed_settings import _core
 from typed_settings._dict_utils import _deep_options
 from typed_settings.attrs import option, settings
-from typed_settings.converters import default_converter, register_strlist_hook
+from typed_settings.converters import (
+    BaseConverter,
+    default_converter,
+    register_strlist_hook,
+)
 from typed_settings.loaders import EnvLoader, FileLoader, Loader, TomlFormat
 
 
@@ -288,7 +291,7 @@ class TestLoadSettings:
 
         monkeypatch.setenv("TEST_OPT", "42")
 
-        converter = cattrs.GenConverter()
+        converter = BaseConverter()
         converter.register_structure_hook(Test, lambda v, t: Test(int(v)))
 
         result = _core.load_settings(Settings, [EnvLoader("TEST_")], converter)
