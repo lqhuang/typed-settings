@@ -3,6 +3,15 @@ Changelog
 =========
 
 
+1.1.1 (2022-10-08)
+==================
+
+- ✨ Add support for `cattrs 22.2`_ which renamed the main converter classes.
+  The older version 22.1 remains supported, too.
+
+.. _cattrs 22.2: https://cattrs.readthedocs.io/en/latest/history.html#id1
+
+
 1.1.0 (2022-07-09)
 ==================
 
