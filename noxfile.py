@@ -12,7 +12,7 @@ from packaging.requirements import Requirement
 
 
 PROJECT_DIR = pathlib.Path(__file__).parent
-LINT_PATHS = [
+MYPY_PATHS = [
     [
         "./noxfile.py",
         "src/",
@@ -26,6 +26,7 @@ LINT_PATHS = [
         "docs/examples/",
     ],
 ]
+LINT_PATHS = [p for paths in MYPY_PATHS for p in paths]
 # Dependencies for which to test against multiple versions
 DEPS_MATRIX = {
     "attrs",
@@ -103,14 +104,20 @@ def coverage_report(session: nox.Session) -> None:
 @nox.session
 def lint(session: nox.Session) -> None:
     session.install(".[lint]")
-    for paths in LINT_PATHS:
-        session.run("flake8", *paths)
+    session.run("flake8", *LINT_PATHS)
+
+
+@nox.session(python=False)
+def fix(session: nox.Session) -> None:
+    session.run("autoflake", *LINT_PATHS)
+    session.run("isort", *LINT_PATHS)
+    session.run("black", *LINT_PATHS)
 
 
 @nox.session
 def mypy(session: nox.Session) -> None:
     session.install(".[lint]")
-    for paths in LINT_PATHS:
+    for paths in MYPY_PATHS:
         session.run("mypy", "--show-error-codes", *paths)
 
 

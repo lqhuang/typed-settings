@@ -10,6 +10,7 @@ from typing import (
     Collection,
     Dict,
     Iterable,
+    List,
     Mapping,
     Optional,
     Sequence,
@@ -19,21 +20,13 @@ from typing import (
 )
 
 import attrs
-import cattrs
 import click
 from attr._make import _Nothing as NothingType
 
-from ._compat import get_args, get_origin
 from ._core import _load_settings, default_loaders
-from ._dict_utils import (
-    _deep_options,
-    _get_path,
-    _group_options,
-    _merge_dicts,
-    _set_path,
-)
+from ._dict_utils import _deep_options, _group_options, _merge_dicts, _set_path
 from .attrs import CLICK_KEY, METADATA_KEY, _SecretRepr
-from .cli_utils import StrDict, TypeArgsMaker, TypeHandlerFunc
+from .cli_utils import StrDict, TypeArgsMaker, TypeHandlerFunc, get_default
 from .converters import BaseConverter, default_converter, from_dict
 from .loaders import Loader
 from .types import ST, OptionInfo, SettingsClass, SettingsDict, T
@@ -56,13 +49,13 @@ Decorator = Callable[[AnyFunc], AnyFunc]
 
 
 def click_options(
-    cls: t.Type[ST],
-    loaders: t.Union[str, t.Sequence[Loader]],
-    converter: t.Optional[BaseConverter] = None,
+    cls: Type[ST],
+    loaders: Union[str, Sequence[Loader]],
+    converter: Optional[BaseConverter] = None,
     type_args_maker: Optional[TypeArgsMaker] = None,
-    argname: t.Optional[str] = None,
-    decorator_factory: "t.Optional[DecoratorFactory]" = None,
-) -> t.Callable[[t.Callable], t.Callable]:
+    argname: Optional[str] = None,
+    decorator_factory: "Optional[DecoratorFactory]" = None,
+) -> Callable[[Callable], Callable]:
     """
     Generate :mod:`click` options for a CLI which override settins loaded via
     :func:`.load_settings()`.
@@ -157,11 +150,11 @@ def click_options(
 def _get_wrapper(
     cls: Type[ST],
     settings_dict: SettingsDict,
-    options: t.List[OptionInfo],
-    grouped_options: t.List[t.Tuple[type, t.List[OptionInfo]]],
+    options: List[OptionInfo],
+    grouped_options: List[Tuple[type, List[OptionInfo]]],
     converter: BaseConverter,
     type_args_maker: TypeArgsMaker,
-    argname: t.Optional[str],
+    argname: Optional[str],
     decorator_factory: "DecoratorFactory",
 ) -> Callable[[Callable], Callable]:
     def pass_settings(f: AnyFunc) -> Decorator:
@@ -194,7 +187,7 @@ def _get_wrapper(
         option_decorator = decorator_factory.get_option_decorator()
         for g_cls, g_opts in reversed(grouped_options):
             for oinfo in reversed(g_opts):
-                default = _get_default(
+                default = get_default(
                     oinfo.field, oinfo.path, settings_dict, converter
                 )
                 option = _mk_option(
@@ -423,33 +416,18 @@ class ClickHandler:
         if type and issubclass(type, bool):
             kwargs["is_flag"] = True
 
-        # {type, default, is_flag} => {type, default, action=BooleanOptionalAction}
-
         return kwargs
 
     def handle_collection(
         self,
-        # kwargs: StrDict,
         type_args_maker: TypeArgsMaker,
         types: Tuple[Any, ...],
         default: Optional[Collection[Any]],
         is_optional: bool,
     ) -> StrDict:
         kwargs = type_args_maker.get_kwargs(types[0], attrs.NOTHING)
-
-        if isinstance(default, Collection):
-            default = type_args_maker.get_defaults(types[0], default)
-        else:
-            default = None
-
-        if isinstance(default, Collection):
-            kwargs["default"] = type_args_maker.get_defaults(types[0], default)
-        elif is_optional:
-            kwargs["default"] = None
+        kwargs["default"] = default
         kwargs["multiple"] = True
-
-        # {type, default, multiple} => {type, default, action="append"}
-
         return kwargs
 
     def handle_tuple(
@@ -464,23 +442,14 @@ class ClickHandler:
             "nargs": len(types),
             "default": default,
         }
-        if isinstance(default, tuple):
-            kwargs["default"] = tuple(
-                type_args_maker.get_defaults(types, default)
-            )
-        elif is_optional:
-            kwargs["default"] = None
-
-        # {type, default, nargs} => {type, default, nargs}
-
         return kwargs
 
     def handle_mapping(
         self,
         type_args_maker: TypeArgsMaker,
         types: Tuple[Any, ...],
-        default,
-        is_optional,
+        default: Any,
+        is_optional: bool,
     ) -> StrDict:
         def cb(
             ctx: click.Context,
@@ -504,51 +473,7 @@ class ClickHandler:
         elif is_optional:
             kwargs["default"] = None
 
-        # {metavar, default, multiple, callback} => {metavar, default, }
-
         return kwargs
-
-
-def _get_default(
-    field: attrs.Attribute,
-    path: str,
-    settings: SettingsDict,
-    converter: BaseConverter,
-) -> t.Any:
-    """
-    Returns the proper default value for an attribute.
-
-    If possible, the default is taken from loaded settings.  Else, use the
-    field's default value.
-    """
-    try:
-        # Use loaded settings value
-        default = _get_path(settings, path)
-    except KeyError:
-        # Use field's default
-        default = field.default
-    else:
-        # If the default was found (no KeyError), convert the input value to
-        # the proper type.
-        # See: https://gitlab.com/sscherfke/typed-settings/-/issues/11
-        if field.type:
-            try:
-                default = converter.structure(default, field.type)
-            except cattrs.BaseValidationError as e:
-                raise ValueError(
-                    f"Invalid default for type {field.type}: {default}"
-                ) from e
-
-    if isinstance(default, attrs.Factory):  # type: ignore
-        if default.takes_self:
-            # There is no instance yet.  Passing ``None`` migh be more correct
-            # than passing a fake instance, because it raises an error instead
-            # of silently creating a false value. :-?
-            default = default.factory(None)
-        else:
-            default = default.factory()
-
-    return default
 
 
 def _mk_option(

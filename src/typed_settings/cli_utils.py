@@ -9,11 +9,15 @@ from collections.abc import (
     MutableSet,
     Sequence,
 )
-from typing import Any, Collection, Dict, List, Optional, Tuple, Union
+from typing import Any, Collection, Dict, Optional, Tuple, Union
 
 import attrs
+import cattrs
 
 from ._compat import Protocol, get_args, get_origin
+from ._dict_utils import _get_path
+from .converters import BaseConverter
+from .types import SettingsDict
 
 
 NoneType = type(None)
@@ -37,9 +41,8 @@ class TypeHandler(Protocol):
 
     def handle_collection(
         self,
-        # kwargs: StrDict,
         type_args_maker: "TypeArgsMaker",
-        args,
+        args: Tuple[Any, ...],
         default: Optional[Collection[Any]],
         is_optional: bool,
     ) -> StrDict:
@@ -54,6 +57,7 @@ class TypeHandler(Protocol):
 
     def handle_tuple(
         self,
+        type_args_maker: "TypeArgsMaker",
         args: Tuple[Any, ...],
         default: Any,
         is_optional: bool,
@@ -180,21 +184,6 @@ class TypeArgsMaker:
 
             raise TypeError(f"Cannot create click type for: {otype}")
 
-        def get_defaults(
-            self, types: Union[type, Sequence[type]], defaults: Sequence[Any]
-        ) -> List[Any]:
-            if isinstance(types, type):
-                types = [types] * len(defaults)
-            if len(types) != len(defaults):
-                raise ValueError(
-                    f'"types" and "defaults" must have the same length: '
-                    f"{len(types)} != {len(defaults)}"
-                )
-            return [
-                self.get_kwargs(t, d)["default"]
-                for t, d in zip(types, defaults)
-            ]
-
     def _handle_scalar(
         self,
         type: Optional[type],
@@ -215,19 +204,12 @@ class TypeArgsMaker:
         Get kwargs for collections (e.g., lists or list-like tuples) of the
         same type.
         """
-        # kwargs = self.get_kwargs(args[0], attrs.NOTHING)
-        # if isinstance(default, Collection):
-        #     # Call get_kwargs() to get proper default value formatting
-        #     default = [self.get_kwargs(args[0], d)["default"] for d in default]
-        # else:
-        #     default = None
         if isinstance(default, Collection):
-            default = self.get_defaults(args[0], default)
+            # Call get_kwargs() to get proper default value formatting
+            default = [self.get_kwargs(args[0], d)["default"] for d in default]
         else:
             default = None
 
-        # Kwargs contains all type info.  Now modify it to collect multiple
-        # values into a single list:
         kwargs = self.type_handler.handle_collection(
             self, args, default, is_optional
         )
@@ -256,7 +238,11 @@ class TypeArgsMaker:
                 raise TypeError(
                     f"Default value must be of len {len(args)}: {len(default)}"
                 )
-            default = tuple(self.get_defaults(types, default))
+            # print("#-", args, default)
+            # default = tuple(self.get_defaults(args, default))
+            default = [
+                self.get_kwargs(a, d)["default"] for a, d in zip(args, default)
+            ]
         else:
             default = None
 
@@ -279,6 +265,48 @@ class TypeArgsMaker:
             self, args, default, is_optional
         )
         return kwargs
+
+
+def get_default(
+    field: attrs.Attribute,
+    path: str,
+    settings: SettingsDict,
+    converter: BaseConverter,
+) -> Any:
+    """
+    Returns the proper default value for an attribute.
+
+    If possible, the default is taken from loaded settings.  Else, use the
+    field's default value.
+    """
+    try:
+        # Use loaded settings value
+        default = _get_path(settings, path)
+    except KeyError:
+        # Use field's default
+        default = field.default
+    else:
+        # If the default was found (no KeyError), convert the input value to
+        # the proper type.
+        # See: https://gitlab.com/sscherfke/typed-settings/-/issues/11
+        if field.type:
+            try:
+                default = converter.structure(default, field.type)
+            except cattrs.BaseValidationError as e:
+                raise ValueError(
+                    f"Invalid default for type {field.type}: {default}"
+                ) from e
+
+    if isinstance(default, attrs.Factory):  # type: ignore
+        if default.takes_self:
+            # There is no instance yet.  Passing ``None`` migh be more correct
+            # than passing a fake instance, because it raises an error instead
+            # of silently creating a false value. :-?
+            default = default.factory(None)
+        else:
+            default = default.factory()
+
+    return default
 
 
 def check_if_optional(

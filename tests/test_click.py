@@ -22,7 +22,6 @@ from typing import (
     Union,
 )
 
-import attrs
 import click
 import click.testing
 import pytest
@@ -31,7 +30,6 @@ from _pytest.python import Metafunc
 from typed_settings import (
     click_options,
     click_utils,
-    default_converter,
     default_loaders,
     option,
     pass_settings,
@@ -139,47 +137,6 @@ class TestDefaultsLoading:
     """
     Tests for loading default values
     """
-
-    @pytest.mark.parametrize(
-        "default, path, type, settings, expected",
-        [
-            (attrs.NOTHING, "a", int, {"a": 3}, 3),
-            (attrs.NOTHING, "a", int, {}, attrs.NOTHING),
-            (2, "a", int, {}, 2),
-            (attrs.Factory(list), "a", List[int], {}, []),
-        ],
-    )
-    def test_get_default(
-        self,
-        default: object,
-        path: str,
-        type: type,
-        settings: dict,
-        expected: object,
-    ):
-        converter = default_converter()
-        field = attrs.Attribute(  # type: ignore[call-arg,var-annotated]
-            "test", default, None, None, None, None, None, None, type=type
-        )
-        result = click_utils._get_default(field, path, settings, converter)
-        assert result == expected
-
-    def test_get_default_factory(self):
-        """
-        If the factory "takes self", ``None`` is passed since we do not yet
-        have an instance.
-        """
-
-        def factory(self) -> str:
-            assert self is None
-            return "eggs"
-
-        default = attrs.Factory(factory, takes_self=True)
-        field = attrs.Attribute(
-            "test", default, None, None, None, None, None, None
-        )
-        result = click_utils._get_default(field, "a", {}, default_converter())
-        assert result == "eggs"
 
     def test_no_default(self, invoke, monkeypatch):
         """
@@ -741,7 +698,7 @@ class TestClickParamTypes:
             i: FrozenSet[int] = frozenset()
 
         expected_help = [
-            "  --a INTEGER                     [required]",
+            "  --a INTEGER",
             "  --b INTEGER",
             "  --c INTEGER",
             "  --d INTEGER",

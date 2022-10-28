@@ -63,6 +63,7 @@ docs = [
 ]
 lint = [
     "typed-settings[all]",
+    "autoflake",
     "bandit",
     "flake8-bandit",
     "flake8-black",
@@ -90,6 +91,11 @@ Documentation = "https://typed-settings.readthedocs.io"
 Changelog = "https://typed-settings.readthedocs.io/en/latest/changelog.html"
 "Bug Tracker" = "https://gitlab.com/sscherfke/typed-settings/-/issues"
 "Source Code" = "https://gitlab.com/sscherfke/typed-settings"
+
+[tool.autoflake]
+in_place = true
+recursive = true
+remove_all_unused_imports = true
 
 [tool.black]
 line-length = 79
@@ -142,6 +148,7 @@ lint = [
   "mypy docs/examples",
 ]
 fix = [
+  "autoflake {args:.}",
   "isort {args:.}",
   "black {args:.}",
 ]

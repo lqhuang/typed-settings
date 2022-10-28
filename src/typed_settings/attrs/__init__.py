@@ -51,6 +51,7 @@ __all__ = [
 
 METADATA_KEY = "typed_settings"
 CLICK_KEY = "click"
+ARGPARSE_KEY = "argparse"
 
 AttrsClass = Type[AttrsInstance]
 
