@@ -129,7 +129,7 @@ def test_unkown_type(invoke):
         match=r"Cannot create click type for: typing.Union\[int, str\]",
     ):
 
-        @click.command()
+        @click.command()  # pragma: no cover
         @click_options(Settings, "test")
         def cli(settings: Settings) -> None:
             ...

@@ -27,6 +27,8 @@ LINT_PATHS = [
     ],
 ]
 # Dependencies for which to test against multiple versions
+PYTHON_VERSIONS = ["3.7", "3.8", "3.9", "3.10", "3.11"]
+LATEST_STABLE_PYTHON = PYTHON_VERSIONS[-1]
 DEPS_MATRIX = {
     "attrs",
     "cattrs",
@@ -41,7 +43,7 @@ def build(session: nox.Session) -> None:
     session.run("check-wheel-contents", *glob.glob("dist/*.whl"))
 
 
-@nox.session(python=["3.7", "3.8", "3.9", "3.10", "3.11"])
+@nox.session(python=PYTHON_VERSIONS)
 @nox.parametrize(
     "deps_min_version",
     [True, False],
@@ -68,6 +70,13 @@ def test(
     # these versions.
     install_deps = []
     if deps_min_version:
+        if session.python != LATEST_STABLE_PYTHON:
+            # We need to save GitLab CI minutes so we only perform the test
+            # against minimal dependency versions for the latest stable
+            # Python version.
+            session.warn(f"Skipping this session for Python {session.python}")
+            return
+
         pyproject = tomllib.loads(
             PROJECT_DIR.joinpath("pyproject.toml").read_text()
         )
