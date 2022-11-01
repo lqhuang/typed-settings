@@ -238,8 +238,6 @@ class TypeArgsMaker:
                 raise TypeError(
                     f"Default value must be of len {len(args)}: {len(default)}"
                 )
-            # print("#-", args, default)
-            # default = tuple(self.get_defaults(args, default))
             default = [
                 self.get_kwargs(a, d)["default"] for a, d in zip(args, default)
             ]

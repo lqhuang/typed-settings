@@ -71,7 +71,7 @@ class ArgparseHandler:
         is_optional: bool,
     ) -> StrDict:
         kwargs: StrDict = {"type": type}
-        if default is not attrs.NOTHING:
+        if default is not None or is_optional:
             kwargs["default"] = default
         if type and issubclass(type, bool):
             kwargs["action"] = BooleanOptionalAction
@@ -274,16 +274,17 @@ def _mk_argument(
     # Get "help" from the user_config *now*, because we may need to update it
     # below.  Also replace "None" with "".
     kwargs["help"] = user_config.pop("help", None) or ""
-    if "default" in kwargs:
-        default
-        if isinstance(field.repr, _SecretRepr):
-            default_str = f"[default: {field.repr('')}"
+    if "default" in kwargs and kwargs["default"] is not attrs.NOTHING:
+        if kwargs["default"] is None:
+            help_extra = ""
+        elif isinstance(field.repr, _SecretRepr):
+            help_extra = f" [default: {field.repr('')}]"
         else:
-            default_str = f"[default: {default}]"
-        kwargs["help"] = " ".join([kwargs["help"], default_str])
-
+            help_extra = f" [default: {kwargs['default']}]"
     else:
         kwargs["required"] = True
+        help_extra = " [required]"
+    kwargs["help"] = f"{kwargs['help']}{help_extra}"
 
     # The user has the last word, though.
     kwargs.update(user_config)
@@ -329,13 +330,6 @@ class BooleanOptionalAction(argparse.Action):
             if option_string.startswith("--"):
                 option_string = "--no-" + option_string[2:]
                 _option_strings.append(option_string)
-
-        if (
-            help is not None
-            and default is not None
-            and default is not argparse.SUPPRESS
-        ):
-            help += " (default: %(default)s)"
 
         super().__init__(
             option_strings=_option_strings,

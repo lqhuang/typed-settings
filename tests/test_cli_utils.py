@@ -16,7 +16,6 @@ from typed_settings import cli_utils, default_converter
     ],
 )
 def test_get_default(
-    self,
     default: object,
     path: str,
     type: type,
@@ -31,7 +30,7 @@ def test_get_default(
     assert result == expected
 
 
-def test_get_default_factory(self):
+def test_get_default_factory():
     """
     If the factory "takes self", ``None`` is passed since we do not yet
     have an instance.
