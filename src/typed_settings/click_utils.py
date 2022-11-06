@@ -418,18 +418,6 @@ class ClickHandler:
 
         return kwargs
 
-    def handle_collection(
-        self,
-        type_args_maker: TypeArgsMaker,
-        types: Tuple[Any, ...],
-        default: Optional[Collection[Any]],
-        is_optional: bool,
-    ) -> StrDict:
-        kwargs = type_args_maker.get_kwargs(types[0], attrs.NOTHING)
-        kwargs["default"] = default
-        kwargs["multiple"] = True
-        return kwargs
-
     def handle_tuple(
         self,
         type_args_maker: TypeArgsMaker,
@@ -442,6 +430,18 @@ class ClickHandler:
             "nargs": len(types),
             "default": default,
         }
+        return kwargs
+
+    def handle_collection(
+        self,
+        type_args_maker: TypeArgsMaker,
+        types: Tuple[Any, ...],
+        default: Optional[Collection[Any]],
+        is_optional: bool,
+    ) -> StrDict:
+        kwargs = type_args_maker.get_kwargs(types[0], attrs.NOTHING)
+        kwargs["default"] = default
+        kwargs["multiple"] = True
         return kwargs
 
     def handle_mapping(
@@ -457,7 +457,7 @@ class ClickHandler:
             value: Optional[Iterable[str]],
         ) -> Optional[Dict[str, str]]:
             if not value:
-                return None if is_optional else {}
+                return {}
             splitted = [v.partition("=") for v in value]
             items = {k: v for k, _, v in splitted}
             return items
@@ -467,11 +467,9 @@ class ClickHandler:
             "multiple": True,
             "callback": cb,
         }
-        if isinstance(default, Mapping):
-            default = [f"{k}={v}" for k, v in default.items()]
-            kwargs["default"] = default
-        elif is_optional:
-            kwargs["default"] = None
+        if not isinstance(default, Mapping):
+            default = {}
+        kwargs["default"] = [f"{k}={v}" for k, v in default.items()]
 
         return kwargs
 

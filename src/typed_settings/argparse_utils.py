@@ -3,7 +3,10 @@ Utilities for generating an :mod:`argparse` based CLI.
 """
 import argparse
 import itertools
+from datetime import datetime
+from enum import Enum
 from functools import wraps
+from pathlib import Path
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -48,10 +51,57 @@ class Settings:
 CliFn = Callable[[ST], Optional[int]]
 DecoratedCliFn = Callable[[], Optional[int]]
 
-#: Default handlers for click option types.
+
+def handle_datetime(type: type, default: Any, is_optional: bool) -> StrDict:
+    """
+    Use :class:`click.DateTime` as option type and convert the default value
+    to an ISO string.
+    """
+    type_info: StrDict = {
+        "type": datetime.fromisoformat,
+        "metavar": "YYYY-MM-DD[Thh:mm:ss[+xx:yy]]",
+    }
+    if default:
+        type_info["default"] = default.isoformat()
+    elif is_optional:
+        type_info["default"] = None
+    return type_info
+
+
+def handle_enum(type: Type[Enum], default: Any, is_optional: bool) -> StrDict:
+    """
+    Use :class:`EnumChoice` as option type and use the enum value's name as
+    default.
+    """
+    type_info: StrDict = {"choices": list(type.__members__)}
+    if default:
+        # Convert Enum instance to string
+        type_info["default"] = default.name
+    elif is_optional:
+        type_info["default"] = None
+
+    return type_info
+
+
+def handle_path(type: Type[Path], default: Any, is_optional: bool) -> StrDict:
+    """
+    Use :class:`EnumChoice` as option type and use the enum value's name as
+    default.
+    """
+    type_info: StrDict = {"type": Path, "metavar": "PATH"}
+    if default:
+        type_info["default"] = str(default)
+    elif is_optional:
+        type_info["default"] = None
+
+    return type_info
+
+
+#: Default handlers for argparse option types.
 DEFAULT_TYPES: Dict[type, TypeHandlerFunc] = {
-    # datetime: handle_datetime,
-    # Enum: handle_enum,
+    datetime: handle_datetime,
+    Enum: handle_enum,
+    Path: handle_path,
 }
 
 
@@ -71,11 +121,35 @@ class ArgparseHandler:
         is_optional: bool,
     ) -> StrDict:
         kwargs: StrDict = {"type": type}
+        if type is not None:
+            if issubclass(type, str):
+                kwargs["metavar"] = "TEXT"
+            else:
+                kwargs["metavar"] = str(type.__name__).upper()
+
         if default is not None or is_optional:
             kwargs["default"] = default
         if type and issubclass(type, bool):
             kwargs["action"] = BooleanOptionalAction
 
+        return kwargs
+
+    def handle_tuple(
+        self,
+        type_args_maker: TypeArgsMaker,
+        types: Tuple[Any, ...],
+        default: Any,
+        is_optional: bool,
+    ) -> StrDict:
+        metavar = tuple(
+            "TEXT" if issubclass(t, str) else str(t.__name__).upper()
+            for t in types
+        )
+        kwargs = {
+            "metavar": metavar,
+            "nargs": len(types),
+            "default": default,
+        }
         return kwargs
 
     def handle_collection(
@@ -86,22 +160,8 @@ class ArgparseHandler:
         is_optional: bool,
     ) -> StrDict:
         kwargs = type_args_maker.get_kwargs(types[0], attrs.NOTHING)
-        kwargs["default"] = default
-        kwargs["action"] = "append"
-        return kwargs
-
-    def handle_tuple(
-        self,
-        type_args_maker: TypeArgsMaker,
-        types: Tuple[Any, ...],
-        default: Any,
-        is_optional: bool,
-    ) -> StrDict:
-        kwargs = {
-            "type": types,
-            "nargs": len(types),
-            "default": default,
-        }
+        kwargs["default"] = default or []  # Don't use None as default
+        kwargs["action"] = ListAction
         return kwargs
 
     def handle_mapping(
@@ -113,14 +173,14 @@ class ArgparseHandler:
     ) -> StrDict:
         kwargs = {
             "metavar": "KEY=VALUE",
-            "multiple": True,
             "action": DictItemAction,
         }
-        if isinstance(default, Mapping):
-            default = [f"{k}={v}" for k, v in default.items()]
-            kwargs["default"] = default
-        elif is_optional:
-            kwargs["default"] = None
+        if not isinstance(default, Mapping):
+            default = {}
+        kwargs["default"] = default
+        kwargs["default_repr"] = ", ".join(
+            f"{k}={v}" for k, v in default.items()
+        )
 
         return kwargs
 
@@ -275,12 +335,13 @@ def _mk_argument(
     # below.  Also replace "None" with "".
     kwargs["help"] = user_config.pop("help", None) or ""
     if "default" in kwargs and kwargs["default"] is not attrs.NOTHING:
+        default_repr = kwargs.pop("default_repr", kwargs["default"])
         if kwargs["default"] is None:
             help_extra = ""
         elif isinstance(field.repr, _SecretRepr):
             help_extra = f" [default: {field.repr('')}]"
         else:
-            help_extra = f" [default: {kwargs['default']}]"
+            help_extra = f" [default: {default_repr}]"
     else:
         kwargs["required"] = True
         help_extra = " [required]"
@@ -350,7 +411,7 @@ class BooleanOptionalAction(argparse.Action):
         values: Union[str, Sequence[Any], None],
         option_string: Optional[str] = None,
     ) -> None:
-        if option_string in self.option_strings:
+        if option_string and option_string in self.option_strings:
             setattr(
                 namespace, self.dest, not option_string.startswith("--no-")
             )
@@ -359,7 +420,7 @@ class BooleanOptionalAction(argparse.Action):
         return " | ".join(self.option_strings)
 
 
-class DictItemAction(argparse.Action):
+class ListAction(argparse.Action):
     def __init__(
         self,
         option_strings: Sequence[str],
@@ -371,22 +432,13 @@ class DictItemAction(argparse.Action):
         required: bool = False,
         help: Optional[str] = None,
         metavar: Union[str, Tuple[str, ...], None] = None,
-    ):
+    ) -> None:
         if nargs == 0:
-            raise ValueError(
-                "nargs for append actions must be != 0; if arg "
-                "strings are not supplying the value to append, "
-                "the append const action may be more appropriate"
-            )
-        if const is not None and nargs != argparse.OPTIONAL:
-            raise ValueError(
-                f"nargs must be {argparse.OPTIONAL!r} to supply const"
-            )
+            raise ValueError(f"nargs for append actions must be != 0: {nargs}")
         super().__init__(
             option_strings=option_strings,
             dest=dest,
             nargs=nargs,
-            const=const,
             default=default,
             type=type,
             choices=choices,
@@ -402,20 +454,63 @@ class DictItemAction(argparse.Action):
         values: Union[str, Sequence[Any], None],
         option_string: Optional[str] = None,
     ) -> None:
-        # def cb(
-        #     ctx: click.Context,
-        #     param: click.Option,
-        #     value: Optional[Iterable[str]],
-        # ) -> Optional[Dict[str, str]]:
-        #     if not value:
-        #         return None if is_optional else {}
-        #     splitted = [v.partition("=") for v in value]
-        #     items = {k: v for k, _, v in splitted}
-        #     return items
+        if values is None:
+            return
 
-        items = getattr(namespace, self.dest, None)
-        items = dict(items)
+        items = getattr(namespace, self.dest, [])
+        # Do not append to the defaults but create a new list!
+        if items is self.default:
+            items = []
         items.append(values)
+        setattr(namespace, self.dest, items)
+
+
+class DictItemAction(argparse.Action):
+    def __init__(
+        self,
+        option_strings: Sequence[str],
+        dest: str,
+        default: Any = None,
+        type: Union[Callable[[str], Any], "FileType", None] = None,
+        choices: Optional[Iterable[Any]] = None,
+        required: bool = False,
+        help: Optional[str] = None,
+        metavar: Union[str, Tuple[str, ...], None] = None,
+    ) -> None:
+        super().__init__(
+            option_strings=option_strings,
+            dest=dest,
+            nargs=1,
+            default=default,
+            type=type,
+            choices=choices,
+            required=required,
+            help=help,
+            metavar=metavar,
+        )
+
+    def __call__(
+        self,
+        parser: argparse.ArgumentParser,
+        namespace: argparse.Namespace,
+        values: Union[str, Sequence[Any], None],
+        option_string: Optional[str] = None,
+    ) -> None:
+        if values is None:
+            return
+
+        if isinstance(values, str):
+            values = [values]
+
+        items = getattr(namespace, self.dest, {})
+        # Do not append to the defaults but create a new list!
+        if items is self.default:
+            items = {}
+
+        for value in values:
+            k, _, v = value.partition("=")
+            items[k] = v
+
         setattr(namespace, self.dest, items)
 
 

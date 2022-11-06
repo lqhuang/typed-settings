@@ -39,6 +39,15 @@ class TypeHandler(Protocol):
     ) -> StrDict:
         ...
 
+    def handle_tuple(
+        self,
+        type_args_maker: "TypeArgsMaker",
+        args: Tuple[Any, ...],
+        default: Any,
+        is_optional: bool,
+    ) -> StrDict:
+        ...
+
     def handle_collection(
         self,
         type_args_maker: "TypeArgsMaker",
@@ -53,15 +62,6 @@ class TypeHandler(Protocol):
         Args:
             kwargs: Kwargs with type info
         """
-        ...
-
-    def handle_tuple(
-        self,
-        type_args_maker: "TypeArgsMaker",
-        args: Tuple[Any, ...],
-        default: Any,
-        is_optional: bool,
-    ) -> StrDict:
         ...
 
     def handle_mapping(

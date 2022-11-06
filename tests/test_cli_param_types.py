@@ -164,9 +164,6 @@ class TestBoolParam(ParamBase):
         "  --e / --no-e",
     ]
     argparse_expected_help = [
-        "Settings:",
-        "  Settings options",
-        "",
         "  --a, --no-a  [required]",
         "  --b, --no-b  [default: True]",
         "  --c, --no-c  [default: False]",
@@ -183,9 +180,6 @@ class TestBoolParam(ParamBase):
         "  --e / --no-e",
     ]
     argparse_expected_env_var_defaults = [
-        "Settings:",
-        "  Settings options",
-        "",
         "  --a, --no-a  [default: True]",
         "  --b, --no-b  [default: False]",
         "  --c, --no-c  [default: False]",
@@ -226,16 +220,13 @@ class TestIntFloatStrParam(ParamBase):
         "  --g INTEGER  [default: 0]",
     ]
     argparse_expected_help = [
-        "Settings:",
-        "  Settings options",
-        "",
-        "  --a A       [default: spam]",
-        "  --b B       [default: ***]",
-        "  --c C       [default: 0]",
-        "  --d D       [default: 0.0]",
-        "  --e E",
-        "  --f F",
-        "  --g G       [default: 0]",
+        "  --a TEXT    [default: spam]",
+        "  --b TEXT    [default: ***]",
+        "  --c INT     [default: 0]",
+        "  --d FLOAT   [default: 0.0]",
+        "  --e TEXT",
+        "  --f INT",
+        "  --g INT     [default: 0]",
     ]
 
     env_vars = {"A": "eggs", "B": "bacon", "C": "42", "D": "3.14"}
@@ -249,16 +240,13 @@ class TestIntFloatStrParam(ParamBase):
         "  --g INTEGER  [default: 0]",
     ]
     argparse_expected_env_var_defaults = [
-        "Settings:",
-        "  Settings options",
-        "",
-        "  --a A       [default: eggs]",
-        "  --b B       [default: ***]",
-        "  --c C       [default: 42]",
-        "  --d D       [default: 3.14]",
-        "  --e E",
-        "  --f F",
-        "  --g G       [default: 0]",
+        "  --a TEXT    [default: eggs]",
+        "  --b TEXT    [default: ***]",
+        "  --c INT     [default: 42]",
+        "  --d FLOAT   [default: 3.14]",
+        "  --e TEXT",
+        "  --f INT",
+        "  --g INT     [default: 0]",
     ]
 
     expected_defaults = Settings(e=None)
@@ -279,7 +267,7 @@ class TestDateTimeParam(ParamBase):
         c: datetime = datetime.fromtimestamp(0, timezone.utc)
         d: Optional[datetime] = None
 
-    expected_help = [
+    click_expected_help = [
         "  --a [%Y-%m-%d|%Y-%m-%dT%H:%M:%S|%Y-%m-%dT%H:%M:%S%z]",
         "                                  [default: 1970-01-01T00:00:00+00:00]",  # noqa: E501
         "  --b [%Y-%m-%d|%Y-%m-%dT%H:%M:%S|%Y-%m-%dT%H:%M:%S%z]",
@@ -288,13 +276,22 @@ class TestDateTimeParam(ParamBase):
         "                                  [default: 1970-01-01T00:00:00+00:00]",  # noqa: E501
         "  --d [%Y-%m-%d|%Y-%m-%dT%H:%M:%S|%Y-%m-%dT%H:%M:%S%z]",
     ]
+    argparse_expected_help = [
+        "  --a YYYY-MM-DD[Thh:mm:ss[+xx:yy]]",
+        "                        [default: 1970-01-01T00:00:00+00:00]",
+        "  --b YYYY-MM-DD[Thh:mm:ss[+xx:yy]]",
+        "                        [default: 1970-01-01T00:00:00+00:00]",
+        "  --c YYYY-MM-DD[Thh:mm:ss[+xx:yy]]",
+        "                        [default: 1970-01-01T00:00:00+00:00]",
+        "  --d YYYY-MM-DD[Thh:mm:ss[+xx:yy]]",
+    ]
 
     env_vars = {
         "A": "2021-05-04T13:37:00Z",
         "B": "2021-05-04T13:37:00",
         "C": "2021-05-04",
     }
-    expected_env_var_defaults = [
+    click_expected_env_var_defaults = [
         "  --a [%Y-%m-%d|%Y-%m-%dT%H:%M:%S|%Y-%m-%dT%H:%M:%S%z]",
         "                                  [default: 2021-05-04T13:37:00+00:00]",  # noqa: E501
         "  --b [%Y-%m-%d|%Y-%m-%dT%H:%M:%S|%Y-%m-%dT%H:%M:%S%z]",
@@ -302,6 +299,15 @@ class TestDateTimeParam(ParamBase):
         "  --c [%Y-%m-%d|%Y-%m-%dT%H:%M:%S|%Y-%m-%dT%H:%M:%S%z]",
         "                                  [default: 2021-05-04T00:00:00]",  # noqa: E501
         "  --d [%Y-%m-%d|%Y-%m-%dT%H:%M:%S|%Y-%m-%dT%H:%M:%S%z]",
+    ]
+    argparse_expected_env_var_defaults = [
+        "  --a YYYY-MM-DD[Thh:mm:ss[+xx:yy]]",
+        "                        [default: 2021-05-04T13:37:00+00:00]",
+        "  --b YYYY-MM-DD[Thh:mm:ss[+xx:yy]]",
+        "                        [default: 2021-05-04T13:37:00]",
+        "  --c YYYY-MM-DD[Thh:mm:ss[+xx:yy]]",
+        "                        [default: 2021-05-04T00:00:00]",
+        "  --d YYYY-MM-DD[Thh:mm:ss[+xx:yy]]",
     ]
 
     expected_defaults = Settings()
@@ -329,17 +335,27 @@ class TestEnumParam(ParamBase):
         b: Optional[LeEnum]
         c: LeEnum = LeEnum.spam
 
-    expected_help = [
+    click_expected_help = [
         "  --a [spam|eggs]  [required]",
         "  --b [spam|eggs]",
         "  --c [spam|eggs]  [default: spam]",
     ]
+    argparse_expected_help = [
+        "  --a {spam,eggs}  [required]",
+        "  --b {spam,eggs}",
+        "  --c {spam,eggs}  [default: spam]",
+    ]
 
     env_vars = {"A": "spam", "C": "eggs"}
-    expected_env_var_defaults = [
+    click_expected_env_var_defaults = [
         "  --a [spam|eggs]  [default: spam]",
         "  --b [spam|eggs]",
         "  --c [spam|eggs]  [default: eggs]",
+    ]
+    argparse_expected_env_var_defaults = [
+        "  --a {spam,eggs}  [default: spam]",
+        "  --b {spam,eggs}",
+        "  --c {spam,eggs}  [default: eggs]",
     ]
 
     default_options = ["--a=spam"]
@@ -359,14 +375,22 @@ class TestPathParam(ParamBase):
         a: Path = Path("/")
         b: Optional[Path] = None
 
-    expected_help = [
+    click_expected_help = [
         "  --a PATH  [default: /]",
+        "  --b PATH",
+    ]
+    argparse_expected_help = [
+        "  --a PATH    [default: /]",
         "  --b PATH",
     ]
 
     env_vars = {"A": "/spam/eggs"}
-    expected_env_var_defaults = [
+    click_expected_env_var_defaults = [
         "  --a PATH  [default: /spam/eggs]",
+        "  --b PATH",
+    ]
+    argparse_expected_env_var_defaults = [
+        "  --a PATH    [default: /spam/eggs]",
         "  --b PATH",
     ]
 
@@ -390,15 +414,23 @@ class TestNestedParam(ParamBase):
 
         n: Nested = Nested()
 
-    expected_help = [
+    click_expected_help = [
         "  --n-a TEXT     [default: nested]",
         "  --n-b INTEGER  [default: 0]",
     ]
+    argparse_expected_help = [
+        "  --n-a TEXT  [default: nested]",
+        "  --n-b INT   [default: 0]",
+    ]
 
     env_vars = {"N_A": "spam", "N_B": "42"}
-    expected_env_var_defaults = [
+    click_expected_env_var_defaults = [
         "  --n-a TEXT     [default: spam]",
         "  --n-b INTEGER  [default: 42]",
+    ]
+    argparse_expected_env_var_defaults = [
+        "  --n-a TEXT  [default: spam]",
+        "  --n-b INT   [default: 42]",
     ]
 
     expected_defaults = Settings()
@@ -424,7 +456,7 @@ class TestListParam(ParamBase):
         h: MutableSet[int] = set()
         i: FrozenSet[int] = frozenset()
 
-    expected_help = [
+    click_expected_help = [
         "  --a INTEGER",
         "  --b INTEGER",
         "  --c INTEGER",
@@ -436,12 +468,24 @@ class TestListParam(ParamBase):
         "  --h INTEGER",
         "  --i INTEGER",
     ]
+    argparse_expected_help = [
+        "  --a INT               [default: []]",
+        "  --b INT               [default: []]",
+        "  --c INT               [default: []]",
+        "  --d INT               [default: []]",
+        "  --e YYYY-MM-DD[Thh:mm:ss[+xx:yy]]",
+        "                        [default: ['2020-05-04T00:00:00']]",
+        "  --f INT               [default: []]",
+        "  --g INT               [default: []]",
+        "  --h INT               [default: []]",
+        "  --i INT               [default: []]",
+    ]
 
     env_vars = {
         "A": "1:2",
         "E": "2021-01-01:2021-01-02",  # Dates with times wont work here!
     }
-    expected_env_var_defaults = [
+    click_expected_env_var_defaults = [
         "  --a INTEGER                     [default: 1, 2]",
         "  --b INTEGER",
         "  --c INTEGER",
@@ -453,6 +497,19 @@ class TestListParam(ParamBase):
         "  --g INTEGER",
         "  --h INTEGER",
         "  --i INTEGER",
+    ]
+    argparse_expected_env_var_defaults = [
+        "  --a INT               [default: [1, 2]]",
+        "  --b INT               [default: []]",
+        "  --c INT               [default: []]",
+        "  --d INT               [default: []]",
+        "  --e YYYY-MM-DD[Thh:mm:ss[+xx:yy]]",
+        "                        [default: ['2021-01-01T00:00:00',",
+        "                        '2021-01-02T00:00:00']]",
+        "  --f INT               [default: []]",
+        "  --g INT               [default: []]",
+        "  --h INT               [default: []]",
+        "  --i INT               [default: []]",
     ]
 
     default_options = ["--a=1"]
@@ -494,17 +551,27 @@ class TestTupleParam(ParamBase):
         b: Tuple[int, float, str] = (0, 0.0, "")
         c: Optional[Tuple[int, float, str]] = None
 
-    expected_help = [
+    click_expected_help = [
         "  --a INTEGER                  [default: 0]",
         "  --b <INTEGER FLOAT TEXT>...  [default: 0, 0.0, ]",
         "  --c <INTEGER FLOAT TEXT>...",
     ]
+    argparse_expected_help = [
+        "  --a INT             [default: [0]]",
+        "  --b INT FLOAT TEXT  [default: [0, 0.0, '']]",
+        "  --c INT FLOAT TEXT",
+    ]
 
     env_vars = {"A": "1:2", "B": "42:3.14:spam"}
-    expected_env_var_defaults = [
+    click_expected_env_var_defaults = [
         "  --a INTEGER                  [default: 1, 2]",
         "  --b <INTEGER FLOAT TEXT>...  [default: 42, 3.14, spam]",
         "  --c <INTEGER FLOAT TEXT>...",
+    ]
+    argparse_expected_env_var_defaults = [
+        "  --a INT             [default: [1, 2]]",
+        "  --b INT FLOAT TEXT  [default: [42, 3.14, 'spam']]",
+        "  --c INT FLOAT TEXT",
     ]
 
     expected_defaults = Settings()
@@ -541,15 +608,21 @@ class TestNestedTupleParam(ParamBase):
     class Settings:
         a: List[Tuple[int, int]] = option(factory=list)
 
-    expected_help = [
+    click_expected_help = [
         "  --a <INTEGER INTEGER>...",
+    ]
+    argparse_expected_help = [
+        "  --a INT INT  [default: []]",
     ]
 
     # A list of tuples cannot be loaded with the default converter,
     # so we skip this test here.
     env_vars: Dict[str, Any] = {}
-    expected_env_var_defaults = [
+    click_expected_env_var_defaults = [
         "  --a <INTEGER INTEGER>...",
+    ]
+    argparse_expected_env_var_defaults = [
+        "  --a INT INT  [default: []]",
     ]
 
     expected_defaults = Settings()
@@ -570,25 +643,37 @@ class TestDictParam(ParamBase):
         c: Dict[str, str] = {"default": "value"}
         d: Optional[Dict[str, str]] = None
 
-    expected_help = [
-        "  --a KEY=VALUE  [required]",
+    click_expected_help = [
+        "  --a KEY=VALUE",
         "  --b KEY=VALUE",
         "  --c KEY=VALUE  [default: default=value]",
         "  --d KEY=VALUE",
+    ]
+    argparse_expected_help = [
+        "  --a KEY=VALUE  [default: ]",
+        "  --b KEY=VALUE  [default: ]",
+        "  --c KEY=VALUE  [default: default=value]",
+        "  --d KEY=VALUE  [default: ]",
     ]
 
     # A dictionary cannot be loaded with the default converter,
     # so we skip this test here.
     env_vars: Dict[str, Any] = {}
-    expected_env_var_defaults = [
-        "  --a KEY=VALUE  [required]",
+    click_expected_env_var_defaults = [
+        "  --a KEY=VALUE",
         "  --b KEY=VALUE",
         "  --c KEY=VALUE  [default: default=value]",
         "  --d KEY=VALUE",
     ]
+    argparse_expected_env_var_defaults = [
+        "  --a KEY=VALUE  [default: ]",
+        "  --b KEY=VALUE  [default: ]",
+        "  --c KEY=VALUE  [default: default=value]",
+        "  --d KEY=VALUE  [default: ]",
+    ]
 
     default_options = ["--a=k=v"]
-    expected_defaults = Settings({"k": "v"})
+    expected_defaults = Settings({"k": "v"}, d={})  # "d" is never None
 
     cli_options = [
         "--a",
@@ -604,6 +689,7 @@ class TestDictParam(ParamBase):
         {"key0": "val0"},
         {},
         {"key1": "val1", "key-2": "val-2", "key 3": "oi oi"},
+        {},
     )
 
 
@@ -616,13 +702,19 @@ class TestNoTypeParam(ParamBase):
     class Settings:
         a = option(default="spam")  # type: ignore
 
-    expected_help = [
+    click_expected_help = [
         "  --a TEXT  [default: spam]",
+    ]
+    argparse_expected_help = [
+        "  --a A       [default: spam]",
     ]
 
     env_vars = {"A": "eggs"}
-    expected_env_var_defaults = [
+    click_expected_env_var_defaults = [
         "  --a TEXT  [default: eggs]",
+    ]
+    argparse_expected_env_var_defaults = [
+        "  --a A       [default: eggs]",
     ]
 
     expected_defaults = Settings("spam")  # type: ignore
@@ -719,9 +811,9 @@ class TestArgparse:
         print(out)
         assert err == ""
 
-        lines = []
+        lines: List[str] = []
         for line in out.splitlines():
-            if line == "Settings:" or lines:
+            if line.startswith("  --") or lines:
                 lines.append(line)
         assert lines == param_cls.get_expected_help(self.prefix)
 
@@ -746,9 +838,9 @@ class TestArgparse:
         out, err = capsys.readouterr()
         print(out)
 
-        lines = []
+        lines: List[str] = []
         for line in out.splitlines():
-            if line == "Settings:" or lines:
+            if line.startswith("  --") or lines:
                 lines.append(line)
         assert lines == param_cls.get_expected_env_var_defaults(self.prefix)
 
