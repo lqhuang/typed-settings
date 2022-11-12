@@ -26,7 +26,13 @@ from attr._make import _Nothing as NothingType
 from ._core import _load_settings, default_loaders
 from ._dict_utils import _deep_options, _group_options, _merge_dicts, _set_path
 from .attrs import CLICK_KEY, METADATA_KEY, _SecretRepr
-from .cli_utils import StrDict, TypeArgsMaker, TypeHandlerFunc, get_default
+from .cli_utils import (
+    Default,
+    StrDict,
+    TypeArgsMaker,
+    TypeHandlerFunc,
+    get_default,
+)
 from .converters import BaseConverter, default_converter, from_dict
 from .loaders import Loader
 from .types import ST, OptionInfo, SettingsClass, SettingsDict, T
@@ -356,36 +362,40 @@ class OptionGroupFactory:
         return self.optgroup.group(name)
 
 
-def handle_datetime(type: type, default: Any, is_optional: bool) -> StrDict:
+def handle_datetime(
+    type: type, default: Default, is_optional: bool
+) -> StrDict:
     """
     Use :class:`click.DateTime` as option type and convert the default value
     to an ISO string.
     """
-    type_info: StrDict = {
+    kwargs: StrDict = {
         "type": click.DateTime(
             ["%Y-%m-%d", "%Y-%m-%dT%H:%M:%S", "%Y-%m-%dT%H:%M:%S%z"]
         ),
     }
-    if default:
-        type_info["default"] = default.isoformat()
+    if isinstance(default, datetime):
+        kwargs["default"] = default.isoformat()
     elif is_optional:
-        type_info["default"] = None
-    return type_info
+        kwargs["default"] = None
+    return kwargs
 
 
-def handle_enum(type: Type[Enum], default: Any, is_optional: bool) -> StrDict:
+def handle_enum(
+    type: Type[Enum], default: Default, is_optional: bool
+) -> StrDict:
     """
     Use :class:`EnumChoice` as option type and use the enum value's name as
     default.
     """
-    type_info: StrDict = {"type": click.Choice(list(type.__members__))}
-    if default:
+    kwargs: StrDict = {"type": click.Choice(list(type.__members__))}
+    if isinstance(default, type):
         # Convert Enum instance to string
-        type_info["default"] = default.name
+        kwargs["default"] = default.name
     elif is_optional:
-        type_info["default"] = None
+        kwargs["default"] = None
 
-    return type_info
+    return kwargs
 
 
 #: Default handlers for click option types.
@@ -407,12 +417,14 @@ class ClickHandler:
     def handle_scalar(
         self,
         type: Optional[type],
-        default: Any,
+        default: Default,
         is_optional: bool,
     ) -> StrDict:
         kwargs: StrDict = {"type": type}
-        if default is not attrs.NOTHING:
+        if default not in (None, attrs.NOTHING):
             kwargs["default"] = default
+        elif is_optional:
+            kwargs["default"] = None
         if type and issubclass(type, bool):
             kwargs["is_flag"] = True
 
@@ -422,7 +434,7 @@ class ClickHandler:
         self,
         type_args_maker: TypeArgsMaker,
         types: Tuple[Any, ...],
-        default: Any,
+        default: Optional[Tuple],
         is_optional: bool,
     ) -> StrDict:
         kwargs = {
@@ -448,7 +460,7 @@ class ClickHandler:
         self,
         type_args_maker: TypeArgsMaker,
         types: Tuple[Any, ...],
-        default: Any,
+        default: Default,
         is_optional: bool,
     ) -> StrDict:
         def cb(

@@ -33,7 +33,13 @@ import typed_settings as ts
 from ._core import _load_settings, default_loaders
 from ._dict_utils import _deep_options, _set_path
 from .attrs import ARGPARSE_KEY, METADATA_KEY, _SecretRepr
-from .cli_utils import StrDict, TypeArgsMaker, TypeHandlerFunc, get_default
+from .cli_utils import (
+    Default,
+    StrDict,
+    TypeArgsMaker,
+    TypeHandlerFunc,
+    get_default,
+)
 from .converters import BaseConverter, default_converter, from_dict
 from .loaders import Loader
 from .types import ST, SettingsDict
@@ -52,49 +58,55 @@ CliFn = Callable[[ST], Optional[int]]
 DecoratedCliFn = Callable[[], Optional[int]]
 
 
-def handle_datetime(type: type, default: Any, is_optional: bool) -> StrDict:
+def handle_datetime(
+    type: type, default: Default, is_optional: bool
+) -> StrDict:
     """
     Use :class:`click.DateTime` as option type and convert the default value
     to an ISO string.
     """
-    type_info: StrDict = {
+    kwargs: StrDict = {
         "type": datetime.fromisoformat,
         "metavar": "YYYY-MM-DD[Thh:mm:ss[+xx:yy]]",
     }
-    if default:
-        type_info["default"] = default.isoformat()
+    if isinstance(default, datetime):
+        kwargs["default"] = default.isoformat()
     elif is_optional:
-        type_info["default"] = None
-    return type_info
+        kwargs["default"] = None
+    return kwargs
 
 
-def handle_enum(type: Type[Enum], default: Any, is_optional: bool) -> StrDict:
+def handle_enum(
+    type: Type[Enum], default: Default, is_optional: bool
+) -> StrDict:
     """
     Use :class:`EnumChoice` as option type and use the enum value's name as
     default.
     """
-    type_info: StrDict = {"choices": list(type.__members__)}
-    if default:
+    kwargs: StrDict = {"choices": list(type.__members__)}
+    if isinstance(default, type):
         # Convert Enum instance to string
-        type_info["default"] = default.name
+        kwargs["default"] = default.name
     elif is_optional:
-        type_info["default"] = None
+        kwargs["default"] = None
 
-    return type_info
+    return kwargs
 
 
-def handle_path(type: Type[Path], default: Any, is_optional: bool) -> StrDict:
+def handle_path(
+    type: Type[Path], default: Default, is_optional: bool
+) -> StrDict:
     """
     Use :class:`EnumChoice` as option type and use the enum value's name as
     default.
     """
-    type_info: StrDict = {"type": Path, "metavar": "PATH"}
-    if default:
-        type_info["default"] = str(default)
+    kwargs: StrDict = {"type": Path, "metavar": "PATH"}
+    if isinstance(default, (Path, str)):
+        kwargs["default"] = str(default)
     elif is_optional:
-        type_info["default"] = None
+        kwargs["default"] = None
 
-    return type_info
+    return kwargs
 
 
 #: Default handlers for argparse option types.
@@ -117,7 +129,7 @@ class ArgparseHandler:
     def handle_scalar(
         self,
         type: Optional[type],
-        default: Any,
+        default: Default,
         is_optional: bool,
     ) -> StrDict:
         kwargs: StrDict = {"type": type}
@@ -127,8 +139,11 @@ class ArgparseHandler:
             else:
                 kwargs["metavar"] = str(type.__name__).upper()
 
-        if default is not None or is_optional:
+        # if default is not None or is_optional:
+        if default not in (None, attrs.NOTHING):
             kwargs["default"] = default
+        elif is_optional:
+            kwargs["default"] = None
         if type and issubclass(type, bool):
             kwargs["action"] = BooleanOptionalAction
 
@@ -138,7 +153,7 @@ class ArgparseHandler:
         self,
         type_args_maker: TypeArgsMaker,
         types: Tuple[Any, ...],
-        default: Any,
+        default: Optional[Tuple],
         is_optional: bool,
     ) -> StrDict:
         metavar = tuple(
@@ -168,7 +183,7 @@ class ArgparseHandler:
         self,
         type_args_maker: TypeArgsMaker,
         types: Tuple[Any, ...],
-        default: Any,
+        default: Default,
         is_optional: bool,
     ) -> StrDict:
         kwargs = {

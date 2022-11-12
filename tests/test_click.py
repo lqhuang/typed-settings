@@ -45,9 +45,9 @@ def _invoke() -> Invoke:
     return invoke
 
 
-def test_simple_cli(invoke):
+def test_simple_cli(invoke: Invoke) -> None:
     """
-    "click_options()" uses the default loaders if you just pass an app name.
+    Basic test "click_options()", create a simple CLI for simple settings.
     """
 
     @settings
@@ -62,9 +62,10 @@ def test_simple_cli(invoke):
     invoke(cli, "--o=3")
 
 
-def test_unkown_type(invoke):
+def test_unkown_type(invoke: Invoke) -> None:
     """
-    "click_options()" uses the default loaders if you just pass an app name.
+    A TypeError is raised if the settings contain a type that the decorator
+    cannot handle.
     """
 
     @settings
@@ -73,7 +74,7 @@ def test_unkown_type(invoke):
 
     with pytest.raises(
         TypeError,
-        match=r"Cannot create click type for: typing.Union\[int, str\]",
+        match=r"Cannot create CLI option for: typing.Union\[int, str\]",
     ):
 
         @click.command()  # pragma: no cover

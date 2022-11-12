@@ -558,7 +558,7 @@ class TestTupleParam(ParamBase):
     ]
     argparse_expected_help = [
         "  --a INT             [default: [0]]",
-        "  --b INT FLOAT TEXT  [default: [0, 0.0, '']]",
+        "  --b INT FLOAT TEXT  [default: (0, 0.0, '')]",
         "  --c INT FLOAT TEXT",
     ]
 
@@ -570,7 +570,7 @@ class TestTupleParam(ParamBase):
     ]
     argparse_expected_env_var_defaults = [
         "  --a INT             [default: [1, 2]]",
-        "  --b INT FLOAT TEXT  [default: [42, 3.14, 'spam']]",
+        "  --b INT FLOAT TEXT  [default: (42, 3.14, 'spam')]",
         "  --c INT FLOAT TEXT",
     ]
 

@@ -1,3 +1,5 @@
+:tocdepth: 4
+
 =============
 API Reference
 =============
@@ -142,6 +144,14 @@ Converters
 
 .. automodule:: typed_settings.converters
    :members:
+
+
+CLI Utils
+=========
+
+.. automodule:: typed_settings.cli_utils
+   :members:
+   :special-members: __call__
 
 
 Click Options

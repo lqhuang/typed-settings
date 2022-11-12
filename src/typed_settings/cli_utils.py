@@ -9,10 +9,12 @@ from collections.abc import (
     MutableSet,
     Sequence,
 )
-from typing import Any, Collection, Dict, Optional, Tuple, Union
+from types import UnionType
+from typing import Any, Collection, Dict, List, Optional, Tuple, Union
 
 import attrs
 import cattrs
+from attr._make import _Nothing as NothingType
 
 from ._compat import Protocol, get_args, get_origin
 from ._dict_utils import _get_path
@@ -20,39 +22,126 @@ from .converters import BaseConverter
 from .types import SettingsDict
 
 
+__all__ = [
+    "TypeHandlerFunc",
+    "TypeHandler",
+    "TypeArgsMaker",
+    "get_default",
+    "check_if_optional",
+]
+
+
 NoneType = type(None)
 StrDict = Dict[str, Any]
-# TypeHandlerFunc = Callable[[type, Any, bool], StrDict]
+Default = Union[Any, None, NothingType]
 
 
 class TypeHandlerFunc(Protocol):
-    def __call__(self, type: type, default: Any, is_optional: bool) -> StrDict:
+    """
+    **Protocol:** A function that returns keyword arguments for a CLI option
+    for a specific type.
+    """
+
+    def __call__(
+        self, type: type, default: Default, is_optional: bool
+    ) -> StrDict:
+        """
+        Return keyword arguments for creating an option for *type*.
+
+        Args:
+            type: The type to create the option for.
+            default: The default value for the option.  May be ``None`` or
+                :data:`attrs.NOTHING`.
+            is_optional: Whether the original type was an
+                :class:`~typing.Optional`.
+        """
         ...
 
 
 class TypeHandler(Protocol):
+    """
+    **Protocol:** Callbacks for the :class:`TypeArgsMaker` that provide
+    framework specific arguments for various classes of CLI options.
+    """
+
     def get_scalar_handlers(self) -> Dict[type, TypeHandlerFunc]:
+        """
+        Return a dict that maps specialized handlers for certain types (e.g.,
+        enums or datetimes.
+
+        Such a handler can look like this:
+
+        .. code-block:: python
+
+            def handle_mytype(
+                type: type,
+                default: Default,
+                is_optional: bool,
+            ) -> Dict[str, Any]:
+                kwargs = {
+                    "type": MyCliType(...)
+                }
+                if default not in (None, attrs.NOTHING):
+                    kwargs["default"] = default.stringify()
+                elif is_optional:
+                    kwargs["default"] = None
+                return kwargs
+
+        Return:
+            A dict mapping types to the corresponding type handler function.
+        """
         ...
 
     def handle_scalar(
-        self, type: Optional[type], default: Any, is_optional: bool
+        self, type: Optional[type], default: Default, is_optional: bool
     ) -> StrDict:
+        """
+        Handle all scalars for which :func:`get_scalar_handlers()` does not
+        provide a specific handler.
+
+        Args:
+            type: The type to create an option for.  Can be none if the option
+                is untyped.
+            default: The default value for the option. My be ``None`` or
+                :data:`attrs.NOTHING`.
+            is_optional: Whether or not the option type was marked as option
+                or not.
+
+        Return:
+            A dictionary with keyword arguments for creating an option for the
+            given type.
+        """
         ...
 
     def handle_tuple(
         self,
         type_args_maker: "TypeArgsMaker",
         args: Tuple[Any, ...],
-        default: Any,
+        default: Optional[Tuple],
         is_optional: bool,
     ) -> StrDict:
+        """
+        Handle options for structured tuples (i.e., not list-like tuples).
+
+        Args:
+            type_args_maker: The :class:`TypeArgsMaker` that called this
+                function.
+            args: The types of all tuple items.
+            default: Either a tuple of default values or ``None``.
+            is_optional: Whether or not the option type was marked as option
+                or not.
+
+        Return:
+            A dictionary with keyword arguments for creating an option for the
+            tuple.
+        """
         ...
 
     def handle_collection(
         self,
         type_args_maker: "TypeArgsMaker",
         args: Tuple[Any, ...],
-        default: Optional[Collection[Any]],
+        default: Optional[List[Any]],
         is_optional: bool,
     ) -> StrDict:
         """
@@ -60,7 +149,16 @@ class TypeHandler(Protocol):
         collect them in a list/collection.
 
         Args:
-            kwargs: Kwargs with type info
+            type_args_maker: The :class:`TypeArgsMaker` that called this
+                function.
+            args: The types of the list items.
+            default: Either a collection of default values or ``None``.
+            is_optional: Whether or not the option type was marked as option
+                or not.
+
+        Return:
+            A dictionary with keyword arguments for creating an option for the
+            list type.
         """
         ...
 
@@ -68,67 +166,56 @@ class TypeHandler(Protocol):
         self,
         type_args_maker: "TypeArgsMaker",
         args: Tuple[Any, ...],
-        default: Any,
+        default: Default,
         is_optional: bool,
     ) -> StrDict:
+        """
+        Handle dictionaries.
+
+        Args:
+            type_args_maker: The :class:`TypeArgsMaker` that called this
+                function.
+            args: The types of keys and values.
+            default: Either a mapping of default values, ``None`` or
+                :data:`attrs.NOTHING`.
+            is_optional: Whether or not the option type was marked as option
+                or not.
+
+        Return:
+            A dictionary with keyword arguments for creating an option for the
+            tuple.
+        """
         ...
 
 
 class TypeArgsMaker:
     """
-    This class derives type information for Click options from an Attrs field's
-    type.
+    This class derives type information (in the form of keyword arguments)
+    for CLI options from an Attrs field's type.
 
-    The class differentitates between specific and generic types (e.g.,
-    :samp:`int` vs. :samp:`list[{T}]`.
+    For example, it could return a dict ``{"type": int, "default": 3}`` for
+    an option ``val: int = 3``.
 
-    Specific types:
-        Handlers for specific types can be extended and modified by passing
-        a *types* dict to the class.  By default, :data:`DEFAULT_TYPES` is
-        used.
+    It is agnostic of the CLI framework being used.  The specifics for each
+    framework are implemented in a :class:`TypeHandler` that is passed to this
+    class.
 
-        This dict maps Python types to a handler function.  Handler functions
-        take the field type and default value and return a dict that is passed
-        as keyword arguments to :func:`click.option()`.  This dict should
-        contain a ``type`` key and, optionally, an updated ``default``.
+    The TypeArgsMaker differentitates between scalar and collection types
+    (e.g., :samp:`int` vs. :samp:`list[int]`. It inspects each option (field)
+    of a settings class and calls the appropriate method of the
+    :class:`TypeHandler`:
 
-        .. code-block:: python
+    - If a type is in the dict returned by
+      :meth:`TypeHandler.get_scalar_handler()`, call the corresponding handler.
 
-            def handle_mytype(type: type, default: Any) -> Dict[str, Any]:
-                type_info = {
-                    "type": ClickType(...)
-                }
-                if default is not attrs.NOTHING:
-                    type_info["default"] = default.stringify()
-                return type_info
+    - For other scalar types, call :meth:`TypeHandler.handle_scalar()`.
 
-        You can use :func:`handle_datetime` and :func:`handle_enum` as
-        a sample.
+    - For structured tuples, call :meth:`TypeHandler.handle_tuple()`.
 
-        Types without a handler get no special treatment and cause options to
-        look like this: :samp:`click.option(..., type=field_type,
-        default=field_default)`.
+    - For collections (e.g., lists, sets, and list-like tuples), call
+      :meth:`TypeHandler.handle_collection()`.
 
-    Generic types:
-        Handlers for generic types cannot be changed.  They either create an
-        option with :samp:`multiple=True` or :samp:`nargs={x}`.  Nested types
-        are recursively resolved.
-
-        Types that cause :samp:`multiple=True`:
-
-        - :class:`typing.List`
-        - :class:`typing.Sequence`
-        - :class:`typing.MutableSequence`
-        - :class:`typing.Set`
-        - :class:`typing.FrozenSet`
-        - :class:`typing.MutableSet`
-
-        Types that cause :samp:`nargs={x}`:
-
-        - :class:`typing.Tuple`
-        - :class:`typing.NamedTuple`
-
-        Dicts are not (yet) supported.
+    - For mappings (e.g., dicts), call :meth:`TypeHandler.handle_mapping()`.
     """
 
     def __init__(
@@ -151,9 +238,26 @@ class TypeArgsMaker:
             MutableMapping,
         )
 
-    def get_kwargs(self, otype: Optional[type], default: Any) -> StrDict:
+    def get_kwargs(self, otype: Any, default: Default) -> StrDict:
         """
-        Analyses the option type and returns updated options.
+        Analyse the option type and return keyword arguments for creating a
+        CLI option for it.
+
+        Args:
+            otype: The option's type.  It can be None if the user uses an
+                untyped attrs class.
+            default: The default value for the option.  It can be anything,
+                but the values ``None`` (possible default for optional types)
+                and :data:`attrs.NOTHING` (no default set) should be handled
+                explicitly.
+
+        Return:
+            A dictionary with keyword arguments for creating a CLI option in
+            for a given framework.
+
+        Raise:
+            TypeError: If the *otype* has an unsupported type (e.g., a union
+                type).
         """
         origin = get_origin(otype)
         args = get_args(otype)
@@ -182,44 +286,24 @@ class TypeArgsMaker:
             elif origin in self.mapping_types:
                 return self._handle_mapping(otype, args, default, is_optional)
 
-            raise TypeError(f"Cannot create click type for: {otype}")
+            raise TypeError(f"Cannot create CLI option for: {otype}")
 
     def _handle_scalar(
         self,
         type: Optional[type],
-        default: Any,
-        is_optional: bool,
-    ) -> StrDict:
-        type_info = self.type_handler.handle_scalar(type, default, is_optional)
-        return type_info
-
-    def _handle_collection(
-        self,
-        type: type,
-        args: Tuple[Any, ...],
-        default: Any,
+        default: Default,
         is_optional: bool,
     ) -> StrDict:
         """
-        Get kwargs for collections (e.g., lists or list-like tuples) of the
-        same type.
+        Get kwargs for scalar types.
         """
-        if isinstance(default, Collection):
-            # Call get_kwargs() to get proper default value formatting
-            default = [self.get_kwargs(args[0], d)["default"] for d in default]
-        else:
-            default = None
-
-        kwargs = self.type_handler.handle_collection(
-            self, args, default, is_optional
-        )
-        return kwargs
+        return self.type_handler.handle_scalar(type, default, is_optional)
 
     def _handle_tuple(
         self,
         type: type,
         args: Tuple[Any, ...],
-        default: Any,
+        default: Default,
         is_optional: bool,
     ) -> StrDict:
         """
@@ -238,9 +322,9 @@ class TypeArgsMaker:
                 raise TypeError(
                     f"Default value must be of len {len(args)}: {len(default)}"
                 )
-            default = [
+            default = tuple(
                 self.get_kwargs(a, d)["default"] for a, d in zip(args, default)
-            ]
+            )
         else:
             default = None
 
@@ -249,11 +333,33 @@ class TypeArgsMaker:
         )
         return kwargs
 
+    def _handle_collection(
+        self,
+        type: type,
+        args: Tuple[Any, ...],
+        default: Default,
+        is_optional: bool,
+    ) -> StrDict:
+        """
+        Get kwargs for collections (e.g., lists or list-like tuples) of the
+        same type.
+        """
+        if isinstance(default, Collection):
+            # Call get_kwargs() to get proper default value formatting
+            default = [self.get_kwargs(args[0], d)["default"] for d in default]
+        else:
+            default = None
+
+        kwargs = self.type_handler.handle_collection(
+            self, args, default, is_optional
+        )
+        return kwargs
+
     def _handle_mapping(
         self,
         type: type,
         args: Tuple[Any, ...],
-        default: Any,
+        default: Default,
         is_optional: bool,
     ) -> StrDict:
         """
@@ -270,12 +376,22 @@ def get_default(
     path: str,
     settings: SettingsDict,
     converter: BaseConverter,
-) -> Any:
+) -> Default:
     """
-    Returns the proper default value for an attribute.
+    Return the proper default value for an attribute.
 
     If possible, the default is taken from loaded settings.  Else, use the
     field's default value.
+
+    Args:
+        field: The attrs field description for the attribute.
+        path: The dotted path the the option in the settings dict.
+        settings: A (nested) dict with the loaded settings.
+        converter: The cattrs converter to be used.
+
+    Return:
+        The default value to be used for the option.  This can also be ``None``
+        or :data:`attrs.NOTHING`.
     """
     try:
         # Use loaded settings value
@@ -309,7 +425,7 @@ def get_default(
 
 def check_if_optional(
     otype: Optional[type],
-    default: Any,
+    default: Default,
     origin: Any,
     args: Tuple[Any, ...],
 ) -> Tuple[Optional[type], Any, Any, Tuple[Any, ...], bool]:
@@ -317,10 +433,32 @@ def check_if_optional(
     Check if *otype* is optional and return the actual type for it and a flag
     indicating the optionality.
 
-    If it is optional and the default value is *NOTHING*, use ``None`` as new
-    default.
+    If it is optional and the default value is :data:`attrs.NOTHING`, use
+    ``None`` as new default.
+
+    Args:
+        otype: The Python type of the option.
+        default: The option's default value.
+        origin: The generic origin as returned by :func:`typing.get_origin()`.
+        args: The generic args as returned by :func:`typing.get_args()`.
+
+    Return:
+        A tuple *(otype, default, origin, args, is_optional)*:
+
+        *otype:*
+            is either the original or the unwrapped optional type.
+        *default:*
+            is the possibly updated default value.
+        *origin:*
+            is the possibly updated *origin* for the unwrapped *otype*.
+        *args:*
+            are the possibly updated *args* for the unwrapped *otype*.
+        *is_optional:*
+            indicates whether *otype* was an optional or not.
     """
-    is_optional = origin is Union and len(args) == 2 and NoneType in args
+    is_optional = (
+        origin in (Union, UnionType) and len(args) == 2 and NoneType in args
+    )
     if is_optional:
         if default is attrs.NOTHING:
             default = None
