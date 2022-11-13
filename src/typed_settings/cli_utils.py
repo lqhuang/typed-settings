@@ -62,6 +62,8 @@ class TypeHandler(Protocol):
     """
     **Protocol:** Callbacks for the :class:`TypeArgsMaker` that provide
     framework specific arguments for various classes of CLI options.
+
+    .. versionadded:: 2.0.0
     """
 
     def get_scalar_handlers(self) -> Dict[type, TypeHandlerFunc]:
@@ -216,6 +218,9 @@ class TypeArgsMaker:
       :meth:`TypeHandler.handle_collection()`.
 
     - For mappings (e.g., dicts), call :meth:`TypeHandler.handle_mapping()`.
+
+    .. versionchanged:: 2.0.0
+       Complete refactoring and renamed from *TypeHandler* to *TypeArgsMaker*.
     """
 
     def __init__(

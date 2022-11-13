@@ -157,19 +157,40 @@ CLI Utils
 Click Options
 =============
 
+.. automodule:: typed_settings.click_utils
+
 Decorators
 ----------
 
-Decorators for using Typed Settings with and as :mod:`click` options.
+Decorators for creating :mod:`click` options from Typed Settings
+options.
 
-.. currentmodule:: typed_settings
 .. autofunction:: click_options
 .. autofunction:: pass_settings
 
 
-Utilities for generating Click options
---------------------------------------
+Generating Click options and option groups
+------------------------------------------
 
-.. automodule:: typed_settings.click_utils
-   :members: DecoratorFactory, ClickOptionFactory, OptionGroupFactory,
-      TypeHandler, DEFAULT_TYPES, handle_datetime, handle_enum
+Classes for customizing how Cli options are created and grouped.
+
+.. autoclass:: DecoratorFactory
+   :members:
+
+.. autoclass:: ClickOptionFactory
+   :members:
+
+.. autoclass:: OptionGroupFactory
+   :members:
+
+
+Type handling
+-------------
+
+Click type handling for the
+:class:`~typed_settings.cli_utils.TypeArgsMaker`.
+
+.. autofunction:: handle_datetime
+.. autofunction:: handle_enum
+.. autodata:: DEFAULT_TYPES
+.. autoclass:: ClickHandler

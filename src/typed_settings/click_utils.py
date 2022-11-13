@@ -1,5 +1,5 @@
 """
-Utilities for generating Click options
+Utilities for generating Click options.
 """
 from datetime import datetime
 from enum import Enum
@@ -45,6 +45,19 @@ except ImportError:
     from typing import _Protocol as Protocol  # type: ignore
 
 
+__all__ = [
+    "click_options",
+    "pass_settings",
+    "DecoratorFactory",
+    "ClickOptionFactory",
+    "OptionGroupFactory",
+    "handle_datetime",
+    "handle_enum",
+    "DEFAULT_TYPES",
+    "ClickHandler",
+]
+
+
 CTX_KEY = "settings"
 
 
@@ -63,34 +76,32 @@ def click_options(
     decorator_factory: "Optional[DecoratorFactory]" = None,
 ) -> Callable[[Callable], Callable]:
     """
-    Generate :mod:`click` options for a CLI which override settins loaded via
-    :func:`.load_settings()`.
-
-    A single *cls* instance is passed to the decorated function -- by default
-    as positional argument.
+    **Decorator:** Generate :mod:`click` options for a CLI which override
+    settings loaded via :func:`.load_settings()`.
 
     Args:
-        cls: Attrs class with options (and default values).
+        cls: The settings class to generate options for.
 
-        loaders: Either a string with your app name or a list of settings
-            :class:`Loader`'s.  If it is a string, use it with
-            :func:`~typed_settings.default_loaders()` to get the defalt
+        loaders: Either a string with your app name or a list of
+            :class:`Loader`\\ s.  If it's a string, use it with
+            :func:`~typed_settings.default_loaders()` to get the default
             loaders.
 
-        converter: An optional :class:`.BaseConverter` used for converting
+        converter: An optional :class:`~cattrs.Converter` used for converting
             option values to the required type.
 
-            By default, :data:`typed_settings.attrs.converter` is used.
+            By default, :data:`typed_settings.default_converter()` is used.
 
-        type_handler: Helps creating proper click options for option types that
-            are not natively supported by click.
+        type_args_maker: The type args maker that is used to generate keyword
+            arguments for :func:`click.option()`.  By default, use
+            :class:`.TypeArgsMaker` with :class:`ClickHandler`.
 
-        argname: An optional argument name.  If it is set, the settings
-            instances is no longer passed as positional argument but as key
-            word argument.
+        argname: An optional argument name for the settings instance that is
+            passed to the CLI.  If it is set, the settings instances is no
+            longer passed as positional argument but as key word argument.
 
-            This allows a function to be decorated with this function multiple
-            times.
+            This allows a CLI function to be decorated with this function
+            multiple times.
 
         decorator_factory: A class that generates Click decorators for options
             and settings classes.  This allows you to, e.g., use
@@ -104,26 +115,29 @@ def click_options(
 
     Example:
 
-      .. code-block:: python
+        .. code-block:: python
 
-         >>> import click
-         >>> import typed_settings as ts
-         >>>
-         >>> @ts.settings
-         ... class Settings: ...
-         ...
-         >>> @click.command()
-         ... @ts.click_options(Settings, "example")
-         ... def cli(settings):
-         ...     print(settings)
+           >>> import click
+           >>> import typed_settings as ts
+           >>>
+           >>> @ts.settings
+           ... class Settings: ...
+           ...
+           >>> @click.command()
+           ... @ts.click_options(Settings, "example")
+           ... def cli(settings):
+           ...     print(settings)
 
     .. versionchanged:: 1.0.0
        Instead of a list of loaders, you can also just pass an application
        name.
     .. versionchanged:: 1.1.0
-       Add the *argname* parameter.
+       Added the *argname* parameter.
     .. versionchanged:: 1.1.0
-       Add the *decorator_factory* parameter.
+       Added the *decorator_factory* parameter.
+    .. versionchanged:: 2.0.0
+       Renamed *type_handler* to *type_args_maker* and changed it's type to
+       ``TypeArgsMaker``.
     """
     cls = attrs.resolve_types(cls)
     options = [
@@ -165,7 +179,7 @@ def _get_wrapper(
 ) -> Callable[[Callable], Callable]:
     def pass_settings(f: AnyFunc) -> Decorator:
         """
-        Creates a *cls* instances from the settings dict stored in
+        Create a *cls* instances from the settings dict stored in
         :attr:`click.Context.obj` and passes it to the decorated function *f*.
         """
 
@@ -216,16 +230,16 @@ def pass_settings(
     f: Optional[AnyFunc] = None, *, argname: Optional[str] = None
 ) -> AnyFunc:
     """
-    Marks a callback as wanting to receive the innermost settings instance as
-    first argument.
+    **Decorator:** Mark a callback as wanting to receive the innermost settings
+    instance as first argument.
 
-    If you specifiy an *argname* in :func:`click_options()`, you must specify
+    If you specify an *argname* in :func:`click_options()`, you must specify
     the same name here in order to get the correct settings instance.  The
     settings instance is then passed as keyword argument.
 
     Args:
         argname: An optional argument name.  If it is set, the settings
-            instances is no longer passed as positional argument but as key
+            instance is no longer passed as positional argument but as key
             word argument.
 
     Return:
@@ -233,24 +247,24 @@ def pass_settings(
 
     Example:
 
-      .. code-block:: python
+        .. code-block:: python
 
-         >>> import click
-         >>> import typed_settings as ts
-         >>>
-         >>> @ts.settings
-         ... class Settings: ...
-         ...
-         >>> @click.group()
-         ... @click_options(Settings, "example", argname="my_settings")
-         ... def cli(my_settings):
-         ...     pass
-         ...
-         >>> @cli.command()
-         ... # Use the same "argname" as above!
-         ... @pass_settings(argname="my_settings")
-         ... def sub_cmd(*, my_settings):
-         ...     print(my_settings)
+           >>> import click
+           >>> import typed_settings as ts
+           >>>
+           >>> @ts.settings
+           ... class Settings: ...
+           ...
+           >>> @click.group()
+           ... @click_options(Settings, "example", argname="my_settings")
+           ... def cli(my_settings):
+           ...     pass
+           ...
+           >>> @cli.command()
+           ... # Use the same "argname" as above!
+           ... @pass_settings(argname="my_settings")
+           ... def sub_cmd(*, my_settings):
+           ...     print(my_settings)
 
     .. versionchanged:: 1.1.0
        Add the *argname* parameter.
@@ -406,6 +420,17 @@ DEFAULT_TYPES: Dict[type, TypeHandlerFunc] = {
 
 
 class ClickHandler:
+    """
+    Implementation of the :class:`~typed_settings.cli_utils.TypeHandler`
+    protocol for Click.
+
+    Args:
+        extra_types: A dict mapping types to specialized handler functions.
+            Use :data:`DEFAULT_TYPES` by default.
+
+    .. versionadded:: 2.0.0
+    """
+
     def __init__(
         self, extra_types: Optional[Dict[type, TypeHandlerFunc]] = None
     ) -> None:
