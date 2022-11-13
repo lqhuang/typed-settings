@@ -45,6 +45,7 @@ def test_dir():
         "EnvLoader",
         "FileLoader",
         "TomlFormat",
+        "cli",
         "click_options",
         "combine",
         "default_converter",

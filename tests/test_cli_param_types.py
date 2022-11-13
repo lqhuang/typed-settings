@@ -372,29 +372,35 @@ class TestPathParam(ParamBase):
 
     @settings
     class Settings:
-        a: Path = Path("/")
-        b: Optional[Path] = None
+        a: Path
+        b: Path = Path("/")
+        c: Optional[Path] = None
 
     click_expected_help = [
-        "  --a PATH  [default: /]",
-        "  --b PATH",
+        "  --a PATH  [required]",
+        "  --b PATH  [default: /]",
+        "  --c PATH",
     ]
     argparse_expected_help = [
-        "  --a PATH    [default: /]",
-        "  --b PATH",
+        "  --a PATH    [required]",
+        "  --b PATH    [default: /]",
+        "  --c PATH",
     ]
 
     env_vars = {"A": "/spam/eggs"}
     click_expected_env_var_defaults = [
         "  --a PATH  [default: /spam/eggs]",
-        "  --b PATH",
+        "  --b PATH  [default: /]",
+        "  --c PATH",
     ]
     argparse_expected_env_var_defaults = [
         "  --a PATH    [default: /spam/eggs]",
-        "  --b PATH",
+        "  --b PATH    [default: /]",
+        "  --c PATH",
     ]
 
-    expected_defaults = Settings()
+    default_options = ["--a=/"]
+    expected_defaults = Settings(Path("/"))
 
     cli_options = ["--a=/spam"]
     expected_settings = Settings(Path("/spam"))

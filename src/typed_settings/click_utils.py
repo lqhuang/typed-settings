@@ -68,7 +68,7 @@ Decorator = Callable[[AnyFunc], AnyFunc]
 
 
 def click_options(
-    cls: Type[ST],
+    settings_cls: Type[ST],
     loaders: Union[str, Sequence[Loader]],
     converter: Optional[BaseConverter] = None,
     type_args_maker: Optional[TypeArgsMaker] = None,
@@ -80,7 +80,7 @@ def click_options(
     settings loaded via :func:`.load_settings()`.
 
     Args:
-        cls: The settings class to generate options for.
+        settings_cls: The settings class to generate options for.
 
         loaders: Either a string with your app name or a list of
             :class:`Loader`\\ s.  If it's a string, use it with
@@ -113,6 +113,14 @@ def click_options(
     Return:
         A decorator for a click command.
 
+    Raise:
+        ValueError: If settings default or passed CLI options have invalid
+            values.
+        TypeError: If the settings class uses unsupported types.
+        cattrs.StructureHandlerNotFoundError: If cattrs has no handler for a
+            given type.
+        cattrs.BaseValidationError: If cattrs structural validation fails.
+
     Example:
 
         .. code-block:: python
@@ -125,7 +133,7 @@ def click_options(
            ...
            >>> @click.command()
            ... @ts.click_options(Settings, "example")
-           ... def cli(settings):
+           ... def cli(settings: Settings) -> None:
            ...     print(settings)
 
     .. versionchanged:: 1.0.0
@@ -139,7 +147,7 @@ def click_options(
        Renamed *type_handler* to *type_args_maker* and changed it's type to
        ``TypeArgsMaker``.
     """
-    cls = attrs.resolve_types(cls)
+    cls = attrs.resolve_types(settings_cls)
     options = [
         opt for opt in _deep_options(cls) if opt.field.init is not False
     ]

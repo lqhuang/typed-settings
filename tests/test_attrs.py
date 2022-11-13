@@ -4,6 +4,7 @@ import attrs
 import pytest
 
 from typed_settings.attrs import (
+    ARGPARSE_KEY,
     CLICK_KEY,
     METADATA_KEY,
     SECRET,
@@ -74,6 +75,7 @@ class TestFieldExtensions:
             METADATA_KEY: {
                 "help": None,
                 CLICK_KEY: {"help": None},
+                ARGPARSE_KEY: {"help": None},
             },
         }
 
@@ -91,6 +93,7 @@ class TestFieldExtensions:
             METADATA_KEY: {
                 "help": "spam",
                 CLICK_KEY: {"help": "spam"},
+                ARGPARSE_KEY: {"help": "spam"},
             },
         }
 
@@ -104,6 +107,7 @@ class TestFieldExtensions:
             METADATA_KEY: {
                 "help": "spam",
                 CLICK_KEY: {"help": "eggs"},
+                ARGPARSE_KEY: {"help": "spam"},
             },
         }
 
@@ -121,6 +125,7 @@ class TestFieldExtensions:
             METADATA_KEY: {
                 "help": None,
                 CLICK_KEY: {"help": None, "param_decls": ("-o",)},
+                ARGPARSE_KEY: {"help": None},
             },
         }
 
@@ -143,6 +148,7 @@ class TestFieldExtensions:
             METADATA_KEY: {
                 "help": "halp!",
                 CLICK_KEY: {"help": "halp!", "param_decls": ("-o",)},
+                ARGPARSE_KEY: {"help": "halp!"},
             },
         }
 

@@ -5,6 +5,7 @@ from typing import Any, List
 
 from ._core import default_loaders, load, load_settings
 from ._file_utils import find
+from .argparse_utils import cli
 from .attrs import combine, evolve, option, secret, settings
 from .converters import default_converter, register_strlist_hook
 from .loaders import EnvLoader, FileLoader, TomlFormat
@@ -30,6 +31,8 @@ __all__ = [
     # Cattrs converters/helpers
     "default_converter",
     "register_strlist_hook",
+    # Argparse utils
+    "cli",
     # Click utils
     "click_options",
     "pass_settings",

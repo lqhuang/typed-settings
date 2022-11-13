@@ -154,6 +154,35 @@ CLI Utils
    :special-members: __call__
 
 
+Argparse Options
+================
+
+.. automodule:: typed_settings.argparse_utils
+
+Decorators and Functions
+------------------------
+
+Decorators and functions for creating :mod:`argparse` options from Typed
+Settings options.
+
+.. autofunction:: cli
+.. autofunction:: make_parser
+.. autofunction:: namespace2settings
+
+
+Type handling
+-------------
+
+Argparse type handling for the
+:class:`~typed_settings.cli_utils.TypeArgsMaker`.
+
+.. autofunction:: handle_datetime
+.. autofunction:: handle_enum
+.. autofunction:: handle_path
+.. autodata:: DEFAULT_TYPES
+.. autoclass:: ArgparseHandler
+
+
 Click Options
 =============
 

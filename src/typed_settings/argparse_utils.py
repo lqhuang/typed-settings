@@ -1,5 +1,7 @@
 """
 Utilities for generating an :mod:`argparse` based CLI.
+
+.. versionadded:: 2.0.0
 """
 import argparse
 import itertools
@@ -28,8 +30,6 @@ if TYPE_CHECKING:
 
 import attrs
 
-import typed_settings as ts
-
 from ._core import _load_settings, default_loaders
 from ._dict_utils import _deep_options, _set_path
 from .attrs import ARGPARSE_KEY, METADATA_KEY, _SecretRepr
@@ -45,15 +45,22 @@ from .loaders import Loader
 from .types import ST, SettingsDict
 
 
+__all__ = [
+    "cli",
+    "make_parser",
+    "namespace2settings",
+    "handle_datetime",
+    "handle_enum",
+    "handle_path",
+    "DEFAULT_TYPES",
+    "ArgparseHandler",
+    "BooleanOptionalAction",
+    "ListAction",
+    "DictItemAction",
+]
+
+
 WrapppedFunc = Callable[[ST], Any]
-
-
-@ts.settings
-class Settings:
-    x: int = 3
-    y: str = ""
-
-
 CliFn = Callable[[ST], Optional[int]]
 DecoratedCliFn = Callable[[], Optional[int]]
 
@@ -62,8 +69,7 @@ def handle_datetime(
     type: type, default: Default, is_optional: bool
 ) -> StrDict:
     """
-    Use :class:`click.DateTime` as option type and convert the default value
-    to an ISO string.
+    Handle isoformatted datetimes.
     """
     kwargs: StrDict = {
         "type": datetime.fromisoformat,
@@ -97,8 +103,7 @@ def handle_path(
     type: Type[Path], default: Default, is_optional: bool
 ) -> StrDict:
     """
-    Use :class:`EnumChoice` as option type and use the enum value's name as
-    default.
+    Handle :class:`pathlib.Path` and also use proper metavar.
     """
     kwargs: StrDict = {"type": Path, "metavar": "PATH"}
     if isinstance(default, (Path, str)):
@@ -118,6 +123,15 @@ DEFAULT_TYPES: Dict[type, TypeHandlerFunc] = {
 
 
 class ArgparseHandler:
+    """
+    Implementation of the :class:`~typed_settings.cli_utils.TypeHandler`
+    protocol for Click.
+
+    Args:
+        extra_types: A dict mapping types to specialized handler functions.
+            Use :data:`DEFAULT_TYPES` by default.
+    """
+
     def __init__(
         self, extra_types: Optional[Dict[type, TypeHandlerFunc]] = None
     ) -> None:
@@ -208,14 +222,59 @@ def cli(
     **parser_kwargs: Any,
 ) -> Callable[[CliFn], DecoratedCliFn]:
     """
-    Generate an argument parser for the options of the given settings class
-    and pass an instance of it to the decorated function.
+    **Decorator:** Generate an argument parser for the options of the given
+    settings class and pass an instance of that class to the decorated
+    function.
+
+    Args:
+        settings_cls: The settings class to generate options for.
+
+        loaders: Either a string with your app name or a list of
+            :class:`Loader`\\ s.  If it's a string, use it with
+            :func:`~typed_settings.default_loaders()` to get the default
+            loaders.
+
+        converter: An optional :class:`~cattrs.Converter` used for converting
+            option values to the required type.
+
+            By default, :data:`typed_settings.default_converter()` is used.
+
+        type_args_maker: The type args maker that is used to generate keyword
+            arguments for :func:`click.option()`.  By default, use
+            :class:`.TypeArgsMaker` with :class:`ClickHandler`.
+
+        **parser_kwargs: Additional keyword arguments to pass to the
+            :class:`argparse.ArgumentParser`.
+
+    Return:
+        A decorator for an argparse CLI function.
+
+    Raise:
+        ValueError: If settings default or passed CLI options have invalid
+            values.
+        TypeError: If the settings class uses unsupported types.
+        cattrs.StructureHandlerNotFoundError: If cattrs has no handler for a
+            given type.
+        cattrs.BaseValidationError: If cattrs structural validation fails.
+
+    Example:
+
+        .. code-block:: python
+
+           >>> import typed_settings as ts
+           >>>
+           >>> @ts.settings
+           ... class Settings: ...
+           ...
+           >>> @ts.cli(Settings, "example")
+           ... def cli(settings: Settings) -> None:
+           ...     print(settings)
     """
     if isinstance(loaders, str):
         loaders = default_loaders(loaders)
-
     converter = converter or default_converter()
     type_args_maker = type_args_maker or TypeArgsMaker(ArgparseHandler())
+
     decorator = _get_decorator(
         settings_cls, loaders, converter, type_args_maker, **parser_kwargs
     )
@@ -229,6 +288,44 @@ def make_parser(
     type_args_maker: Optional[TypeArgsMaker] = None,
     **parser_kwargs: Any,
 ) -> argparse.ArgumentParser:
+    """
+    Return an argument parser for the options of the given settings class.
+
+    Use :func:`namespace2settings()` to convert the parser's namespace to an
+    instance of the settings class.
+
+    Args:
+        settings_cls: The settings class to generate options for.
+
+        loaders: Either a string with your app name or a list of
+            :class:`Loader`\\ s.  If it's a string, use it with
+            :func:`~typed_settings.default_loaders()` to get the default
+            loaders.
+
+        converter: An optional :class:`~cattrs.Converter` used for converting
+            option values to the required type.
+
+            By default, :data:`typed_settings.default_converter()` is used.
+
+        type_args_maker: The type args maker that is used to generate keyword
+            arguments for :func:`click.option()`.  By default, use
+            :class:`.TypeArgsMaker` with :class:`ClickHandler`.
+
+        **parser_kwargs: Additional keyword arguments to pass to the
+            :class:`argparse.ArgumentParser`.
+
+    Return:
+        An argument parser configured with with an argument for each option of
+        *settings_cls*.
+
+    Raise:
+        ValueError: If settings default or passed CLI options have invalid
+            values.
+        TypeError: If the settings class uses unsupported types.
+        cattrs.StructureHandlerNotFoundError: If cattrs has no handler for a
+            given type.
+        cattrs.BaseValidationError: If cattrs structural validation fails.
+    """
     if isinstance(loaders, str):
         loaders = default_loaders(loaders)
     converter = converter or default_converter()
@@ -244,6 +341,28 @@ def namespace2settings(
     namespace: argparse.Namespace,
     converter: Optional[BaseConverter] = None,
 ) -> ST:
+    """
+    Create a settings instance from an argparse namespace.
+
+    To be used together with :func:`make_parser()`.
+
+    Args:
+        settings_cls: The settings class to instantiate.
+        namespace: The namespace returned by the argument parser.
+        converter: An optional :class:`~cattrs.Converter` used for converting
+            option values to the required type.  By default,
+            :data:`typed_settings.default_converter()` is used.
+
+    Raise:
+        ValueError: If settings default or passed CLI options have invalid
+            values.
+        TypeError: If the settings class uses unsupported types.
+        cattrs.StructureHandlerNotFoundError: If cattrs has no handler for a
+            given type.
+        cattrs.BaseValidationError: If cattrs structural validation fails.
+
+    Return: An instance of *settings_cls*.
+    """
     converter = converter or default_converter()
     return _ns2settings(namespace, settings_cls, converter)
 
@@ -403,9 +522,13 @@ class BooleanOptionalAction(argparse.Action):
         for option_string in option_strings:
             _option_strings.append(option_string)
 
-            if option_string.startswith("--"):
-                option_string = "--no-" + option_string[2:]
-                _option_strings.append(option_string)
+            if not option_string.startswith("--"):
+                raise ValueError(
+                    f"Only boolean flags starting with '--' are supported: "
+                    f"{option_string}"
+                )
+            option_string = "--no-" + option_string[2:]
+            _option_strings.append(option_string)
 
         super().__init__(
             option_strings=_option_strings,
@@ -426,7 +549,9 @@ class BooleanOptionalAction(argparse.Action):
         values: Union[str, Sequence[Any], None],
         option_string: Optional[str] = None,
     ) -> None:
-        if option_string and option_string in self.option_strings:
+        if (
+            option_string and option_string in self.option_strings
+        ):  # pragma: no cover
             setattr(
                 namespace, self.dest, not option_string.startswith("--no-")
             )
@@ -448,7 +573,7 @@ class ListAction(argparse.Action):
         help: Optional[str] = None,
         metavar: Union[str, Tuple[str, ...], None] = None,
     ) -> None:
-        if nargs == 0:
+        if nargs == 0:  # pragma: no cover
             raise ValueError(f"nargs for append actions must be != 0: {nargs}")
         super().__init__(
             option_strings=option_strings,
@@ -470,7 +595,7 @@ class ListAction(argparse.Action):
         option_string: Optional[str] = None,
     ) -> None:
         if values is None:
-            return
+            return  # pragma: no cover
 
         items = getattr(namespace, self.dest, [])
         # Do not append to the defaults but create a new list!
@@ -512,10 +637,10 @@ class DictItemAction(argparse.Action):
         option_string: Optional[str] = None,
     ) -> None:
         if values is None:
-            return
+            return  # pragma: no cover
 
         if isinstance(values, str):
-            values = [values]
+            values = [values]  # pragma: no cover
 
         items = getattr(namespace, self.dest, {})
         # Do not append to the defaults but create a new list!
@@ -527,17 +652,3 @@ class DictItemAction(argparse.Action):
             items[k] = v
 
         setattr(namespace, self.dest, items)
-
-
-@cli(Settings, "myapp")
-def main(settings: Settings) -> None:
-    """
-    My cli
-
-    Spam eggs
-    """
-    print(settings)
-
-
-if __name__ == "__main__":
-    main()
