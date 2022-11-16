@@ -9,7 +9,15 @@ from collections.abc import (
     MutableSet,
     Sequence,
 )
-from types import UnionType
+
+from ._compat import PY_310
+
+
+if PY_310:
+    from types import UnionType
+else:
+    from typing import Union as UnionType  # type: ignore[misc]
+
 from typing import Any, Collection, Dict, List, Optional, Tuple, Union
 
 import attrs

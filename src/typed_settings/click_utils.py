@@ -23,6 +23,7 @@ import attrs
 import click
 from attr._make import _Nothing as NothingType
 
+from ._compat import PY_38
 from ._core import _load_settings, default_loaders
 from ._dict_utils import _deep_options, _group_options, _merge_dicts, _set_path
 from .attrs import CLICK_KEY, METADATA_KEY, _SecretRepr
@@ -38,10 +39,9 @@ from .loaders import Loader
 from .types import ST, OptionInfo, SettingsClass, SettingsDict, T
 
 
-try:
+if PY_38:
     from typing import Protocol
-except ImportError:
-    # Python 3.7
+else:
     from typing import _Protocol as Protocol  # type: ignore
 
 

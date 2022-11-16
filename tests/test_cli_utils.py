@@ -20,6 +20,7 @@ import attrs
 import pytest
 
 from typed_settings import cli_utils, default_converter
+from typed_settings._compat import PY_39, PY_310
 
 
 def handle_int(
@@ -177,6 +178,7 @@ class TestTypeArgsMaker:
         ):
             tam.get_kwargs(Tuple[int, str], (1, "x", True))
 
+    @pytest.mark.skipif(not PY_39, reason="Needs Python 3.8")
     @pytest.mark.parametrize("default", [[1, 2], None, attrs.NOTHING])
     @pytest.mark.parametrize("is_optional", [True, False])
     def test_listtuple(
@@ -199,6 +201,7 @@ class TestTypeArgsMaker:
             "called": "collection",
         }
 
+    @pytest.mark.skipif(not PY_39, reason="Needs Python 3.8")
     @pytest.mark.parametrize(
         "ctype", [list, Sequence, MutableSequence, set, frozenset, MutableSet]
     )
@@ -225,6 +228,7 @@ class TestTypeArgsMaker:
             "called": "collection",
         }
 
+    @pytest.mark.skipif(not PY_39, reason="Needs Python 3.8")
     @pytest.mark.parametrize("ctype", [dict, Mapping, MutableMapping])
     @pytest.mark.parametrize("default", [{"a": 1}, None, attrs.NOTHING])
     @pytest.mark.parametrize("is_optional", [True, False])
@@ -334,34 +338,37 @@ def test_get_default_cattrs_error() -> None:
         None,
         None,
         None,
-        type=list[int],
+        type=List[int],
     )
     with pytest.raises(ValueError, match="Invalid default for type"):
         cli_utils.get_default(field, "a", {"a": ["spam"]}, converter)
 
 
-@pytest.mark.parametrize(
-    "t, d, expected",
-    [
-        (int, 3, (int, 3, None, (), False)),
-        (int, attrs.NOTHING, (int, attrs.NOTHING, None, (), False)),
-        (Optional[int], 3, (int, 3, None, (), True)),
-        (Optional[int], None, (int, None, None, (), True)),
-        (Optional[int], attrs.NOTHING, (int, None, None, (), True)),
+OPTIONAL_TEST_DATA = [
+    (int, 3, (int, 3, None, (), False)),
+    (int, attrs.NOTHING, (int, attrs.NOTHING, None, (), False)),
+    (Optional[int], 3, (int, 3, None, (), True)),
+    (Optional[int], None, (int, None, None, (), True)),
+    (Optional[int], attrs.NOTHING, (int, None, None, (), True)),
+    (Union[int, None], 3, (int, 3, None, (), True)),
+    (Union[int, None], None, (int, None, None, (), True)),
+    (Union[int, None], attrs.NOTHING, (int, None, None, (), True)),
+    (Union[None, int], 3, (int, 3, None, (), True)),
+    (Union[None, int], None, (int, None, None, (), True)),
+    (Union[None, int], attrs.NOTHING, (int, None, None, (), True)),
+    (List[int], None, (List[int], None, list, (int,), False)),
+    (Optional[List[int]], None, (List[int], None, list, (int,), True)),
+    (None, None, (None, None, None, (), False)),
+]
+if PY_310:
+    OPTIONAL_TEST_DATA += [  # type: ignore[misc]  # type: ignore[misc]
         (int | None, 3, (int, 3, None, (), True)),
         (int | None, None, (int, None, None, (), True)),
         (int | None, attrs.NOTHING, (int, None, None, (), True)),
-        (Union[int, None], 3, (int, 3, None, (), True)),
-        (Union[int, None], None, (int, None, None, (), True)),
-        (Union[int, None], attrs.NOTHING, (int, None, None, (), True)),
-        (Union[None, int], 3, (int, 3, None, (), True)),
-        (Union[None, int], None, (int, None, None, (), True)),
-        (Union[None, int], attrs.NOTHING, (int, None, None, (), True)),
-        (List[int], None, (List[int], None, list, (int,), False)),
-        (Optional[List[int]], None, (List[int], None, list, (int,), True)),
-        (None, None, (None, None, None, (), False)),
-    ],
-)
+    ]
+
+
+@pytest.mark.parametrize("t, d, expected", OPTIONAL_TEST_DATA)
 def test_is_optional(
     t: Optional[type],
     d: Any,
