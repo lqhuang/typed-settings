@@ -59,7 +59,6 @@ docs = [
     "typed-settings[all]",
     "furo",
     "sphinx",
-    "sphinx-autodoc-typehints",
 ]
 lint = [
     "typed-settings[all]",
