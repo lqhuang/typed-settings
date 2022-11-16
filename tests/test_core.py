@@ -61,7 +61,7 @@ class TestLoadSettings:
             EnvLoader(prefix="EXAMPLE_"),
         ]
 
-    def test__load_settings(self, loaders: List[Loader]):
+    def test__load_settings(self, loaders: List[Loader]) -> None:
         """
         "_load_settings()" is the internal core loader and takes a list of
         options instead of a normal settings class.  It returns a dict and
@@ -81,7 +81,7 @@ class TestLoadSettings:
             },
         }
 
-    def test_load_settings(self, loaders: List[Loader]):
+    def test_load_settings(self, loaders: List[Loader]) -> None:
         """
         The "load_settings()" works like "_load_settings" but takes a settings
         class and returns an instance of it.
@@ -99,7 +99,7 @@ class TestLoadSettings:
             ),
         )
 
-    def test_load(self, config_files: List[Path], env_vars: None):
+    def test_load(self, config_files: List[Path], env_vars: None) -> None:
         """
         The "load()" shortcut automaticaly defines a file loader and an
         env loader.  Section and env var names are derived from the app name.
@@ -118,7 +118,7 @@ class TestLoadSettings:
             ),
         )
 
-    def test_explicit_section(self, tmp_path: Path):
+    def test_explicit_section(self, tmp_path: Path) -> None:
         """
         The automatically derived config section name name can be overriden.
         """
@@ -143,7 +143,7 @@ class TestLoadSettings:
 
     def test_explicit_files_var(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-    ):
+    ) -> None:
         """
         The automatically derived settings files var name can be overriden.
         """
@@ -170,7 +170,7 @@ class TestLoadSettings:
 
     def test_no_files_var(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-    ):
+    ) -> None:
         """
         Setting config files via an env var can be disabled.
         """
@@ -195,7 +195,9 @@ class TestLoadSettings:
         )
         assert result == Settings(spam="")
 
-    def test_env_var_dash_underscore(self, monkeypatch, tmp_path):
+    def test_env_var_dash_underscore(
+        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    ) -> None:
         """
         Dashes in the appname get replaced with underscores for the settings
         fiels var name.
@@ -212,7 +214,9 @@ class TestLoadSettings:
         result = _core.load(Settings, appname="a-b")
         assert result == Settings(option=False)
 
-    def test_explicit_env_prefix(self, monkeypatch: pytest.MonkeyPatch):
+    def test_explicit_env_prefix(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         monkeypatch.setenv("P_SPAM", "spam")
 
         @settings(frozen=True)
@@ -224,7 +228,7 @@ class TestLoadSettings:
         )
         assert result == Settings(spam="spam")
 
-    def test_disable_env_vars(self, monkeypatch):
+    def test_disable_env_vars(self, monkeypatch: pytest.MonkeyPatch) -> None:
         monkeypatch.setenv("EXAMPLE_SPAM", "spam")
 
         @settings(frozen=True)
@@ -236,7 +240,7 @@ class TestLoadSettings:
         )
         assert result == Settings(spam="")
 
-    def test_load_nested_settings_by_default(self):
+    def test_load_nested_settings_by_default(self) -> None:
         """
         Instantiate nested settings with default settings and pass it to the
         parent settings even if no nested settings are defined in a config
@@ -258,7 +262,7 @@ class TestLoadSettings:
         s = _core.load(Settings, "test")
         assert s == Settings(Nested())
 
-    def test_default_factories(self):
+    def test_default_factories(self) -> None:
         """
         The default value "attr.Factory" is handle as if "attr.NOTHING" was
         set.
@@ -273,7 +277,7 @@ class TestLoadSettings:
         result = _core.load(S, "t")
         assert result == S()
 
-    def test_custom_converter(self, monkeypatch: pytest.MonkeyPatch):
+    def test_custom_converter(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """
         A custom cattr converter can be used in "load_settings()".
         """
@@ -312,7 +316,7 @@ class TestLoadSettings:
         loaders: List[Loader],
         tmp_path: Path,
         monkeypatch: pytest.MonkeyPatch,
-    ):
+    ) -> None:
         """
         Lists can be loaded from env vars
         """
@@ -338,7 +342,7 @@ class TestLoadSettings:
             x=[3, 4, 42], y=[Path("spam"), Path("eggs")], z=[1, 2]
         )
 
-    def test_load_empty_cls(self):
+    def test_load_empty_cls(self) -> None:
         """
         Empty classes are no special case.
         """
@@ -356,7 +360,12 @@ class TestLogging:
     Test emitted log messages.
     """
 
-    def test_successfull_loading(self, caplog, tmp_path, monkeypatch):
+    def test_successfull_loading(
+        self,
+        caplog: pytest.LogCaptureFixture,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
         """
         In case of success, only DEBUG messages are emitted.
         """
@@ -392,7 +401,12 @@ class TestLogging:
             ("typed_settings", logging.DEBUG, "Env var found: TEST_OPT"),
         ]
 
-    def test_optional_files_not_found(self, caplog, tmp_path, monkeypatch):
+    def test_optional_files_not_found(
+        self,
+        caplog: pytest.LogCaptureFixture,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
         """
         Non-existing optional files emit an INFO message if file was specified
         by the app (passed to "load_settings()") an a WARNING message if the
@@ -431,7 +445,12 @@ class TestLogging:
             ("typed_settings", logging.DEBUG, "Env var not found: TEST_OPT"),
         ]
 
-    def test_mandatory_files_not_found(self, caplog, tmp_path, monkeypatch):
+    def test_mandatory_files_not_found(
+        self,
+        caplog: pytest.LogCaptureFixture,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
         """
         In case of success, only ``debug`` messages are emitted.
         """

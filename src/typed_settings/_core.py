@@ -3,7 +3,7 @@ Core functionality for loading settings.
 """
 import logging
 from pathlib import Path
-from typing import Any, Dict, Iterable, List, Sequence, Type, Union
+from typing import Any, Dict, Iterable, List, Optional, Sequence, Type, Union
 
 import attrs
 
@@ -189,7 +189,7 @@ def load(
 def load_settings(
     cls: Type[ST],
     loaders: Sequence[Loader],
-    converter: BaseConverter = None,
+    converter: Optional[BaseConverter] = None,
 ) -> ST:
     """
     Load settings defined by the class *cls* and return an instance of it.

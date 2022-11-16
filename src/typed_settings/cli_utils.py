@@ -16,7 +16,7 @@ from ._compat import PY_310
 if PY_310:
     from types import UnionType
 else:
-    from typing import Union as UnionType  # type: ignore[misc]
+    from typing import Union as UnionType  # type: ignore
 
 from typing import Any, Collection, Dict, List, Optional, Tuple, Union
 

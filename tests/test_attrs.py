@@ -29,38 +29,38 @@ class TestFieldExtensions:
     """Tests for attrs field extensions."""
 
     @pytest.fixture
-    def inst(self):
+    def inst(self) -> S:
         """
         Return an instance of "S".
         """
         return S(u="spam", p="42")
 
     @pytest.fixture(params=[option, secret])
-    def field_func(self, request) -> FieldFunc:
+    def field_func(self, request: pytest.FixtureRequest) -> FieldFunc:
         """
         Generate two test params, one for "option", one for "secret".
         """
         return request.param
 
-    def test_secret_repr_repr(self):
+    def test_secret_repr_repr(self) -> None:
         """
         Secrets are represented by "***" and not printed directly.
         """
         assert str(SECRET) == "***"
 
-    def test_secret_str(self, inst):
+    def test_secret_str(self, inst: S) -> None:
         """
         Values of secrets are obfuscated in the string repr.
         """
         assert str(inst) == "S(u='spam', p=***)"
 
-    def test_secret_repr_call(self, inst):
+    def test_secret_repr_call(self, inst: S) -> None:
         """
         Values of secrets are obfuscated in the repr.
         """
         assert repr(inst) == "S(u='spam', p=***)"
 
-    def test_meta_not_set(self, field_func: FieldFunc):
+    def test_meta_not_set(self, field_func: FieldFunc) -> None:
         """
         The "help" and "click" entries are always present in the metadata,
         even if they are not explicitly set.
@@ -79,7 +79,7 @@ class TestFieldExtensions:
             },
         }
 
-    def test_meta_help(self, field_func: FieldFunc):
+    def test_meta_help(self, field_func: FieldFunc) -> None:
         """
         "help" is stored directly in the meta and in the CLI options dicts.
         """
@@ -97,7 +97,7 @@ class TestFieldExtensions:
             },
         }
 
-    def test_meta_help_override(self, field_func: FieldFunc):
+    def test_meta_help_override(self, field_func: FieldFunc) -> None:
         @settings
         class S:
             o: str = field_func(help="spam", click={"help": "eggs"})
@@ -111,7 +111,7 @@ class TestFieldExtensions:
             },
         }
 
-    def test_meta_click_params(self, field_func: FieldFunc):
+    def test_meta_click_params(self, field_func: FieldFunc) -> None:
         """
         "help" can be overwritten via "click" options.
         """
@@ -129,7 +129,7 @@ class TestFieldExtensions:
             },
         }
 
-    def test_meta_merge(self, field_func: FieldFunc):
+    def test_meta_merge(self, field_func: FieldFunc) -> None:
         """
         If metadata is already present, it is not overridden.
         """
@@ -160,7 +160,7 @@ class TestEvolve:
     Copied from attrs and adjusted/reduced.
     """
 
-    def test_validator_failure(self):
+    def test_validator_failure(self) -> None:
         """
         TypeError isn't swallowed when validation fails within evolve.
         """
@@ -175,7 +175,7 @@ class TestEvolve:
 
         assert m.startswith("'a' must be <class 'int'>")
 
-    def test_private(self):
+    def test_private(self) -> None:
         """
         evolve() acts as `__init__` with regards to private attributes.
         """
@@ -184,15 +184,15 @@ class TestEvolve:
         class C(object):
             _a: str
 
-        assert evolve(C(1), a=2)._a == 2
+        assert evolve(C(1), a=2)._a == 2  # type: ignore
 
         with pytest.raises(TypeError):
-            evolve(C(1), _a=2)
+            evolve(C(1), _a=2)  # type: ignore[arg-type]
 
         with pytest.raises(TypeError):
-            evolve(C(1), a=3, _a=2)
+            evolve(C(1), a=3, _a=2)  # type: ignore[arg-type]
 
-    def test_non_init_attrs(self):
+    def test_non_init_attrs(self) -> None:
         """
         evolve() handles `init=False` attributes.
         """
@@ -202,9 +202,9 @@ class TestEvolve:
             a: str
             b: int = option(init=False, default=0)
 
-        assert evolve(C(1), a=2).a == 2
+        assert evolve(C(1), a=2).a == 2  # type: ignore
 
-    def test_regression_attrs_classes(self):
+    def test_regression_attrs_classes(self) -> None:
         """
         evolve() can evolve fields that are instances of attrs classes.
 
@@ -226,7 +226,7 @@ class TestEvolve:
 
         assert Parent(param1=Child(param2="b")) == evolve(obj1a, param1=obj2b)
 
-    def test_recursive(self):
+    def test_recursive(self) -> None:
         """
         evolve() recursively evolves nested attrs classes when a dict is
         passed for an attribute.
@@ -251,7 +251,7 @@ class TestEvolve:
 
         assert c2 == C(N1(N2(23), 2), 42)
 
-    def test_recursive_attrs_classes(self):
+    def test_recursive_attrs_classes(self) -> None:
         """
         evolve() can evolve fields that are instances of attrs classes.
         """
@@ -270,7 +270,7 @@ class TestEvolve:
         obj1a = Parent(param1=obj2a)
 
         result = evolve(obj1a, param1=obj2b)
-        assert result.param1 is obj2b
+        assert result.param1 is obj2b  # type: ignore
 
 
 class TestCombine:
@@ -278,7 +278,7 @@ class TestCombine:
     Tests for "combine()"
     """
 
-    def test_combine(self):
+    def test_combine(self) -> None:
         """
         A base class and nested classes can be combined into a single, composed
         class.
@@ -311,7 +311,7 @@ class TestCombine:
             ("n2", Nested2, Nested2()),
         ]
 
-    def test_duplicate_attrib(self):
+    def test_duplicate_attrib(self) -> None:
         """
         Raise an error if a nested class placed with attrib name that is
         already used by the base class.
@@ -335,7 +335,7 @@ class TestCombine:
                 {"a": Nested1()},
             )
 
-    def test_docstring(self):
+    def test_docstring(self) -> None:
         """
         The created class copies the costring from the base class
         """

@@ -596,7 +596,7 @@ class TestTupleParam(ParamBase):
 
         @settings
         class Settings:
-            a: Tuple[int, int, int] = (0, 1)
+            a: Tuple[int, int, int] = (0, 1)  # type: ignore
 
         run = make_cli(Settings)
 

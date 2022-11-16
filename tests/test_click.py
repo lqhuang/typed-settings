@@ -1,7 +1,7 @@
 import sys
 import unittest.mock as mock
 from pathlib import Path
-from typing import Callable, Generic, List, Optional, TypeVar, Union
+from typing import Any, Callable, Generic, List, Optional, TypeVar, Union
 
 import attrs
 import click
@@ -104,7 +104,7 @@ class TestDefaultsLoading:
         type: type,
         settings: dict,
         expected: object,
-    ):
+    ) -> None:
         converter = default_converter()
         field = attrs.Attribute(  # type: ignore[call-arg,var-annotated]
             "test", default, None, None, None, None, None, None, type=type
@@ -112,7 +112,7 @@ class TestDefaultsLoading:
         result = cli_utils.get_default(field, path, settings, converter)
         assert result == expected
 
-    def test_get_default_factory(self):
+    def test_get_default_factory(self) -> None:
         """
         If the factory "takes self", ``None`` is passed since we do not yet
         have an instance.
@@ -123,13 +123,15 @@ class TestDefaultsLoading:
             return "eggs"
 
         default = attrs.Factory(factory, takes_self=True)
-        field = attrs.Attribute(
+        field = attrs.Attribute(  # type: ignore[call-arg,var-annotated]
             "test", default, None, None, None, None, None, None
         )
         result = cli_utils.get_default(field, "a", {}, default_converter())
         assert result == "eggs"
 
-    def test_no_default(self, invoke, monkeypatch):
+    def test_no_default(
+        self, invoke: Invoke, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         """
         cli_options without a default are mandatory/required.
         """
@@ -145,7 +147,7 @@ class TestDefaultsLoading:
 
         @click.command()
         @click_options(Settings, default_loaders("test"))
-        def cli(settings):
+        def cli(settings: Settings) -> None:
             ...
 
         result = invoke(cli)
@@ -157,7 +159,7 @@ class TestDefaultsLoading:
         )
         assert result.exit_code == 2
 
-    def test_help_text(self, invoke: Invoke):
+    def test_help_text(self, invoke: Invoke) -> None:
         """
         cli_options/secrets can specify a help text for click cli_options.
         """
@@ -169,7 +171,7 @@ class TestDefaultsLoading:
 
         @click.command()
         @click_options(Settings, default_loaders("test"))
-        def cli(settings):
+        def cli(settings: Settings) -> None:
             ...
 
         result = invoke(cli, "--help")
@@ -183,7 +185,7 @@ class TestDefaultsLoading:
         )
         assert result.exit_code == 0
 
-    def test_long_name(self, invoke: Invoke):
+    def test_long_name(self, invoke: Invoke) -> None:
         """
         Underscores in option names are replaces with "-" in Click cli_options.
         """
@@ -194,7 +196,7 @@ class TestDefaultsLoading:
 
         @click.command()
         @click_options(Settings, default_loaders("test"))
-        def cli(settings):
+        def cli(settings: Settings) -> None:
             ...
 
         result = invoke(cli, "--help")
@@ -209,7 +211,7 @@ class TestDefaultsLoading:
 
     def test_click_default_from_settings(
         self, invoke: Invoke, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
-    ):
+    ) -> None:
         """
         If a setting is set in a config file, that value is being used as
         default for click cli_options - *not* the default defined in the
@@ -234,7 +236,7 @@ class TestDefaultsLoading:
             Settings,
             default_loaders("test", [tmp_path.joinpath("settings.toml")]),
         )
-        def cli(settings):
+        def cli(settings: Settings) -> None:
             ...
 
         result = invoke(cli, "--help")
@@ -256,7 +258,7 @@ class TestSettingsPassing:
     Test for passing settings as positional or keyword arg.
     """
 
-    def test_pass_as_pos_arg(self, invoke: Invoke):
+    def test_pass_as_pos_arg(self, invoke: Invoke) -> None:
         """
         If no explicit argname is provided, the settings instance is passed
         as positional argument.
@@ -277,7 +279,7 @@ class TestSettingsPassing:
 
         invoke(cli, "--o=3")
 
-    def test_pos_arg_order_1(self, invoke: Invoke):
+    def test_pos_arg_order_1(self, invoke: Invoke) -> None:
         """
         The inner most decorator maps to the first argument.
         """
@@ -295,7 +297,7 @@ class TestSettingsPassing:
 
         invoke(cli)
 
-    def test_pos_arg_order_2(self, invoke: Invoke):
+    def test_pos_arg_order_2(self, invoke: Invoke) -> None:
         """
         The inner most decorator maps to the first argument.
 
@@ -315,7 +317,7 @@ class TestSettingsPassing:
 
         invoke(cli)
 
-    def test_change_arg_name(self, invoke: Invoke):
+    def test_change_arg_name(self, invoke: Invoke) -> None:
         """
         The name of the settings argument can be changed.  It is then passed
         as kwarg.
@@ -332,7 +334,7 @@ class TestSettingsPassing:
 
         invoke(cli, "--o=3")
 
-    def test_multi_settings(self, invoke: Invoke):
+    def test_multi_settings(self, invoke: Invoke) -> None:
         """
         Multiple settings classes can be used when the argname is changed.
         """
@@ -363,7 +365,7 @@ class TestSettingsPassing:
             "  --help       Show this message and exit.\n"
         )
 
-    def test_multi_settings_duplicates(self, invoke: Invoke):
+    def test_multi_settings_duplicates(self, invoke: Invoke) -> None:
         """
         Different settings classes should not define the same options!
         """
@@ -394,7 +396,7 @@ class TestSettingsPassing:
             "  --help       Show this message and exit.\n"
         )
 
-    def test_empty_cls(self, invoke: Invoke):
+    def test_empty_cls(self, invoke: Invoke) -> None:
         """
         Empty settings classes are no special case.
         """
@@ -405,7 +407,7 @@ class TestSettingsPassing:
 
         @click.command()
         @click_options(S, "test")
-        def cli(settings: S):
+        def cli(settings: S) -> None:
             assert settings == S()
 
         invoke(cli)
@@ -418,7 +420,7 @@ class TestPassSettings:
     class Settings:
         opt: str = ""
 
-    def test_pass_settings(self, invoke: Invoke):
+    def test_pass_settings(self, invoke: Invoke) -> None:
         """
         A subcommand can receive the settings (as pos arg) via the
         `pass_settings` decorator.
@@ -426,17 +428,17 @@ class TestPassSettings:
 
         @click.group()
         @click_options(self.Settings, default_loaders("test"))
-        def cli(settings):
+        def cli(settings: TestPassSettings.Settings) -> None:
             pass
 
         @cli.command()
         @pass_settings
-        def cmd(s):
+        def cmd(s: TestPassSettings.Settings) -> None:
             assert s == self.Settings(opt="spam")
 
         invoke(cli, "--opt=spam", "cmd")
 
-    def test_change_argname(self, invoke: Invoke):
+    def test_change_argname(self, invoke: Invoke) -> None:
         """
         The argument name for "pass_settings" can be changed but must be the
         same as in "click_options()".
@@ -444,49 +446,49 @@ class TestPassSettings:
 
         @click.group()
         @click_options(self.Settings, "test", argname="le_settings")
-        def cli(le_settings):
+        def cli(le_settings: TestPassSettings.Settings) -> None:
             pass
 
         @cli.command()
         @pass_settings(argname="le_settings")
-        def cmd(*, le_settings):
+        def cmd(*, le_settings: TestPassSettings.Settings) -> None:
             assert le_settings == self.Settings(opt="spam")
 
         invoke(cli, "--opt=spam", "cmd")
 
-    def test_pass_settings_no_settings(self, invoke: Invoke):
+    def test_pass_settings_no_settings(self, invoke: Invoke) -> None:
         """
         Pass ``None`` if no settings are defined.
         """
 
         @click.group()
-        def cli():
+        def cli() -> None:
             pass
 
         @cli.command()
         @pass_settings
-        def cmd(settings):
+        def cmd(settings: TestPassSettings.Settings) -> None:
             assert settings is None
 
         invoke(cli, "cmd")
 
-    def test_change_argname_no_settings(self, invoke: Invoke):
+    def test_change_argname_no_settings(self, invoke: Invoke) -> None:
         """
         Pass ``None`` if no settings are defined.
         """
 
         @click.group()
-        def cli():
+        def cli() -> None:
             pass
 
         @cli.command()
         @pass_settings(argname="le_settings")
-        def cmd(le_settings):
+        def cmd(le_settings: TestPassSettings.Settings) -> None:
             assert le_settings is None
 
         invoke(cli, "cmd")
 
-    def test_pass_in_parent_context(self, invoke: Invoke):
+    def test_pass_in_parent_context(self, invoke: Invoke) -> None:
         """
         The decorator can be used in the same context as "click_options()".
         This makes no sense, but works.
@@ -497,12 +499,14 @@ class TestPassSettings:
         @click.command()
         @click_options(self.Settings, "test")
         @pass_settings
-        def cli(s1, s2):
+        def cli(
+            s1: TestPassSettings.Settings, s2: TestPassSettings.Settings
+        ) -> None:
             assert s1 is s2
 
         invoke(cli, "--opt=spam")
 
-    def test_pass_in_parent_context_argname(self, invoke: Invoke):
+    def test_pass_in_parent_context_argname(self, invoke: Invoke) -> None:
         """
         The decorator can be used in the same context as "click_options()".
         This makes no sense, but works.
@@ -517,7 +521,7 @@ class TestPassSettings:
 
         invoke(cli, "--opt=spam")
 
-    def test_combine_pass_settings_click_options(self, invoke: Invoke):
+    def test_combine_pass_settings_click_options(self, invoke: Invoke) -> None:
         """
         A sub command can receive the parent's options via "pass_settings"
         and define its own options at the same time.
@@ -529,13 +533,13 @@ class TestPassSettings:
 
         @click.group()
         @click_options(self.Settings, "test-main", argname="main")
-        def cli(main):
+        def cli(main: TestPassSettings.Settings) -> None:
             assert main == self.Settings("spam")
 
         @cli.command()
         @click_options(SubSettings, "test-sub", argname="sub")
         @pass_settings(argname="main")
-        def cmd(main, sub):
+        def cmd(main: TestPassSettings.Settings, sub: SubSettings) -> None:
             assert main == self.Settings("spam")
             assert sub == SubSettings("eggs")
 
@@ -558,7 +562,7 @@ class TestClickConfig:
         click_config: Optional[dict],
         flag: Optional[str],
         value: bool,
-    ):
+    ) -> None:
         """
         The attrs default value is correctly used for flag options in all
         variants (no flag, on-flag, off-flag).
@@ -570,7 +574,7 @@ class TestClickConfig:
 
         @click.command()
         @click_options(Settings, "test")
-        def cli(settings):
+        def cli(settings: Settings) -> None:
             assert settings.opt is value
 
         if flag is None:
@@ -584,7 +588,7 @@ class TestClickConfig:
     )
     def test_create_a_flag_without_off_switch(
         self, invoke: Invoke, flag, value
-    ):
+    ) -> None:
         """
         The "off"-flag for flag options can be removed.
         """
@@ -596,7 +600,7 @@ class TestClickConfig:
 
         @click.command()
         @click_options(Settings, "test")
-        def cli(settings):
+        def cli(settings: Settings) -> None:
             assert settings.opt is value
 
         if flag is None:
@@ -614,7 +618,7 @@ class TestClickConfig:
     )
     def test_create_a_short_handle_for_a_flag(
         self, invoke: Invoke, flag, value
-    ):
+    ) -> None:
         """
         Create a shorter handle for a command similar to pytest's -x.
         """
@@ -626,7 +630,7 @@ class TestClickConfig:
 
         @click.command()
         @click_options(Settings, "test")
-        def cli(settings):
+        def cli(settings: Settings) -> None:
             assert settings.exitfirst is value
 
         if flag is None:
@@ -654,7 +658,7 @@ class TestClickConfig:
 
         @click.command()
         @click_options(Settings, "test")
-        def cli(settings):
+        def cli(settings: Settings) -> None:
             assert settings.arg is value
 
         result = invoke(cli, *args)
@@ -715,14 +719,16 @@ class TestDecoratorFactory:
 
         return Settings
 
-    def test_click_option_factory(self, settings_cls: type, invoke: Invoke):
+    def test_click_option_factory(
+        self, settings_cls: type, invoke: Invoke
+    ) -> None:
         """
         The ClickOptionFactory is the default.
         """
 
         @click.command()
         @click_options(settings_cls, "t")
-        def cli1(settings):
+        def cli1(settings: Any) -> None:
             ...
 
         @click.command()
@@ -731,14 +737,16 @@ class TestDecoratorFactory:
             "t",
             decorator_factory=click_utils.ClickOptionFactory(),
         )
-        def cli2(settings):
+        def cli2(settings: Any) -> None:
             ...
 
         r1 = invoke(cli1, "--help").output.splitlines()[1:]
         r2 = invoke(cli2, "--help").output.splitlines()[1:]
         assert r1 == r2
 
-    def test_option_group_factory(self, settings_cls: type, invoke: Invoke):
+    def test_option_group_factory(
+        self, settings_cls: type, invoke: Invoke
+    ) -> None:
         """
         Option groups can be created via the OptionGroupFactory
         """
@@ -749,7 +757,7 @@ class TestDecoratorFactory:
             "t",
             decorator_factory=click_utils.OptionGroupFactory(),
         )
-        def cli(settings):
+        def cli(settings: Any) -> None:
             ...
 
         result = invoke(cli, "--help").output.splitlines()
@@ -766,7 +774,7 @@ class TestDecoratorFactory:
             "  --help              Show this message and exit.",
         ]
 
-    def test_not_installed(self, monkeypatch: pytest.MonkeyPatch):
+    def test_not_installed(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """
         The factory checks if click-option-group is installed.
         """
@@ -779,7 +787,7 @@ class TestDecoratorFactory:
 
     def test_no_init_no_option(
         self, settings_init_false_csl: type, invoke: Invoke
-    ):
+    ) -> None:
         """
         No option is generated for an attribute if "init=False".
         """
@@ -790,7 +798,7 @@ class TestDecoratorFactory:
             "t",
             decorator_factory=click_utils.OptionGroupFactory(),
         )
-        def cli(settings):
+        def cli(settings: Any) -> None:
             ...
 
         result = invoke(cli, "--help").output.splitlines()
