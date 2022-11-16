@@ -40,7 +40,7 @@ classifiers = [
 ]
 dependencies = [
     "attrs>=22.1",
-    "cattrs>=22.1",
+    "cattrs>=22.2",
     "tomli>=2; python_version<'3.11'",
 ]
 
