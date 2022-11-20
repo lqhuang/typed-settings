@@ -87,7 +87,14 @@ def test(
     # We have to run the tests for the doctests in "src" separately or we'll
     # get an "ImportPathMismatchError" (the "same" file is located in the
     # cwd and in the nox venv).
-    session.run("coverage", "run", "-m", "pytest", "docs", "tests")
+    if tuple(map(int, session.python.split("."))) < (3, 10):  # type: ignore
+        # Skip doctests on older Python versions
+        # The output of arparse's "--help" has changed in 3.10
+        session.run(
+            "coverage", "run", "-m", "pytest", "tests", "-k", "not test_readme"
+        )
+    else:
+        session.run("coverage", "run", "-m", "pytest", "docs", "tests")
     session.run("coverage", "run", "-m", "pytest", "src")
 
 

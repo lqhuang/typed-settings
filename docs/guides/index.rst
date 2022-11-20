@@ -11,4 +11,4 @@ If you need inspiration on how to use the different features, you should stop by
    :caption: Contents:
 
    core
-   click
+   cli
