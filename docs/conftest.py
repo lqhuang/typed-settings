@@ -5,9 +5,20 @@ Examples need to have a :file:`test.console` file that contains shell commands
 and their output similarly to Python doctests.
 """
 import subprocess
+import sys
 from pathlib import Path
-from typing import TYPE_CHECKING, Dict, Generator, List, Optional, Union
+from typing import (
+    TYPE_CHECKING,
+    Callable,
+    Dict,
+    Generator,
+    List,
+    Optional,
+    Union,
+)
 
+import click
+import click.testing
 import pytest
 from _pytest._code.code import TerminalRepr
 from _pytest.assertion.util import _diff_text
@@ -21,6 +32,33 @@ if TYPE_CHECKING:
 
 
 EXAMPLES_DIR = Path(__file__).parent.joinpath("examples")
+
+
+@pytest.fixture(name="invoke")
+def invoke_(monkeypatch: pytest.MonkeyPatch) -> Callable[..., None]:
+    """
+    Return a funcition that can invoke argparse and click CLIs.
+    """
+
+    def invoke(cli: Callable[[], None], *args: str) -> None:
+        if isinstance(cli, click.Command):
+            runner = click.testing.CliRunner()
+            print(runner.invoke(cli, args).output)
+        else:
+            with monkeypatch.context() as m:
+                m.setattr(sys, "argv", [cli.__name__] + list(args))
+                try:
+                    cli()
+                except SystemExit:
+                    pass
+
+    return invoke
+
+
+@pytest.fixture(autouse=True)
+def add_np(doctest_namespace, invoke, monkeypatch):
+    doctest_namespace["invoke"] = invoke
+    doctest_namespace["monkeypatch"] = monkeypatch
 
 
 # Part of pathlib only from py39

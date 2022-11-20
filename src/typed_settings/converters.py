@@ -7,16 +7,7 @@ from pathlib import Path
 from typing import Any, Callable, Optional, Type, Union
 
 from attrs import has
-
-
-try:
-    # cattrs >= 22.2.0
-    from cattrs import BaseConverter, Converter
-except ImportError:
-    # cattrs < 22.2.0
-    from cattrs import Converter as BaseConverter  # type: ignore
-    from cattrs import GenConverter as Converter  # type: ignore
-
+from cattrs import BaseConverter, Converter
 from cattrs._compat import is_frozenset, is_mutable_set, is_sequence, is_tuple
 
 from .exceptions import InvalidValueError

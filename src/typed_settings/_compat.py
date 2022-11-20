@@ -1,14 +1,21 @@
 import sys
+from typing import Any, Optional, Tuple
 
 
-if sys.version_info[:2] >= (3, 8):
+PY_38 = sys.version_info[:2] >= (3, 8)
+PY_39 = sys.version_info[:2] >= (3, 9)
+PY_310 = sys.version_info[:2] >= (3, 10)
+PY_311 = sys.version_info[:2] >= (3, 11)
+
+
+if PY_38:
     from typing import Protocol, get_args, get_origin
 else:
     import collections.abc
-    from typing import Generic, _GenericAlias
-    from typing import _Protocol as Protocol
+    from typing import Generic, _GenericAlias  # type: ignore
+    from typing import _Protocol as Protocol  # type: ignore
 
-    def get_origin(tp):
+    def get_origin(tp: Any) -> Optional[Any]:
         # Backported from py38
         if isinstance(tp, _GenericAlias):
             return tp.__origin__
@@ -16,7 +23,7 @@ else:
             return Generic
         return None
 
-    def get_args(tp):
+    def get_args(tp: Any) -> Tuple[Any, ...]:
         # Backported from py38
         if isinstance(tp, _GenericAlias) and not tp._special:
             res = tp.__args__

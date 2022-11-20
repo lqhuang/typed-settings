@@ -43,7 +43,7 @@ class Settings:
 class TestCleanSettings:
     """Tests for clean_settings."""
 
-    def test_load_convert_dashes(self):
+    def test_load_convert_dashes(self) -> None:
         """
         Dashes in settings and section names are replaced with underscores.
         """
@@ -71,7 +71,7 @@ class TestCleanSettings:
             "sub_section": {"b_1": "bacon"},
         }
 
-    def test_no_replace_dash_in_dict_keys(self):
+    def test_no_replace_dash_in_dict_keys(self) -> None:
         """
         "-" in TOML keys are replaced with "_" for sections and options, but
         "-" in actuall dict keys are left alone.
@@ -95,7 +95,7 @@ class TestCleanSettings:
             "option_2": {"another-key": 23},
         }
 
-    def test_invalid_settings(self):
+    def test_invalid_settings(self) -> None:
         """
         Settings for which there is no attribute are errors
         """
@@ -111,7 +111,7 @@ class TestCleanSettings:
             "Invalid options found in t: host.eggs, spam"
         )
 
-    def test_clean_settings_unresolved_type(self):
+    def test_clean_settings_unresolved_type(self) -> None:
         """
         Cleaning must also work if an options type is an unresolved string.
         """
@@ -129,7 +129,7 @@ class TestCleanSettings:
             clean_settings(s, _deep_options(Settings), "t")
         assert str(exc_info.value) == "Invalid options found in t: host.eggs"
 
-    def test_clean_settings_dict_values(self):
+    def test_clean_settings_dict_values(self) -> None:
         """
         Some dicts may be actual values (not nested) classes.  Don't try to
         check theses as option paths.
@@ -189,7 +189,9 @@ class TestPythonFormat:
             ),
         ],
     )
-    def test_load_python(self, fmt: FileFormat, data: str, tmp_path: Path):
+    def test_load_python(
+        self, fmt: FileFormat, data: str, tmp_path: Path
+    ) -> None:
         """
         We can load settings from a Python file.
         """
@@ -202,7 +204,7 @@ class TestPythonFormat:
         }
 
     @pytest.mark.parametrize("section", ["example", "spam.example"])
-    def test_section_not_found(self, section: str, tmp_path: Path):
+    def test_section_not_found(self, section: str, tmp_path: Path) -> None:
         """
         An empty dict is returned when the config file does not contain the
         desired class.
@@ -214,7 +216,7 @@ class TestPythonFormat:
         )
         assert result == {}
 
-    def test_file_not_found(self):
+    def test_file_not_found(self) -> None:
         """
         "ConfigFileNotFoundError" is raised when a file does not exist.
         """
@@ -226,7 +228,7 @@ class TestPythonFormat:
             Settings,
         )
 
-    def test_file_invalid(self, tmp_path: Path):
+    def test_file_invalid(self, tmp_path: Path) -> None:
         """
         "ConfigFileLoadError" is raised when a file contains invalid Python.
         """
@@ -258,7 +260,9 @@ class TestTomlFormat:
             ),
         ],
     )
-    def test_load_toml(self, fmt: FileFormat, data: str, tmp_path: Path):
+    def test_load_toml(
+        self, fmt: FileFormat, data: str, tmp_path: Path
+    ) -> None:
         """
         We can load settings from a TOML file.
         """
@@ -270,7 +274,7 @@ class TestTomlFormat:
             "host": {"port": 42},
         }
 
-    def test_load_from_nested(self, tmp_path: Path):
+    def test_load_from_nested(self, tmp_path: Path) -> None:
         """
         We can load settings from a nested section (e.g., "tool.example").
         """
@@ -293,7 +297,7 @@ class TestTomlFormat:
         }
 
     @pytest.mark.parametrize("section", ["example", "tool.example"])
-    def test_section_not_found(self, section: str, tmp_path: Path):
+    def test_section_not_found(self, section: str, tmp_path: Path) -> None:
         """
         An empty dict is returned when the config file does not contain the
         desired section.
@@ -309,7 +313,7 @@ class TestTomlFormat:
         )
         assert result == {}
 
-    def test_file_not_found(self):
+    def test_file_not_found(self) -> None:
         """
         "ConfigFileNotFoundError" is raised when a file does not exist.
         """
@@ -323,12 +327,12 @@ class TestTomlFormat:
 
     def test_file_not_allowed(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-    ):
+    ) -> None:
         """
         "ConfigFileLoadError" is raised when a file cannot be accessed.
         """
 
-        def toml_load(path: Path):
+        def toml_load(path: Path) -> None:
             raise PermissionError()
 
         monkeypatch.setattr(tomllib, "load", toml_load)
@@ -348,7 +352,7 @@ class TestTomlFormat:
             Settings,
         )
 
-    def test_file_invalid(self, tmp_path: Path):
+    def test_file_invalid(self, tmp_path: Path) -> None:
         """
         "ConfigFileLoadError" is raised when a file contains invalid TOML.
         """
@@ -396,7 +400,7 @@ class TestFileLoader:
         expected: List[int],
         fnames: List[Path],
         monkeypatch: MonkeyPatch,
-    ):
+    ) -> None:
         """
         Config files names (cfn) can be specified explicitly or via an env var.
         It's no problem if a files does not exist.
@@ -415,7 +419,7 @@ class TestFileLoader:
         self,
         fnames: List[Path],
         monkeypatch: MonkeyPatch,
-    ):
+    ) -> None:
         """
         Empty filenames from the env var are ignored.
         """
@@ -423,7 +427,7 @@ class TestFileLoader:
         paths = FileLoader._get_config_filenames([], "CF")
         assert paths == fnames[:1]
 
-    def test_load_file(self, tmp_path: Path):
+    def test_load_file(self, tmp_path: Path) -> None:
         """
         Settings are cleaned for each file individually.
         """
@@ -445,7 +449,7 @@ class TestFileLoader:
         s = loader._load_file(config_file, Settings, _deep_options(Settings))
         assert s == {"le_option": "spam"}
 
-    def test_load_file2(self, tmp_path: Path):
+    def test_load_file2(self, tmp_path: Path) -> None:
         """
         Settings are cleaned for each file individually.  In that process,
         "-" is normalized to "_".  This may result in duplicate settings and
@@ -470,7 +474,7 @@ class TestFileLoader:
         s = loader._load_file(config_file, Settings, _deep_options(Settings))
         assert s == {"le_option": "spam"}
 
-    def test_load_file_invalid_format(self):
+    def test_load_file_invalid_format(self) -> None:
         """
         An error is raised if a file has an unknown extension.
         """
@@ -479,7 +483,7 @@ class TestFileLoader:
             UnknownFormatError, loader._load_file, Path("f.py"), [], type
         )
 
-    def test_load(self, tmp_path: Path):
+    def test_load(self, tmp_path: Path) -> None:
         """
         FileLoader() loads multiple files, each one overriding options
         from its predecessor.
@@ -520,7 +524,7 @@ class TestFileLoader:
         tmp_path,
         settings_cls: type,
         monkeypatch,
-    ):
+    ) -> None:
         """
         Paths with a "!" are mandatory and an error is raised if they don't
         exist.
@@ -549,7 +553,7 @@ class TestEnvLoader:
 
     def test_from_env(
         self, settings_cls: type, options: OptionList, monkeypatch: MonkeyPatch
-    ):
+    ) -> None:
         """
         Load options from env vars, ignore env vars for which no settings
         exist.
@@ -568,7 +572,7 @@ class TestEnvLoader:
 
     def test_no_env_prefix(
         self, settings_cls: type, options: OptionList, monkeypatch: MonkeyPatch
-    ):
+    ) -> None:
         """
         It is okay to use an empty prefix.
         """
@@ -584,7 +588,7 @@ class TestInstanceLoader:
 
     def test_from_inst(
         self, settings_cls: type, options: OptionList, monkeypatch: MonkeyPatch
-    ):
+    ) -> None:
         """
         Load options from env vars, ignore env vars for which no settings
         exist.
@@ -606,7 +610,7 @@ class TestInstanceLoader:
 
     def test_invalid_type(
         self, settings_cls: type, options: OptionList, monkeypatch: MonkeyPatch
-    ):
+    ) -> None:
         """
         It is okay to use an empty prefix.
         """

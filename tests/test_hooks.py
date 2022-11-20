@@ -36,14 +36,14 @@ class TestTransformHook:
     Tests for `attrs(tranform_value_serializer=func)`
     """
 
-    def test_hook_applied(self):
+    def test_hook_applied(self) -> None:
         """
         The transform hook is applied to all attributes.  Types can be missing,
         explicitly set, or annotated.
         """
-        results = []
+        results: List[Tuple[str, Optional[type]]] = []
 
-        def hook(cls, attribs):
+        def hook(cls, attribs: List[attr.Attribute]) -> List[attr.Attribute]:
             results[:] = [(a.name, a.type) for a in attribs]
             return attribs
 
@@ -55,14 +55,14 @@ class TestTransformHook:
 
         assert results == [("x", None), ("y", int), ("z", float)]
 
-    def test_hook_applied_auto_attrib(self):
+    def test_hook_applied_auto_attrib(self) -> None:
         """
         The transform hook is applied to all attributes and type annotations
         are detected.
         """
-        results = []
+        results: List[Tuple[str, Optional[type]]] = []
 
-        def hook(cls, attribs):
+        def hook(cls, attribs: List[attr.Attribute]) -> List[attr.Attribute]:
             results[:] = [(a.name, a.type) for a in attribs]
             return attribs
 
@@ -73,12 +73,12 @@ class TestTransformHook:
 
         assert results == [("x", int), ("y", str)]
 
-    def test_hook_applied_modify_attrib(self):
+    def test_hook_applied_modify_attrib(self) -> None:
         """
         The transform hook can modify attributes.
         """
 
-        def hook(cls, attribs):
+        def hook(cls, attribs: List[attr.Attribute]) -> List[attr.Attribute]:
             return [a.evolve(converter=a.type) for a in attribs]
 
         @attr.s(auto_attribs=True, field_transformer=hook)
@@ -86,15 +86,15 @@ class TestTransformHook:
             x: int = attr.ib(converter=int)
             y: float
 
-        c = C(x="3", y="3.14")
+        c = C(x="3", y="3.14")  # type: ignore[arg-type]
         assert c == C(x=3, y=3.14)
 
-    def test_hook_remove_field(self):
+    def test_hook_remove_field(self) -> None:
         """
         It is possible to remove fields via the hook.
         """
 
-        def hook(cls, attribs):
+        def hook(cls, attribs: List[attr.Attribute]) -> List[attr.Attribute]:
             return [a for a in attribs if a.type is not int]
 
         @attr.s(auto_attribs=True, field_transformer=hook)
@@ -102,14 +102,14 @@ class TestTransformHook:
             x: int
             y: float
 
-        assert attr.asdict(C(2.7)) == {"y": 2.7}
+        assert attr.asdict(C(2.7)) == {"y": 2.7}  # type: ignore
 
-    def test_hook_add_field(self):
+    def test_hook_add_field(self) -> None:
         """
         It is possible to add fields via the hook.
         """
 
-        def hook(cls, attribs):
+        def hook(cls, attribs: List[attr.Attribute]) -> List[attr.Attribute]:
             a1 = attribs[0]
             a2 = a1.evolve(name="new")
             return [a1, a2]
@@ -118,14 +118,14 @@ class TestTransformHook:
         class C:
             x: int
 
-        assert attr.asdict(C(1, 2)) == {"x": 1, "new": 2}
+        assert attr.asdict(C(1, 2)) == {"x": 1, "new": 2}  # type: ignore
 
-    def test_hook_with_inheritance(self):
+    def test_hook_with_inheritance(self) -> None:
         """
         The hook receives all fields from base classes.
         """
 
-        def hook(cls, attribs):
+        def hook(cls, attribs: List[attr.Attribute]) -> List[attr.Attribute]:
             assert [a.name for a in attribs] == ["x", "y"]
             # Remove Base' "x"
             return attribs[1:]
@@ -138,17 +138,17 @@ class TestTransformHook:
         class Sub(Base):
             y: int
 
-        assert attr.asdict(Sub(2)) == {"y": 2}
+        assert attr.asdict(Sub(2)) == {"y": 2}  # type: ignore
 
 
 class TestAsDictHook:
-    def test_asdict(self):
+    def test_asdict(self) -> None:
         """
         asdict() calls the hooks in attrs classes and in other datastructures
         like lists or dicts.
         """
 
-        def hook(inst, a, v):
+        def hook(inst: Any, a: attr.Attribute, v: Any) -> Any:
             if isinstance(v, datetime):
                 return v.isoformat()
             return v
@@ -165,10 +165,12 @@ class TestAsDictHook:
             c: Dict[str, Child]
             d: Dict[str, datetime]
 
+        # We intentionally have type errors here to see if our hook works
+        # as expected.
         inst = Parent(
-            a=Child(1, [datetime(2020, 7, 1)]),
-            b=[Child(2, [datetime(2020, 7, 2)])],
-            c={"spam": Child(3, [datetime(2020, 7, 3)])},
+            a=Child(1, [datetime(2020, 7, 1)]),  # type: ignore
+            b=[Child(2, [datetime(2020, 7, 2)])],  # type: ignore
+            c={"spam": Child(3, [datetime(2020, 7, 3)])},  # type: ignore
             d={"eggs": datetime(2020, 7, 4)},
         )
 
@@ -180,13 +182,13 @@ class TestAsDictHook:
             "d": {"eggs": "2020-07-04T00:00:00"},
         }
 
-    def test_asdict_calls(self):
+    def test_asdict_calls(self) -> None:
         """
         The correct instances and attribute names are passed to the hook.
         """
         calls = []
 
-        def hook(inst, a, v):
+        def hook(inst: Any, a: attr.Attribute, v: Any) -> Any:
             calls.append((inst, a.name if a else a, v))
             return v
 
@@ -250,10 +252,10 @@ class TestAutoConvertHook:
     }
 
     @pytest.fixture(scope="class")
-    def parent(self):
-        return Parent(**self.DATA)
+    def parent(self) -> Parent:
+        return Parent(**self.DATA)  # type: ignore[arg-type]
 
-    def test_auto_convert_hook(self, parent):
+    def test_auto_convert_hook(self, parent: Parent) -> None:
         """
         The auto_convert hook converts attrs classes, datetimes, enums and
         basic type as well as basic containers.
@@ -273,7 +275,7 @@ class TestAutoConvertHook:
             child=Child(23, 42),
         )
 
-    def test_serialize_from_parent(self, parent):
+    def test_serialize_from_parent(self, parent: Parent) -> None:
         """
         The serialize_hook is able to serialize the same types as the
         auto_convert hook.
@@ -292,7 +294,7 @@ class TestAutoConvertHook:
             "child": {"x": 23, "y": 42},
         }
 
-    def test_json_roundtrip(self, parent):
+    def test_json_roundtrip(self, parent: Parent) -> None:
         """
         The roundtrip "inst -> JSON -> inst" results in the same instance.
         """
@@ -321,7 +323,7 @@ class TestAutoConvertHook:
             (Any, None, None),
         ],
     )
-    def test_static_types(self, typ, value, expected):
+    def test_static_types(self, typ: type, value: Any, expected: Any) -> None:
         """
         All oficially supported types can be converted by attrs.
 
@@ -330,7 +332,7 @@ class TestAutoConvertHook:
 
         @auto_converter
         class C:
-            opt: typ
+            opt: typ  # type: ignore[valid-type]
 
         c = C(value)
         assert c.opt == expected
@@ -390,7 +392,9 @@ class TestAutoConvertHook:
             (Union[None, List[str]], [1, 2], ["1", "2"], list),
         ],
     )
-    def test_generic_types(self, typ, value, expected_val, expected_type):
+    def test_generic_types(
+        self, typ: type, value: Any, expected_val: Any, expected_type: Any
+    ) -> None:
         """
         All oficially supported types can be converted by attrs.
 
@@ -399,7 +403,7 @@ class TestAutoConvertHook:
 
         @auto_converter
         class C:
-            opt: typ
+            opt: typ  # type: ignore[valid-type]
 
         c = C(value)
         assert c.opt == expected_val

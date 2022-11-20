@@ -1,6 +1,7 @@
-from typing import Any
+from itertools import groupby
+from typing import Any, List, Tuple
 
-from attr import fields, has, resolve_types
+import attrs
 
 from .types import OptionInfo, OptionList, SettingsClass, SettingsDict
 
@@ -22,12 +23,12 @@ def _deep_options(cls: SettingsClass) -> OptionList:
         NameError: if the type annotations can not be resolved.  This is, e.g.,
           the case when recursive classes are being used.
     """
-    cls = resolve_types(cls)
+    cls = attrs.resolve_types(cls)
     result = []
 
     def iter_attribs(r_cls: type, prefix: str) -> None:
-        for field in fields(r_cls):
-            if field.type is not None and has(field.type):
+        for field in attrs.fields(r_cls):
+            if field.type is not None and attrs.has(field.type):
                 iter_attribs(field.type, f"{prefix}{field.name}.")
             else:
                 result.append(
@@ -36,6 +37,53 @@ def _deep_options(cls: SettingsClass) -> OptionList:
 
     iter_attribs(cls, "")
     return result
+
+
+def _group_options(
+    cls: type, options: OptionList
+) -> List[Tuple[type, List[OptionInfo]]]:
+    """
+    Group (nested) options by parent class.
+
+    If *cls* does not contain nested settings classes, return a single
+    group for *cls* with all its options.
+
+    If *cls* only contains nested subclasses, return one group per class
+    contain all of that classes (posibly nested) options.
+
+    If *cls* has multiple attributtes with the same nested settings class,
+    create one group per attribute.
+
+    If *cls* contains a mix of scalar options and nested options, return a
+    mix of both.  Scalar options schould be grouped (on top or bottom) or else
+    multiple groups for the main settings class will be created.
+
+    See the tests for details.
+
+    Args:
+        cls: The settings class
+        options: The list of all options of the settings class.
+
+    Return:
+        A list of tuples matching a grouper class to all settings within that
+        group.
+    """
+    group_classes = {
+        field.name: (field.type if attrs.has(field.type) else cls)
+        for field in attrs.fields(cls)
+    }
+
+    def keyfn(o: OptionInfo) -> Tuple[str, type]:
+        """
+        Group by prefix and also return the corresponding group class.
+        """
+        base, *remainder = o.path.split(".")
+        prefix = base if remainder else ""
+        return prefix, group_classes[base]
+
+    grouper = groupby(options, key=keyfn)
+    grouped_options = [(g_cls[1], list(g_opts)) for g_cls, g_opts in grouper]
+    return grouped_options
 
 
 def _get_path(dct: SettingsDict, path: str) -> Any:

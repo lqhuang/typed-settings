@@ -2,7 +2,6 @@
 Tests for `typed_settings.attrs.converters`.
 """
 import json
-import sys
 from datetime import datetime, timedelta, timezone
 from enum import Enum
 from itertools import product
@@ -11,6 +10,7 @@ from typing import Any, Dict, FrozenSet, List, Optional, Sequence, Set, Tuple
 
 import pytest
 
+from typed_settings._compat import PY_39
 from typed_settings.attrs import option, secret, settings
 from typed_settings.converters import (
     default_converter,
@@ -38,7 +38,7 @@ class S:
 class TestToDt:
     """Tests for `to_dt`."""
 
-    def test_from_dt(self):
+    def test_from_dt(self) -> None:
         """
         Existing datetimes are returned unchanged.
         """
@@ -72,19 +72,19 @@ class TestToDt:
             ),
         ],
     )
-    def test_from_str(self, value, expected):
+    def test_from_str(self, value: str, expected: datetime) -> None:
         """
         Existing datetimes are returned unchanged.
         """
         result = to_dt(value, datetime)
         assert result == expected
 
-    def test_invalid_input(self):
+    def test_invalid_input(self) -> None:
         """
         Invalid inputs raises a TypeError.
         """
         with pytest.raises(TypeError):
-            to_dt(3)
+            to_dt(3)  # type: ignore
 
 
 class TestToBool:
@@ -114,14 +114,14 @@ class TestToBool:
             (0, False),
         ],
     )
-    def test_to_bool(self, val, expected):
+    def test_to_bool(self, val: str, expected: bool) -> None:
         """
         Only a limited set of values can be converted to a bool.
         """
         assert to_bool(val, bool) is expected
 
     @pytest.mark.parametrize("val", ["", [], "spam", 2, -1])
-    def test_to_bool_error(self, val):
+    def test_to_bool_error(self, val: Any) -> None:
         """
         In contrast to ``bool()``, `to_bool` does no take Pythons default
         truthyness into account.
@@ -141,7 +141,7 @@ class TestToEnum:
             ("spam", LeEnum.spam),
         ],
     )
-    def test_to_enum(self, value, expected):
+    def test_to_enum(self, value: Any, expected: LeEnum) -> None:
         """
         `to_enum()` accepts Enums and member names.
         """
@@ -158,7 +158,7 @@ class TestToPath:
             (Path("eggs"), Path("eggs")),
         ],
     )
-    def test_to_path(self, value, expected):
+    def test_to_path(self, value: Any, expected: Path) -> None:
         assert to_path(value, Path) == expected
 
 
@@ -207,7 +207,7 @@ class TestToPath:
         (Optional[LeEnum], "spam", LeEnum.spam),
     ],
 )
-def test_supported_types(typ, value, expected):
+def test_supported_types(typ, value: Any, expected: Any) -> None:
     """
     All oficially supported types can be converted by attrs.
 
@@ -216,14 +216,14 @@ def test_supported_types(typ, value, expected):
 
     @settings
     class Settings:
-        opt: typ
+        opt: typ  # type: ignore[valid-type]
 
     inst = from_dict({"opt": value}, Settings, default_converter())
     assert inst.opt == expected
 
 
 @pytest.mark.parametrize("val", [{"foo": 3}, {"opt", "x"}])
-def test_unsupported_values(val):
+def test_unsupported_values(val: dict) -> None:
     """
     An InvalidValueError is raised if a settings dict cannot be converted
     to the settings class.
@@ -246,7 +246,7 @@ STRLIST_TEST_DATA = [
     (Tuple[int, int, int], (1, 2, 3)),
 ]
 
-if sys.version_info[:2] >= (3, 9):
+if PY_39:
     STRLIST_TEST_DATA.extend(
         [
             (list[int], [1, 2, 3]),
@@ -269,7 +269,7 @@ if sys.version_info[:2] >= (3, 9):
 def test_strlist_hook(input, kw, typ, expected):
     @settings
     class Settings:
-        a: typ
+        a: typ  # type: ignore
 
     converter = default_converter()
     register_strlist_hook(converter, **kw)
@@ -277,7 +277,7 @@ def test_strlist_hook(input, kw, typ, expected):
     assert inst == Settings(expected)
 
 
-def test_strlist_hook_either_arg():
+def test_strlist_hook_either_arg() -> None:
     """
     Either "sep" OR "fn" can be passed to "register_str_list_hook()"
     """

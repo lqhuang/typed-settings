@@ -15,10 +15,10 @@ version = ".".join(release.split(".")[0:2])
 
 extensions = [
     "sphinx.ext.autodoc",
+    "sphinx.ext.autosectionlabel",
     "sphinx.ext.intersphinx",
     "sphinx.ext.napoleon",
     "sphinx.ext.viewcode",
-    "sphinx_autodoc_typehints",
 ]
 templates_path = ["_templates"]
 exclude_patterns = ["_build", "Thumbs.db", ".DS_Store"]
@@ -38,6 +38,9 @@ html_theme_options = {
     },
 }
 html_static_path = ["_static"]
+html_css_files = [
+    "custom.css",
+]
 html_logo = "_static/typed-settings-spacing.svg"
 html_title = "Typed Settings"
 

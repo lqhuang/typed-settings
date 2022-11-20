@@ -12,7 +12,7 @@ from packaging.requirements import Requirement
 
 
 PROJECT_DIR = pathlib.Path(__file__).parent
-LINT_PATHS = [
+MYPY_PATHS = [
     [
         "./noxfile.py",
         "src/",
@@ -26,6 +26,7 @@ LINT_PATHS = [
         "docs/examples/",
     ],
 ]
+LINT_PATHS = [p for paths in MYPY_PATHS for p in paths]
 # Dependencies for which to test against multiple versions
 PYTHON_VERSIONS = ["3.7", "3.8", "3.9", "3.10", "3.11"]
 LATEST_STABLE_PYTHON = PYTHON_VERSIONS[-1]
@@ -95,7 +96,14 @@ def test(
     # We have to run the tests for the doctests in "src" separately or we'll
     # get an "ImportPathMismatchError" (the "same" file is located in the
     # cwd and in the nox venv).
-    session.run("coverage", "run", "-m", "pytest", "docs", "tests")
+    if tuple(map(int, session.python.split("."))) < (3, 10):  # type: ignore
+        # Skip doctests on older Python versions
+        # The output of arparse's "--help" has changed in 3.10
+        session.run(
+            "coverage", "run", "-m", "pytest", "tests", "-k", "not test_readme"
+        )
+    else:
+        session.run("coverage", "run", "-m", "pytest", "docs", "tests")
     session.run("coverage", "run", "-m", "pytest", "src")
 
 
@@ -112,14 +120,20 @@ def coverage_report(session: nox.Session) -> None:
 @nox.session
 def lint(session: nox.Session) -> None:
     session.install(".[lint]")
-    for paths in LINT_PATHS:
-        session.run("flake8", *paths)
+    session.run("flake8", *LINT_PATHS)
+
+
+@nox.session(python=False)
+def fix(session: nox.Session) -> None:
+    session.run("autoflake", *LINT_PATHS)
+    session.run("isort", *LINT_PATHS)
+    session.run("black", *LINT_PATHS)
 
 
 @nox.session
 def mypy(session: nox.Session) -> None:
     session.install(".[lint]")
-    for paths in LINT_PATHS:
+    for paths in MYPY_PATHS:
         session.run("mypy", "--show-error-codes", *paths)
 
 
