@@ -2,6 +2,15 @@
 Changelog
 =========
 
+2.0.0 (2022-mm-dd)
+==================
+
+- 💥 The `click_utils.TypeHandler` is now called `cli_utils.TypeArgsMaker` and has a completely different interface.  If you do not explicitly use this class, nothing will change for you.
+
+- ✨ Add support for Argparse based CLIs via `typed_settings.cli()` (See `#14`_).
+
+.. _#14: https://gitlab.com/sscherfke/typed-settings/-/issues/14
+
 
 1.1.1 (2022-10-08)
 ==================
