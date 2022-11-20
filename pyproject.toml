@@ -77,7 +77,7 @@ test = [
     "typed-settings[all]",
     "coverage[toml]>=5.3",
     "pytest-cov",
-    "pytest>=6",
+    "pytest>=7.2.0",
 ]
 dev = [  # Everything needed for development
     "typed-settings[docs,lint,test]",

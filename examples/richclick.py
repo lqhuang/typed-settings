@@ -7,7 +7,7 @@ By (un)commenting the proper imports and decorators, you can use:
 - a Click cli
 - a Click cli with rich-click styling
 """
-import click
+import click  # noqa
 import rich_click
 
 import typed_settings as ts
@@ -25,9 +25,9 @@ class Settings:
     )
 
 
-@click.command()
 @rich_click.command()
-# @ts.click_options(Settings, "myapp")
+# @click.command()
+@ts.click_options(Settings, "myapp")
 # @ts.cli(Settings, "myapp")
 def cli(settings: Settings) -> None:
     """
