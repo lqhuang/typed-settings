@@ -1,34 +1,15 @@
-import re
 import sys
 import unittest.mock as mock
-from datetime import datetime, timezone
-from enum import Enum
 from pathlib import Path
-from typing import (
-    Any,
-    Callable,
-    Dict,
-    FrozenSet,
-    Generic,
-    List,
-    MutableSequence,
-    MutableSet,
-    Optional,
-    Sequence,
-    Set,
-    Tuple,
-    Type,
-    TypeVar,
-    Union,
-)
+from typing import Any, Callable, Generic, List, Optional, TypeVar, Union
 
 import attrs
 import click
 import click.testing
 import pytest
-from _pytest.python import Metafunc
 
 from typed_settings import (
+    cli_utils,
     click_options,
     click_utils,
     default_converter,
@@ -64,43 +45,9 @@ def _invoke() -> Invoke:
     return invoke
 
 
-def make_cli(settings_cls: Type[T]) -> Cli:
+def test_simple_cli(invoke: Invoke) -> None:
     """
-    Return a function that invokes a Click CLI with Typed Settings options
-    for *settings_cls*.
-
-    That functions returns a :class:`CliResult` with the loaded settings
-    instance (:attrs:`CliResult.settings`).
-    """
-
-    class Runner(click.testing.CliRunner):
-        settings: Optional[T]
-
-        def invoke(self, *args, **kwargs) -> CliResult:
-            result = super().invoke(*args, **kwargs)
-            cli_result: CliResult[T] = CliResult(**result.__dict__)
-            try:
-                cli_result.settings = self.settings
-            except AttributeError:
-                cli_result.settings = None
-            return cli_result
-
-    runner = Runner()
-
-    def run(*args, **kwargs) -> CliResult:
-        @click.group(invoke_without_command=True)
-        @click_options(settings_cls, default_loaders("test"))
-        def cli(settings: T) -> None:
-            runner.settings = settings
-
-        return runner.invoke(cli, args, catch_exceptions=False, **kwargs)
-
-    return run
-
-
-def test_simple_cli(invoke):
-    """
-    "click_options()" uses the default loaders if you just pass an app name.
+    Basic test "click_options()", create a simple CLI for simple settings.
     """
 
     @settings
@@ -115,9 +62,10 @@ def test_simple_cli(invoke):
     invoke(cli, "--o=3")
 
 
-def test_unkown_type(invoke):
+def test_unkown_type(invoke: Invoke) -> None:
     """
-    "click_options()" uses the default loaders if you just pass an app name.
+    A TypeError is raised if the settings contain a type that the decorator
+    cannot handle.
     """
 
     @settings
@@ -126,7 +74,7 @@ def test_unkown_type(invoke):
 
     with pytest.raises(
         TypeError,
-        match=r"Cannot create click type for: typing.Union\[int, str\]",
+        match=r"Cannot create CLI option for: typing.Union\[int, str\]",
     ):
 
         @click.command()  # pragma: no cover
@@ -156,15 +104,15 @@ class TestDefaultsLoading:
         type: type,
         settings: dict,
         expected: object,
-    ):
+    ) -> None:
         converter = default_converter()
         field = attrs.Attribute(  # type: ignore[call-arg,var-annotated]
             "test", default, None, None, None, None, None, None, type=type
         )
-        result = click_utils._get_default(field, path, settings, converter)
+        result = cli_utils.get_default(field, path, settings, converter)
         assert result == expected
 
-    def test_get_default_factory(self):
+    def test_get_default_factory(self) -> None:
         """
         If the factory "takes self", ``None`` is passed since we do not yet
         have an instance.
@@ -175,13 +123,15 @@ class TestDefaultsLoading:
             return "eggs"
 
         default = attrs.Factory(factory, takes_self=True)
-        field = attrs.Attribute(
+        field = attrs.Attribute(  # type: ignore[call-arg,var-annotated]
             "test", default, None, None, None, None, None, None
         )
-        result = click_utils._get_default(field, "a", {}, default_converter())
+        result = cli_utils.get_default(field, "a", {}, default_converter())
         assert result == "eggs"
 
-    def test_no_default(self, invoke, monkeypatch):
+    def test_no_default(
+        self, invoke: Invoke, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         """
         cli_options without a default are mandatory/required.
         """
@@ -197,7 +147,7 @@ class TestDefaultsLoading:
 
         @click.command()
         @click_options(Settings, default_loaders("test"))
-        def cli(settings):
+        def cli(settings: Settings) -> None:
             ...
 
         result = invoke(cli)
@@ -209,7 +159,7 @@ class TestDefaultsLoading:
         )
         assert result.exit_code == 2
 
-    def test_help_text(self, invoke: Invoke):
+    def test_help_text(self, invoke: Invoke) -> None:
         """
         cli_options/secrets can specify a help text for click cli_options.
         """
@@ -221,7 +171,7 @@ class TestDefaultsLoading:
 
         @click.command()
         @click_options(Settings, default_loaders("test"))
-        def cli(settings):
+        def cli(settings: Settings) -> None:
             ...
 
         result = invoke(cli, "--help")
@@ -235,7 +185,7 @@ class TestDefaultsLoading:
         )
         assert result.exit_code == 0
 
-    def test_long_name(self, invoke: Invoke):
+    def test_long_name(self, invoke: Invoke) -> None:
         """
         Underscores in option names are replaces with "-" in Click cli_options.
         """
@@ -246,7 +196,7 @@ class TestDefaultsLoading:
 
         @click.command()
         @click_options(Settings, default_loaders("test"))
-        def cli(settings):
+        def cli(settings: Settings) -> None:
             ...
 
         result = invoke(cli, "--help")
@@ -261,7 +211,7 @@ class TestDefaultsLoading:
 
     def test_click_default_from_settings(
         self, invoke: Invoke, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
-    ):
+    ) -> None:
         """
         If a setting is set in a config file, that value is being used as
         default for click cli_options - *not* the default defined in the
@@ -286,7 +236,7 @@ class TestDefaultsLoading:
             Settings,
             default_loaders("test", [tmp_path.joinpath("settings.toml")]),
         )
-        def cli(settings):
+        def cli(settings: Settings) -> None:
             ...
 
         result = invoke(cli, "--help")
@@ -308,7 +258,7 @@ class TestSettingsPassing:
     Test for passing settings as positional or keyword arg.
     """
 
-    def test_pass_as_pos_arg(self, invoke: Invoke):
+    def test_pass_as_pos_arg(self, invoke: Invoke) -> None:
         """
         If no explicit argname is provided, the settings instance is passed
         as positional argument.
@@ -329,7 +279,7 @@ class TestSettingsPassing:
 
         invoke(cli, "--o=3")
 
-    def test_pos_arg_order_1(self, invoke: Invoke):
+    def test_pos_arg_order_1(self, invoke: Invoke) -> None:
         """
         The inner most decorator maps to the first argument.
         """
@@ -347,7 +297,7 @@ class TestSettingsPassing:
 
         invoke(cli)
 
-    def test_pos_arg_order_2(self, invoke: Invoke):
+    def test_pos_arg_order_2(self, invoke: Invoke) -> None:
         """
         The inner most decorator maps to the first argument.
 
@@ -367,7 +317,7 @@ class TestSettingsPassing:
 
         invoke(cli)
 
-    def test_change_arg_name(self, invoke: Invoke):
+    def test_change_arg_name(self, invoke: Invoke) -> None:
         """
         The name of the settings argument can be changed.  It is then passed
         as kwarg.
@@ -384,7 +334,7 @@ class TestSettingsPassing:
 
         invoke(cli, "--o=3")
 
-    def test_multi_settings(self, invoke: Invoke):
+    def test_multi_settings(self, invoke: Invoke) -> None:
         """
         Multiple settings classes can be used when the argname is changed.
         """
@@ -415,7 +365,7 @@ class TestSettingsPassing:
             "  --help       Show this message and exit.\n"
         )
 
-    def test_multi_settings_duplicates(self, invoke: Invoke):
+    def test_multi_settings_duplicates(self, invoke: Invoke) -> None:
         """
         Different settings classes should not define the same options!
         """
@@ -446,7 +396,7 @@ class TestSettingsPassing:
             "  --help       Show this message and exit.\n"
         )
 
-    def test_empty_cls(self, invoke: Invoke):
+    def test_empty_cls(self, invoke: Invoke) -> None:
         """
         Empty settings classes are no special case.
         """
@@ -457,570 +407,10 @@ class TestSettingsPassing:
 
         @click.command()
         @click_options(S, "test")
-        def cli(settings: S):
+        def cli(settings: S) -> None:
             assert settings == S()
 
         invoke(cli)
-
-
-class LeEnum(Enum):
-    spam = "Le spam"
-    eggs = "Le eggs"
-
-
-class TestClickParamTypes:
-    """
-    Test the behavior of click options for various parameter types.
-
-    """
-
-    class ClickParamBase:
-        """
-        Base class for test parameters.
-
-        Sublcasses must define:
-
-        - A settings class
-        - A list of expected "--help" outputs for each option
-        - Optionally, required arguments for options with no default.
-        - An instance of the settings class with expected default option
-          values.
-        - A list of Cli options and the expected settings result.
-        """
-
-        @settings
-        class Settings:
-            pass
-
-        expected_help: List[str] = []
-
-        env_vars: Dict[str, str] = {}
-        expected_env_var_defaults: List[str] = []
-
-        default_options: List[str] = []
-        expected_defaults: Any = None
-
-        cli_options: List[str] = []
-        expected_settings: Any = None
-
-        _classes: List["TestClickParamTypes.ClickParamBase"] = []
-
-        def __init_subclass__(cls, **kwargs):
-            super().__init_subclass__(**kwargs)
-            cls._classes.append(cls)
-
-    class TestClickBoolParam(ClickParamBase):
-        """
-        Test boolean flags.
-        """
-
-        @settings(kw_only=True)
-        class Settings:
-            a: bool
-            b: bool = True
-            c: bool = False
-            d: Optional[bool]
-            e: Optional[bool] = None
-
-        expected_help = [
-            "  --a / --no-a  [required]",
-            "  --b / --no-b  [default: b]",
-            "  --c / --no-c  [default: no-c]",
-            "  --d / --no-d",
-            "  --e / --no-e",
-        ]
-
-        env_vars = {"A": "1", "B": "0"}
-        expected_env_var_defaults = [
-            "  --a / --no-a  [default: a]",
-            "  --b / --no-b  [default: no-b]",
-            "  --c / --no-c  [default: no-c]",
-            "  --d / --no-d",
-            "  --e / --no-e",
-        ]
-
-        default_options = ["--a"]
-        expected_defaults = Settings(a=True, b=True, c=False, d=None, e=None)
-
-        cli_options = ["--no-a", "--no-b", "--c"]
-        expected_settings = Settings(a=False, b=False, c=True, d=None, e=None)
-
-    class TestIntFloatStrParam(ClickParamBase):
-        """
-        Test int, float and str cli_options.
-        """
-
-        @settings(kw_only=True)
-        class Settings:
-            a: str = option(default="spam")
-            b: str = secret(default="spam")
-            c: int = 0
-            d: float = 0
-            # Test explicit and implicit "Optional" variants
-            e: Optional[str]
-            f: Union[None, int] = None
-            g: Union[int, None] = 0
-
-        expected_help = [
-            "  --a TEXT     [default: spam]",
-            "  --b TEXT     [default: ***]",
-            "  --c INTEGER  [default: 0]",
-            "  --d FLOAT    [default: 0.0]",
-            "  --e TEXT",
-            "  --f INTEGER",
-            "  --g INTEGER  [default: 0]",
-        ]
-
-        env_vars = {"A": "eggs", "B": "bacon", "C": "42", "D": "3.14"}
-        expected_env_var_defaults = [
-            "  --a TEXT     [default: eggs]",
-            "  --b TEXT     [default: ***]",
-            "  --c INTEGER  [default: 42]",
-            "  --d FLOAT    [default: 3.14]",
-            "  --e TEXT",
-            "  --f INTEGER",
-            "  --g INTEGER  [default: 0]",
-        ]
-
-        expected_defaults = Settings(e=None)
-
-        cli_options = ["--a=eggs", "--b=pwd", "--c=3", "--d=3.1"]
-        expected_settings = Settings(a="eggs", b="pwd", c=3, d=3.1, e=None)
-
-    class TestDateTimeParam(ClickParamBase):
-        """
-        Test datetime cli_options.
-        """
-
-        @settings
-        class Settings:
-            a: datetime = datetime.fromtimestamp(0, timezone.utc)
-            b: datetime = datetime.fromtimestamp(0, timezone.utc)
-            c: datetime = datetime.fromtimestamp(0, timezone.utc)
-            d: Optional[datetime] = None
-
-        expected_help = [
-            "  --a [%Y-%m-%d|%Y-%m-%dT%H:%M:%S|%Y-%m-%dT%H:%M:%S%z]",
-            "                                  [default: 1970-01-01T00:00:00+00:00]",  # noqa: E501
-            "  --b [%Y-%m-%d|%Y-%m-%dT%H:%M:%S|%Y-%m-%dT%H:%M:%S%z]",
-            "                                  [default: 1970-01-01T00:00:00+00:00]",  # noqa: E501
-            "  --c [%Y-%m-%d|%Y-%m-%dT%H:%M:%S|%Y-%m-%dT%H:%M:%S%z]",
-            "                                  [default: 1970-01-01T00:00:00+00:00]",  # noqa: E501
-            "  --d [%Y-%m-%d|%Y-%m-%dT%H:%M:%S|%Y-%m-%dT%H:%M:%S%z]",
-        ]
-
-        env_vars = {
-            "A": "2021-05-04T13:37:00Z",
-            "B": "2021-05-04T13:37:00",
-            "C": "2021-05-04",
-        }
-        expected_env_var_defaults = [
-            "  --a [%Y-%m-%d|%Y-%m-%dT%H:%M:%S|%Y-%m-%dT%H:%M:%S%z]",
-            "                                  [default: 2021-05-04T13:37:00+00:00]",  # noqa: E501
-            "  --b [%Y-%m-%d|%Y-%m-%dT%H:%M:%S|%Y-%m-%dT%H:%M:%S%z]",
-            "                                  [default: 2021-05-04T13:37:00]",  # noqa: E501
-            "  --c [%Y-%m-%d|%Y-%m-%dT%H:%M:%S|%Y-%m-%dT%H:%M:%S%z]",
-            "                                  [default: 2021-05-04T00:00:00]",  # noqa: E501
-            "  --d [%Y-%m-%d|%Y-%m-%dT%H:%M:%S|%Y-%m-%dT%H:%M:%S%z]",
-        ]
-
-        expected_defaults = Settings()
-
-        cli_options = [
-            "--a=2020-05-04",
-            "--b=2020-05-04T13:37:00",
-            "--c=2020-05-04T13:37:00+00:00",
-        ]
-        expected_settings = Settings(
-            datetime(2020, 5, 4),
-            datetime(2020, 5, 4, 13, 37),
-            datetime(2020, 5, 4, 13, 37, tzinfo=timezone.utc),
-        )
-
-    class TestEnumParam(ClickParamBase):
-        """
-        Test enum cli_options
-        """
-
-        @settings
-        class Settings:
-            a: LeEnum
-            b: Optional[LeEnum]
-            c: LeEnum = LeEnum.spam
-
-        expected_help = [
-            "  --a [spam|eggs]  [required]",
-            "  --b [spam|eggs]",
-            "  --c [spam|eggs]  [default: spam]",
-        ]
-
-        env_vars = {"A": "spam", "C": "eggs"}
-        expected_env_var_defaults = [
-            "  --a [spam|eggs]  [default: spam]",
-            "  --b [spam|eggs]",
-            "  --c [spam|eggs]  [default: eggs]",
-        ]
-
-        default_options = ["--a=spam"]
-        expected_defaults = Settings(a=LeEnum.spam, b=None)
-
-        cli_options = ["--a=spam", "--c=eggs"]
-        expected_settings = Settings(LeEnum.spam, None, LeEnum.eggs)
-
-    class TestPathParam(ClickParamBase):
-        """
-        Test Path cli_options
-        """
-
-        @settings
-        class Settings:
-            a: Path = Path("/")
-            b: Optional[Path] = None
-
-        expected_help = [
-            "  --a PATH  [default: /]",
-            "  --b PATH",
-        ]
-
-        env_vars = {"A": "/spam/eggs"}
-        expected_env_var_defaults = [
-            "  --a PATH  [default: /spam/eggs]",
-            "  --b PATH",
-        ]
-
-        expected_defaults = Settings()
-
-        cli_options = ["--a=/spam"]
-        expected_settings = Settings(Path("/spam"))
-
-    class TestNestedParam(ClickParamBase):
-        """
-        Test cli_options for nested settings
-        """
-
-        @settings
-        class Settings:
-            @settings
-            class Nested:
-                a: str = "nested"
-                b: int = 0
-
-            n: Nested = Nested()
-
-        expected_help = [
-            "  --n-a TEXT     [default: nested]",
-            "  --n-b INTEGER  [default: 0]",
-        ]
-
-        env_vars = {"N_A": "spam", "N_B": "42"}
-        expected_env_var_defaults = [
-            "  --n-a TEXT     [default: spam]",
-            "  --n-b INTEGER  [default: 42]",
-        ]
-
-        expected_defaults = Settings()
-
-        cli_options = ["--n-a=eggs", "--n-b=3"]
-        expected_settings = Settings(Settings.Nested("eggs", 3))
-
-    class TestListParam(ClickParamBase):
-        """
-        Lists (and friends) use "multiple=True".
-        """
-
-        @settings
-        class Settings:
-            a: List[int]
-            b: Optional[List[int]]
-            c: Optional[List[int]] = None
-            d: Optional[List[int]] = []
-            e: Sequence[datetime] = [datetime(2020, 5, 4)]
-            f: MutableSequence[int] = []
-            g: Set[int] = set()
-            h: MutableSet[int] = set()
-            i: FrozenSet[int] = frozenset()
-
-        expected_help = [
-            "  --a INTEGER                     [required]",
-            "  --b INTEGER",
-            "  --c INTEGER",
-            "  --d INTEGER",
-            "  --e [%Y-%m-%d|%Y-%m-%dT%H:%M:%S|%Y-%m-%dT%H:%M:%S%z]",
-            "                                  [default: 2020-05-04T00:00:00]",
-            "  --f INTEGER",
-            "  --g INTEGER",
-            "  --h INTEGER",
-            "  --i INTEGER",
-        ]
-
-        env_vars = {
-            "A": "1:2",
-            "E": "2021-01-01:2021-01-02",  # Dates with times wont work here!
-        }
-        expected_env_var_defaults = [
-            "  --a INTEGER                     [default: 1, 2]",
-            "  --b INTEGER",
-            "  --c INTEGER",
-            "  --d INTEGER",
-            "  --e [%Y-%m-%d|%Y-%m-%dT%H:%M:%S|%Y-%m-%dT%H:%M:%S%z]",
-            "                                  [default: 2021-01-01T00:00:00,",
-            "                                  2021-01-02T00:00:00]",
-            "  --f INTEGER",
-            "  --g INTEGER",
-            "  --h INTEGER",
-            "  --i INTEGER",
-        ]
-
-        default_options = ["--a=1"]
-        # click always gives us an empty list, never "None"
-        expected_defaults = Settings(a=[1], b=[], c=[])
-
-        cli_options = [
-            "--a=1",
-            "--a=2",
-            "--e=2020-01-01",
-            "--e=2020-01-02",
-            "--f=3",
-            "--g=4",
-            "--h=5",
-            "--i=6",
-        ]
-        expected_settings = Settings(
-            [1, 2],
-            [],  # click always gives us an empty list, never "None"
-            [],  # click always gives us an empty list, never "None"
-            [],
-            [datetime(2020, 1, 1), datetime(2020, 1, 2)],
-            [3],
-            {4},
-            {5},
-            frozenset({6}),
-        )
-
-    class TestTupleParam(ClickParamBase):
-        """
-        Tuples are handled either like the list variant with multiple=True or
-        like the struct variant with nargs=x.
-        """
-
-        @settings
-        class Settings:
-            a: Tuple[int, ...] = (0,)
-            b: Tuple[int, float, str] = (0, 0.0, "")
-            c: Optional[Tuple[int, float, str]] = None
-
-        expected_help = [
-            "  --a INTEGER                  [default: 0]",
-            "  --b <INTEGER FLOAT TEXT>...  [default: 0, 0.0, ]",
-            "  --c <INTEGER FLOAT TEXT>...",
-        ]
-
-        env_vars = {"A": "1:2", "B": "42:3.14:spam"}
-        expected_env_var_defaults = [
-            "  --a INTEGER                  [default: 1, 2]",
-            "  --b <INTEGER FLOAT TEXT>...  [default: 42, 3.14, spam]",
-            "  --c <INTEGER FLOAT TEXT>...",
-        ]
-
-        expected_defaults = Settings()
-
-        cli_options = ["--a=1", "--a=2", "--b", "1", "2.3", "spam"]
-        expected_settings = Settings((1, 2), (1, 2.3, "spam"))
-
-        def test_wrong_default_length(self):
-            """
-            Default values for tuples must have the exact shape defined in by
-            their type.
-
-            Too long tuples are automatically truncated (by attrs or click),
-            but too short default values are an error.
-            """
-
-            @settings
-            class Settings:
-                a: Tuple[int, int, int] = (0, 1)
-
-            run = make_cli(Settings)
-
-            p = "Invalid default for type typing.Tuple[int, int, int]: (0, 1)"
-            with pytest.raises(ValueError, match=re.escape(p)):
-                run("--help")
-
-    class TestNestedTupleParam(ClickParamBase):
-        """
-        Lists of tuples use "multiple=True" and "nargs=x".
-        """
-
-        @settings
-        class Settings:
-            a: List[Tuple[int, int]] = option(factory=list)
-
-        expected_help = [
-            "  --a <INTEGER INTEGER>...",
-        ]
-
-        # A list of tuples cannot be loaded with the default converter,
-        # so we skip this test here.
-        env_vars: Dict[str, Any] = {}
-        expected_env_var_defaults = [
-            "  --a <INTEGER INTEGER>...",
-        ]
-
-        expected_defaults = Settings()
-
-        cli_options = ["--a", "1", "2", "--a", "3", "4"]
-        expected_settings = Settings([(1, 2), (3, 4)])
-
-    class TestDictParam(ClickParamBase):
-        """
-        Dict params use "="-spearated key-value pairs and "multiple=True".
-        """
-
-        @settings
-        class Settings:
-            a: Dict[str, str]  # Test "None" value
-            b: Dict[str, str] = {}  # Test empty value
-            c: Dict[str, str] = {"default": "value"}
-            d: Optional[Dict[str, str]] = None
-
-        expected_help = [
-            "  --a KEY=VALUE  [required]",
-            "  --b KEY=VALUE",
-            "  --c KEY=VALUE  [default: default=value]",
-            "  --d KEY=VALUE",
-        ]
-
-        # A dictionary cannot be loaded with the default converter,
-        # so we skip this test here.
-        env_vars: Dict[str, Any] = {}
-        expected_env_var_defaults = [
-            "  --a KEY=VALUE  [required]",
-            "  --b KEY=VALUE",
-            "  --c KEY=VALUE  [default: default=value]",
-            "  --d KEY=VALUE",
-        ]
-
-        default_options = ["--a=k=v"]
-        expected_defaults = Settings({"k": "v"})
-
-        cli_options = [
-            "--a",
-            "key0=val0",
-            "--c",
-            "key1=val1",
-            "--c",
-            "key-2=val-2",
-            "--c",
-            "key 3=oi oi",
-        ]
-        expected_settings = Settings(
-            {"key0": "val0"},
-            {},
-            {"key1": "val1", "key-2": "val-2", "key 3": "oi oi"},
-        )
-
-    class TestNoTypeParam(ClickParamBase):
-        """
-        Test option without type annotation.
-        """
-
-        @settings
-        class Settings:
-            a = option(default="spam")  # type: ignore
-
-        expected_help = [
-            "  --a TEXT  [default: spam]",
-        ]
-
-        env_vars = {"A": "eggs"}
-        expected_env_var_defaults = [
-            "  --a TEXT  [default: eggs]",
-        ]
-
-        expected_defaults = Settings("spam")  # type: ignore
-
-        cli_options = ["--a=eggs"]
-        expected_settings = Settings(a="eggs")  # type: ignore
-
-    def pytest_generate_tests(self, metafunc: Metafunc) -> None:
-        params = []
-        fixtures = ["cli"] + [
-            n for n in metafunc.fixturenames if hasattr(self.ClickParamBase, n)
-        ]
-        for param_cls in self.ClickParamBase._classes:
-            argvals = []
-            for name in fixtures:
-                if name == "cli":
-                    argvals.append(make_cli(param_cls.Settings))
-                else:
-                    argvals.append(getattr(param_cls, name))
-            params.append(pytest.param(*argvals, id=param_cls.__name__))  # type: ignore  # noqa: E501
-
-        metafunc.parametrize(fixtures, params)
-
-    def test_help(self, cli: Cli[T], expected_help: List[str]):
-        """
-        The genereated CLI has a proper help output.
-        """
-        result = cli("--help")
-
-        # fmt: off
-        assert result.output.splitlines()[:-1] == [
-            "Usage: cli [OPTIONS] COMMAND [ARGS]...",
-            "",
-            "Options:",
-        ] + expected_help
-        assert result.exit_code == 0
-        # fmt: on
-
-    def test_defaults_from_envvars(
-        self,
-        cli: Cli[T],
-        env_vars: Dict[str, str],
-        expected_env_var_defaults: List[str],
-        monkeypatch: pytest.MonkeyPatch,
-    ):
-        """
-        Previously loaded settings (e.g., from env vars) can be converted
-        to click options.
-
-        Regression test for #11
-        """
-        for var, val in env_vars.items():
-            monkeypatch.setenv(f"TEST_{var}", val)
-
-        result = cli("--help")
-
-        # fmt: off
-        assert result.output.splitlines()[:-1] == [
-            "Usage: cli [OPTIONS] COMMAND [ARGS]...",
-            "",
-            "Options:",
-        ] + expected_env_var_defaults
-        assert result.exit_code == 0
-        # fmt: on
-
-    def test_defaults(
-        self, cli: Cli[T], default_options: List[str], expected_defaults: T
-    ):
-        """
-        Arguments of the generated CLI have default values.
-        """
-        result = cli(*default_options)
-        assert result.output == ""
-        assert result.exit_code == 0
-        assert result.settings == expected_defaults
-
-    def test_options(
-        self, cli: Cli[T], cli_options: List[str], expected_settings: T
-    ):
-        """
-        Default values can be overriden by passing the corresponding args.
-        """
-        result = cli(*cli_options)
-        assert result.output == ""
-        assert result.exit_code == 0
-        assert result.settings == expected_settings
 
 
 class TestPassSettings:
@@ -1030,7 +420,7 @@ class TestPassSettings:
     class Settings:
         opt: str = ""
 
-    def test_pass_settings(self, invoke: Invoke):
+    def test_pass_settings(self, invoke: Invoke) -> None:
         """
         A subcommand can receive the settings (as pos arg) via the
         `pass_settings` decorator.
@@ -1038,17 +428,17 @@ class TestPassSettings:
 
         @click.group()
         @click_options(self.Settings, default_loaders("test"))
-        def cli(settings):
+        def cli(settings: TestPassSettings.Settings) -> None:
             pass
 
         @cli.command()
         @pass_settings
-        def cmd(s):
+        def cmd(s: TestPassSettings.Settings) -> None:
             assert s == self.Settings(opt="spam")
 
         invoke(cli, "--opt=spam", "cmd")
 
-    def test_change_argname(self, invoke: Invoke):
+    def test_change_argname(self, invoke: Invoke) -> None:
         """
         The argument name for "pass_settings" can be changed but must be the
         same as in "click_options()".
@@ -1056,49 +446,49 @@ class TestPassSettings:
 
         @click.group()
         @click_options(self.Settings, "test", argname="le_settings")
-        def cli(le_settings):
+        def cli(le_settings: TestPassSettings.Settings) -> None:
             pass
 
         @cli.command()
         @pass_settings(argname="le_settings")
-        def cmd(*, le_settings):
+        def cmd(*, le_settings: TestPassSettings.Settings) -> None:
             assert le_settings == self.Settings(opt="spam")
 
         invoke(cli, "--opt=spam", "cmd")
 
-    def test_pass_settings_no_settings(self, invoke: Invoke):
+    def test_pass_settings_no_settings(self, invoke: Invoke) -> None:
         """
         Pass ``None`` if no settings are defined.
         """
 
         @click.group()
-        def cli():
+        def cli() -> None:
             pass
 
         @cli.command()
         @pass_settings
-        def cmd(settings):
+        def cmd(settings: TestPassSettings.Settings) -> None:
             assert settings is None
 
         invoke(cli, "cmd")
 
-    def test_change_argname_no_settings(self, invoke: Invoke):
+    def test_change_argname_no_settings(self, invoke: Invoke) -> None:
         """
         Pass ``None`` if no settings are defined.
         """
 
         @click.group()
-        def cli():
+        def cli() -> None:
             pass
 
         @cli.command()
         @pass_settings(argname="le_settings")
-        def cmd(le_settings):
+        def cmd(le_settings: TestPassSettings.Settings) -> None:
             assert le_settings is None
 
         invoke(cli, "cmd")
 
-    def test_pass_in_parent_context(self, invoke: Invoke):
+    def test_pass_in_parent_context(self, invoke: Invoke) -> None:
         """
         The decorator can be used in the same context as "click_options()".
         This makes no sense, but works.
@@ -1109,12 +499,14 @@ class TestPassSettings:
         @click.command()
         @click_options(self.Settings, "test")
         @pass_settings
-        def cli(s1, s2):
+        def cli(
+            s1: TestPassSettings.Settings, s2: TestPassSettings.Settings
+        ) -> None:
             assert s1 is s2
 
         invoke(cli, "--opt=spam")
 
-    def test_pass_in_parent_context_argname(self, invoke: Invoke):
+    def test_pass_in_parent_context_argname(self, invoke: Invoke) -> None:
         """
         The decorator can be used in the same context as "click_options()".
         This makes no sense, but works.
@@ -1129,7 +521,7 @@ class TestPassSettings:
 
         invoke(cli, "--opt=spam")
 
-    def test_combine_pass_settings_click_options(self, invoke: Invoke):
+    def test_combine_pass_settings_click_options(self, invoke: Invoke) -> None:
         """
         A sub command can receive the parent's options via "pass_settings"
         and define its own options at the same time.
@@ -1141,13 +533,13 @@ class TestPassSettings:
 
         @click.group()
         @click_options(self.Settings, "test-main", argname="main")
-        def cli(main):
+        def cli(main: TestPassSettings.Settings) -> None:
             assert main == self.Settings("spam")
 
         @cli.command()
         @click_options(SubSettings, "test-sub", argname="sub")
         @pass_settings(argname="main")
-        def cmd(main, sub):
+        def cmd(main: TestPassSettings.Settings, sub: SubSettings) -> None:
             assert main == self.Settings("spam")
             assert sub == SubSettings("eggs")
 
@@ -1170,7 +562,7 @@ class TestClickConfig:
         click_config: Optional[dict],
         flag: Optional[str],
         value: bool,
-    ):
+    ) -> None:
         """
         The attrs default value is correctly used for flag options in all
         variants (no flag, on-flag, off-flag).
@@ -1182,7 +574,7 @@ class TestClickConfig:
 
         @click.command()
         @click_options(Settings, "test")
-        def cli(settings):
+        def cli(settings: Settings) -> None:
             assert settings.opt is value
 
         if flag is None:
@@ -1196,7 +588,7 @@ class TestClickConfig:
     )
     def test_create_a_flag_without_off_switch(
         self, invoke: Invoke, flag, value
-    ):
+    ) -> None:
         """
         The "off"-flag for flag options can be removed.
         """
@@ -1208,7 +600,7 @@ class TestClickConfig:
 
         @click.command()
         @click_options(Settings, "test")
-        def cli(settings):
+        def cli(settings: Settings) -> None:
             assert settings.opt is value
 
         if flag is None:
@@ -1226,7 +618,7 @@ class TestClickConfig:
     )
     def test_create_a_short_handle_for_a_flag(
         self, invoke: Invoke, flag, value
-    ):
+    ) -> None:
         """
         Create a shorter handle for a command similar to pytest's -x.
         """
@@ -1238,7 +630,7 @@ class TestClickConfig:
 
         @click.command()
         @click_options(Settings, "test")
-        def cli(settings):
+        def cli(settings: Settings) -> None:
             assert settings.exitfirst is value
 
         if flag is None:
@@ -1266,7 +658,7 @@ class TestClickConfig:
 
         @click.command()
         @click_options(Settings, "test")
-        def cli(settings):
+        def cli(settings: Settings) -> None:
             assert settings.arg is value
 
         result = invoke(cli, *args)
@@ -1327,14 +719,16 @@ class TestDecoratorFactory:
 
         return Settings
 
-    def test_click_option_factory(self, settings_cls: type, invoke: Invoke):
+    def test_click_option_factory(
+        self, settings_cls: type, invoke: Invoke
+    ) -> None:
         """
         The ClickOptionFactory is the default.
         """
 
         @click.command()
         @click_options(settings_cls, "t")
-        def cli1(settings):
+        def cli1(settings: Any) -> None:
             ...
 
         @click.command()
@@ -1343,14 +737,16 @@ class TestDecoratorFactory:
             "t",
             decorator_factory=click_utils.ClickOptionFactory(),
         )
-        def cli2(settings):
+        def cli2(settings: Any) -> None:
             ...
 
         r1 = invoke(cli1, "--help").output.splitlines()[1:]
         r2 = invoke(cli2, "--help").output.splitlines()[1:]
         assert r1 == r2
 
-    def test_option_group_factory(self, settings_cls: type, invoke: Invoke):
+    def test_option_group_factory(
+        self, settings_cls: type, invoke: Invoke
+    ) -> None:
         """
         Option groups can be created via the OptionGroupFactory
         """
@@ -1361,7 +757,7 @@ class TestDecoratorFactory:
             "t",
             decorator_factory=click_utils.OptionGroupFactory(),
         )
-        def cli(settings):
+        def cli(settings: Any) -> None:
             ...
 
         result = invoke(cli, "--help").output.splitlines()
@@ -1378,7 +774,7 @@ class TestDecoratorFactory:
             "  --help              Show this message and exit.",
         ]
 
-    def test_not_installed(self, monkeypatch: pytest.MonkeyPatch):
+    def test_not_installed(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """
         The factory checks if click-option-group is installed.
         """
@@ -1391,7 +787,7 @@ class TestDecoratorFactory:
 
     def test_no_init_no_option(
         self, settings_init_false_csl: type, invoke: Invoke
-    ):
+    ) -> None:
         """
         No option is generated for an attribute if "init=False".
         """
@@ -1402,7 +798,7 @@ class TestDecoratorFactory:
             "t",
             decorator_factory=click_utils.OptionGroupFactory(),
         )
-        def cli(settings):
+        def cli(settings: Any) -> None:
             ...
 
         result = invoke(cli, "--help").output.splitlines()

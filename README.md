@@ -153,9 +153,51 @@ In order to write your own loaders or support new file formats, you need to impl
 
 You can also pass a custom [cattrs converter](https://cattrs.readthedocs.io/en/latest/index.html) to add support for additional Python types.
 
-### Click
 
-Optionally, Click options can be generated for each option.  Config files and environment variables will still be read and can be overriden by passing command line options.
+### Command Line Interfaces
+
+Typed Settings can generate a command line interfaces (CLI) based on your settings.
+These CLIs will load settings as described above and let users override the loades settings with command line argumments.
+
+Typed Settings supports `argparse` and `click`.
+
+
+#### Argparse
+
+```python
+# example.py
+import typed_settings as ts
+
+@ts.settings
+class Settings:
+    a_str: str = ts.option(default="default", help="A string")
+    an_int: int = ts.option(default=3, help="An int")
+
+@ts.cli(Settings, "example")
+def main(settings):
+    print(settings)
+
+if __name__ == "__main__":
+    main()
+```
+
+```console
+$ python example.py --help
+usage: example.py [-h] [--a-str TEXT] [--an-int INT]
+
+options:
+  -h, --help    show this help message and exit
+
+Settings:
+  Settings options
+
+  --a-str TEXT  A string [default: default]
+  --an-int INT  An int [default: 3]
+$ python example.py --a-str=spam --an-int=1
+Settings(a_str='spam', an_int=1)
+```
+
+#### Click
 
 
 ```python
@@ -165,8 +207,8 @@ import typed_settings as ts
 
 @ts.settings
 class Settings:
-    a_str: str = "default"
-    an_int: int = 3
+    a_str: str = ts.option(default="default", help="A string")
+    an_int: int = ts.option(default=3, help="An int")
 
 @click.command()
 @ts.click_options(Settings, "example")
@@ -182,8 +224,8 @@ $ python example.py --help
 Usage: example.py [OPTIONS]
 
 Options:
-  --a-str TEXT      [default: default]
-  --an-int INTEGER  [default: 3]
+  --a-str TEXT      A string  [default: default]
+  --an-int INTEGER  An int  [default: 3]
   --help            Show this message and exit.
 $ python example.py --a-str=spam --an-int=1
 Settings(a_str='spam', an_int=1)

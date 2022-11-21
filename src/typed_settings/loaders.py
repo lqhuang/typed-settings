@@ -5,19 +5,20 @@ from fnmatch import fnmatch
 from pathlib import Path
 from typing import Any, Callable, Dict, Iterable, List, Optional, Union
 
+from ._compat import PY_38, PY_311
 
-try:
+
+if PY_38:
     from typing import Protocol
-except ImportError:
-    # Python 3.7
+else:
     from typing import _Protocol as Protocol  # type: ignore
 
 import attrs
 
 
-try:
+if PY_311:
     import tomllib
-except ImportError:
+else:
     import tomli as tomllib  # type: ignore[no-redef]
 
 from ._dict_utils import _merge_dicts, _set_path

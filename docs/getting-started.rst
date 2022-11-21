@@ -38,7 +38,7 @@ Basic Settings Definition and Loading
 
 
 Settings are defined as `attrs classes`_.
-You can either use the decorators provided by ``attrs`` or the :func:`settings` decorator which is an alias to :func:`attrs.define()`:
+You can either use the decorators provided by ``attrs`` or the :func:`~typed_settings.attrs.settings()` decorator which is an alias to :func:`attrs.define()`:
 
 .. code-block:: python
 
@@ -52,7 +52,7 @@ You can either use the decorators provided by ``attrs`` or the :func:`settings` 
    >>> Settings("monty", "S3cr3t!")
    Settings(username='monty', password=***)
 
-:func:`secret()` is a wrapper for :func:`attrs.field()` and masks secrets when the settings instance is being printed.
+:func:`~typed_settings.attrs.secret()` is a wrapper for :func:`attrs.field()` and masks secrets when the settings instance is being printed.
 
 Settings should (but are not required to) define defaults for all options.
 If an option has no default and no config value can be found for it, an error will be raised by ``attrs``.
@@ -189,47 +189,88 @@ However, you can mark files as *mandatory* if you want an error instead.
 You can read more about this in the guide :ref:`guide-working-with-config-files`.
 
 
-Command Line Options with Click
-===============================
+Command Line Interfaces
+=======================
 
 Some tools (like :ref:`example-pytest` or :ref:`example-twine`) allow you store settings in a config file and override them on-the-fly via command line options.
 
-Typed Settings can integrate with click_ and automatically create command line options for your settings.
+Typed Settings can integrate with argparse_ and click_ and
+can automatically create command line options for your settings.
 When you run your app, settings will first be loaded from config files and environment variables.
-The loaded values then serve as defaults for the corresponding Click options.
+The loaded values then serve as defaults for the corresponding CLI options.
 
-Your CLI function receives all options as the single instance of your settings class:
+Your CLI function receives all options as the single instance of your settings class.
+
+Below you'll find two examples how to generate an Argparse and a Click CLI for the following settings:
 
 .. code-block:: python
 
-   >>> import click
-   >>> import click.testing
-   >>>
    >>> @ts.settings
    ... class Settings:
    ...     username: str = ts.option(help="Your username")
    ...     password: str = ts.secret(default="", help="Your password")
+
+Argparse
+--------
+
+.. code-block:: python
+
+   >>> @ts.cli(Settings, "myapp")
+   ... def cli(settings: Settings) -> None:
+   ...     """My App"""
+   ...     print(settings)
+   ...
+   >>> invoke(cli, "--help")
+   usage: cli [-h] --username TEXT [--password TEXT]
+   <BLANKLINE>
+   My App
+   <BLANKLINE>
+   options:
+     -h, --help       show this help message and exit
+   <BLANKLINE>
+   Settings:
+     Settings options
+   <BLANKLINE>
+     --username TEXT  Your username [required]
+     --password TEXT  Your password [default: ***]
+   >>> invoke(cli, "--username=guido", "--password=1234")
+   Settings(username='guido', password=***)
+
+Click
+-----
+
+.. code-block:: python
+
+   >>> import click
+   >>>
    >>>
    >>> @click.command()
    ... @ts.click_options(Settings, "myapp")
    ... def cli(settings):
+   ...     """My App"""
    ...     print(settings)
    ...
-   >>> # The "CliRunner" allows us to run our CLI right here in the Python shell:
-   >>> runner = click.testing.CliRunner()
-   >>> print(runner.invoke(cli, ["--help"]).output)
+   >>> invoke(cli, "--help")
    Usage: cli [OPTIONS]
+   <BLANKLINE>
+     My App
    <BLANKLINE>
    Options:
      --username TEXT  Your username  [required]
      --password TEXT  Your password  [default: ***]
      --help           Show this message and exit.
    <BLANKLINE>
-   >>> print(runner.invoke(cli, ["--username=guido", "--password=1234"]).output)
+   >>> invoke(cli, "--username=guido", "--password=1234")
    Settings(username='guido', password=***)
    <BLANKLINE>
 
+.. _argparse: https://docs.python.org/3/library/argparse.html
 .. _click: https://click.palletsprojects.com
+
+
+----
+
+See :doc:`guides/cli` for details.
 
 
 Frozen Settings and Updating Them
@@ -261,7 +302,7 @@ However, this does not extend to mutable option values:
 Immutable settings can be desirable because they prevent you or your users from (accidentally) changing them while the app is running.
 
 However, when you are testing your app, you may still want to modify your settings.
-You can create an updated copy of your settings via :func:`evolve()`, which is a recursive version of :func:`attrs.evolve()`:
+You can create an updated copy of your settings via :func:`~typed_settings.attrs.evolve()`, which is a recursive version of :func:`attrs.evolve()`:
 
 .. code-block:: python
 

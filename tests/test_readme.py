@@ -3,12 +3,16 @@ Extract examples from the README and assert they work.
 """
 import pathlib
 import subprocess
-from typing import Dict, List, Tuple
+from pathlib import Path
+from typing import Dict, List, Optional, Tuple
 
 import pytest
 
 
 HERE = pathlib.Path(__file__).parent
+
+
+Example = Dict[str, List[str]]
 
 
 def readme() -> str:
@@ -38,8 +42,8 @@ def load_readme() -> List[Tuple[str, List[str]]]:
         if line.startswith("## "):
             return list(examples.items())
 
-        if line.startswith("### "):
-            example_title = line[4:]
+        if line.startswith("### ") or line.startswith("#### "):
+            _, _, example_title = line.partition(" ")
             examples[example_title] = []
             continue
 
@@ -50,7 +54,7 @@ def load_readme() -> List[Tuple[str, List[str]]]:
 
 
 @pytest.fixture
-def example(request, tmp_path):
+def example(request: pytest.FixtureRequest, tmp_path: Path) -> Example:
     """
     Splits the example lines into code blocks.
 
@@ -62,21 +66,22 @@ def example(request, tmp_path):
     command.
     """
     example_lines = request.param
-    code_lines = None
+    code_lines: Optional[List[str]] = None
     for line in example_lines:  # pragma: no cover
         if line.startswith("```") and len(line) > 3:
             code_lines = []
             continue
 
         if line == "```":
+            assert code_lines is not None
             if code_lines[0].startswith("# "):
                 first_line, *code_lines = code_lines
                 _, _, fname = first_line.partition(" ")
                 contents = "\n".join(code_lines) + "\n"
                 tmp_path.joinpath(fname).write_text(contents)
             else:
-                cmds = {}
-                current_cmd = None
+                cmds: Dict[str, List[str]] = {}
+                current_cmd: str
                 for line in code_lines:
                     if line.startswith("$"):
                         _, _, current_cmd = line.partition(" ")
@@ -87,13 +92,15 @@ def example(request, tmp_path):
         elif code_lines is not None:
             code_lines.append(line)
 
+    return {}
+
 
 @pytest.mark.parametrize(
     "example",
     [pytest.param(e[1], id=e[0]) for e in load_readme()],
     indirect=True,
 )
-def test_readme(example, tmp_path):
+def test_readme(example: Example, tmp_path: Path) -> None:
     """
     All commands in the *console* block of an example produce the exact same
     results as shown in the example.
