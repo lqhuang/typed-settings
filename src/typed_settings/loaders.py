@@ -217,11 +217,11 @@ class FileLoader:
             A dict with the loaded settings.
 
         Raise:
-            UnknownFormat: When no :class:`FileFormat` is configured for a
+            UnknownFormatError: When no :class:`FileFormat` is configured for a
                 loaded file.
             ConfigFileNotFoundError: If *path* does not exist.
             ConfigFileLoadError: If *path* cannot be read/loaded/decoded.
-            InvalidOptionError: If invalid settings have been found.
+            InvalidOptionsError: If invalid settings have been found.
         """
         paths = self._get_config_filenames(self.files, self.env_var)
         merged_settings: SettingsDict = {}
@@ -439,7 +439,7 @@ def clean_settings(
     Return:
         The cleaned settings.
     Raise:
-        InvalidOptionError: If invalid settings have been found.
+        InvalidOptionsError: If invalid settings have been found.
     """
     invalid_paths = []
     valid_paths = {o.path for o in options}

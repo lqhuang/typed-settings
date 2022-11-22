@@ -308,7 +308,7 @@ This may, for example, be the case when your app runs in a container and the con
 For these cases, Typed Settings can read search paths for config files from an environment variable.
 If you use :func:`load()`, its name is derived from the *appname* argument and is :samp:`{APPNAME}_SETTINGS`.
 
-Multiple paths are separated by :code:`:`, similarly to the :envvar:`PATH` variable.
+Multiple paths are separated by :code:`:`, similarly to the ``$PATH`` variable.
 However, in contrast to :code:`PATH`, *all* existing files are loaded one after another:
 
 .. code-block:: python
@@ -340,7 +340,7 @@ However, in contrast to :code:`PATH`, *all* existing files are loaded one after 
    Settings(option1='eggs', option2='spam')
 
 You can override the default using the *config_files_var* argument
-(or *env_var* if you use the :class:`FileLoader` directly):
+(or *env_var* if you use the :class:`~typed_settings.loaders.FileLoader` directly):
 
 .. code-block:: python
 
@@ -364,7 +364,7 @@ Config File Precedence
 
 Typed-Settings loads all files that it finds and merges their contents with all previously loaded settings.
 
-The list of static files (passed to :func:`load()` or :class:`FileLoader`) is always loaded first.
+The list of static files (passed to :func:`load()` or :class:`~typed_settings.loaders.FileLoader`) is always loaded first.
 The files specified via an environment variable are loaded afterwards:
 
 .. code-block:: python

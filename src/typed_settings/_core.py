@@ -30,7 +30,7 @@ def default_loaders(
 
     These loaders are:
 
-    #. A :class:`.FileLoader` loader configured with the :class:`TomlFormat`
+    #. A :class:`.FileLoader` loader configured with the :class:`.TomlFormat`
     #. An :class:`.EnvLoader`
 
     The :class:`.FileLoader` will load files from *config_files* and from the
@@ -162,8 +162,8 @@ def load(
         environment variables.
 
     Raise:
-        UnknownFormatError: When no :class:`FileFormat` is configured for a
-            loaded file.
+        UnknownFormatError: When no :class:`~typed_settings.loaders.FileFormat`
+            is configured for a loaded file.
         ConfigFileNotFoundError: If *path* does not exist.
         ConfigFileLoadError: If *path* cannot be read/loaded/decoded.
         InvalidOptionsError: If invalid settings have been found.
@@ -196,11 +196,11 @@ def load_settings(
 
     Args:
         cls: Attrs class with options (and default values).
-        loaders: A list of settings :class:`Loader`'s.
-        converter: An optional :class:`.BaseConverter` used for converting
-            option values to the required type.
+        loaders: A list of settings :class:`.Loader`'s.
+        converter: An optional :class:`cattrs.converters.BaseConverter` used
+            for converting option values to the required type.
 
-            By default, :data:`typed_settings.attrs.converter` is used.
+            By default, :func:`.default_converter()` is used.
 
     Return:
         An instance of *cls* populated with settings from the defined loaders.

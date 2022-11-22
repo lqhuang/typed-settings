@@ -398,7 +398,7 @@ def evolve(inst: "AttrsInstance", **changes: Any) -> "AttrsInstance":
     Raise:
         TypeError: If *attr_name* couldn't be found in the class ``__init__``.
         attrs.exceptions.NotAnAttrsClassError: If *cls* is not an ``attrs``
-        class.
+            class.
 
     ..  versionadded:: 1.0.0
     """

@@ -86,8 +86,7 @@ def handle_enum(
     type: Type[Enum], default: Default, is_optional: bool
 ) -> StrDict:
     """
-    Use :class:`EnumChoice` as option type and use the enum value's name as
-    default.
+    Use *choices* as option type and use the enum value's name as default.
     """
     kwargs: StrDict = {"choices": list(type.__members__)}
     if isinstance(default, type):
@@ -230,7 +229,7 @@ def cli(
         settings_cls: The settings class to generate options for.
 
         loaders: Either a string with your app name or a list of
-            :class:`Loader`\\ s.  If it's a string, use it with
+            :class:`.Loader`\\ s.  If it's a string, use it with
             :func:`~typed_settings.default_loaders()` to get the default
             loaders.
 
@@ -241,7 +240,7 @@ def cli(
 
         type_args_maker: The type args maker that is used to generate keyword
             arguments for :func:`click.option()`.  By default, use
-            :class:`.TypeArgsMaker` with :class:`ClickHandler`.
+            :class:`.TypeArgsMaker` with :class:`ArgparseHandler`.
 
         **parser_kwargs: Additional keyword arguments to pass to the
             :class:`argparse.ArgumentParser`.
@@ -298,7 +297,7 @@ def make_parser(
         settings_cls: The settings class to generate options for.
 
         loaders: Either a string with your app name or a list of
-            :class:`Loader`\\ s.  If it's a string, use it with
+            :class:`.Loader`\\ s.  If it's a string, use it with
             :func:`~typed_settings.default_loaders()` to get the default
             loaders.
 
@@ -309,7 +308,7 @@ def make_parser(
 
         type_args_maker: The type args maker that is used to generate keyword
             arguments for :func:`click.option()`.  By default, use
-            :class:`.TypeArgsMaker` with :class:`ClickHandler`.
+            :class:`.TypeArgsMaker` with :class:`ArgparseHandler`.
 
         **parser_kwargs: Additional keyword arguments to pass to the
             :class:`argparse.ArgumentParser`.

@@ -216,7 +216,8 @@ class TypeArgsMaker:
     :class:`TypeHandler`:
 
     - If a type is in the dict returned by
-      :meth:`TypeHandler.get_scalar_handler()`, call the corresponding handler.
+      :meth:`TypeHandler.get_scalar_handlers()`, call the corresponding
+      handler.
 
     - For other scalar types, call :meth:`TypeHandler.handle_scalar()`.
 

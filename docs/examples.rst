@@ -232,11 +232,11 @@ We then define Pytest's base settings.
 They also override the Click parameter declarations and add help texts for the options.
 
 The next step is to combine the base settings with the settings of of all Plugins.
-We use :func:`ts.combine()` for that which is a convenience wrapper around :func:`attrs.make()`.
+We use :func:`~typed_settings.attrs.combine()` for that which is a convenience wrapper around :func:`attrs.make_class()`.
 
 Now that we habe class that contains Pytests own settings as well as the settings of all plugins,
 we can create a command line application.
-We create option groups by passing :class:`ts.OptionGroupFactory` to :func:`ts.click_options()`.
+We create option groups by passing :class:`~typed_settings.click_utils.OptionGroupFactory` to :func:`.click_options()`.
 
 .. literalinclude:: examples/pytest-plugins/pytest.py
 

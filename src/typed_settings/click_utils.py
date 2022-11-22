@@ -83,7 +83,7 @@ def click_options(
         settings_cls: The settings class to generate options for.
 
         loaders: Either a string with your app name or a list of
-            :class:`Loader`\\ s.  If it's a string, use it with
+            :class:`.Loader`\\ s.  If it's a string, use it with
             :func:`~typed_settings.default_loaders()` to get the default
             loaders.
 
@@ -368,13 +368,13 @@ class OptionGroupFactory:
 
     def get_option_decorator(self) -> Callable[..., Decorator]:
         """
-        Return :func:`click_option_group.optgroup.option()`.
+        Return :class:`click_option_group.optgroup` option.
         """
         return self.optgroup.option
 
     def get_group_decorator(self, settings_cls: SettingsClass) -> Decorator:
         """
-        Return a :func:`click_option_group.optgroup.group()` instantiated with
+        Return a :class:`click_option_group.optgroup` group instantiated with
         the first line of *settings_cls*'s docstring.
         """
         try:
@@ -407,7 +407,7 @@ def handle_enum(
     type: Type[Enum], default: Default, is_optional: bool
 ) -> StrDict:
     """
-    Use :class:`EnumChoice` as option type and use the enum value's name as
+    Use :class:`click.Choice` as option type and use the enum value's name as
     default.
     """
     kwargs: StrDict = {"type": click.Choice(list(type.__members__))}

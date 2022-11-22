@@ -1,5 +1,5 @@
 """
-Typed settings
+Core functions for loading and working with settings.
 """
 from typing import Any, List
 

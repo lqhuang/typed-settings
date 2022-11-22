@@ -1,5 +1,5 @@
 """
-Converters and helpers for :mod:`cattr`.
+Converters and helpers for :mod:`cattrs`.
 """
 from datetime import datetime
 from enum import Enum
@@ -30,7 +30,7 @@ def default_converter() -> BaseConverter:
         The converter can also structure attrs instances from existing attrs
         instances (normaly, it would only work with dicts).  This allows using
         instances of nested class es of default values for options.  See
-        :func:`register_structure_hook_factory()`.
+        :meth:`cattrs.converters.BaseConverter.register_structure_hook_factory()`.
 
     This converter can also be used as a base for converters with custom
     structure hooks.
@@ -158,7 +158,7 @@ def to_dt(value: Union[datetime, str], _type: type = datetime) -> datetime:
     Convert an ISO formatted string to :class:`datetime.datetime`.  Leave the
     input untouched if it is already a datetime.
 
-    See: :func:`datetime.datetime.fromisoformat()`
+    See: :meth:`datetime.datetime.fromisoformat()`
 
     The ``Z`` suffix is also supported and will be replaced with ``+00:00``.
 
@@ -225,7 +225,8 @@ def to_bool(value: Any, _type: type = bool) -> bool:
 
 def to_enum(value: Any, cls: Type[ET]) -> ET:
     """
-    Return a converter that creates an instance of the :class:`.Enum` *cls*.
+    Return a converter that creates an instance of the :class:`~enum.Enum`
+    *cls*.
 
     If the to be converted value is not already an enum, the converter will
     create one by name (``MyEnum[val]``).

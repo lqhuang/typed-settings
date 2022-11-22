@@ -12,18 +12,58 @@ This is the full list of all public classes and functions.
 Core
 ====
 
-
 Core Functions
 --------------
 
-Core functions for loading and working with settings.
-
-.. currentmodule:: typed_settings
-.. autofunction:: default_converter
-.. autofunction:: default_loaders
-.. autofunction:: find
+.. automodule:: typed_settings
 .. autofunction:: load
 .. autofunction:: load_settings
+.. autofunction:: default_loaders
+.. autofunction:: find
+
+
+Aliases
+-------
+
+.. function:: settings()
+
+   Alias for :func:`typed_settings.attrs.settings()`
+
+.. function:: option()
+
+   Alias for :func:`typed_settings.attrs.option()`
+
+.. function:: secret()
+
+   Alias for :func:`typed_settings.attrs.secret()`
+
+.. function:: evolve()
+
+   Alias for :func:`typed_settings.attrs.evolve()`
+
+.. function:: combine()
+
+   Alias for :func:`typed_settings.attrs.combine()`
+
+.. function:: default_converter()
+
+   Alias for :func:`typed_settings.converters.default_converter()`
+
+.. function:: register_strlist_hook()
+
+   Alias for :func:`typed_settings.converters.register_strlist_hook()`
+
+.. function:: cli()
+
+   Alias for :func:`typed_settings.argparse_utils.cli()`.
+
+.. function:: click_options()
+
+   Alias for :func:`typed_settings.click_utils.click_options()`.
+
+.. function:: pass_settings()
+
+   Alias for :func:`typed_settings.click_utils.pass_settings()`.
 
 
 Exceptions
@@ -48,13 +88,13 @@ Types
    :members:
 
 
-Attrs
-======
+Attrs & Cattrs
+==============
 
 Classes and Fields
 ------------------
 
-Helpers for creating :mod:`attrs` classes and fields with sensible details for Typed Settings.
+Helpers for creating ``attrs`` classes and fields with sensible details for Typed Settings.
 They are all also available directly from the :mod:`typed_settings` module.
 
 .. currentmodule:: typed_settings.attrs
@@ -63,7 +103,7 @@ They are all also available directly from the :mod:`typed_settings` module.
 
 .. function:: settings(maybe_cls=None, *, these=None, repr=None, hash=None, init=None, slots=True, frozen=True, weakref_slot=True, str=False, auto_attribs=None, kw_only=False, cache_hash=False, auto_exc=True, eq=None, order=False, auto_detect=True, getstate_setstate=None, on_setattr=None, field_transformer=<function auto_convert>)
 
-    An alias to :func:`attrs.frozen`,
+    An alias to :func:`attrs.define()`,
     configured with a *field_transformer* that automatically adds converters to all fields based on their annotated type.
 
     Supported concrete types:
@@ -71,24 +111,18 @@ They are all also available directly from the :mod:`typed_settings` module.
           :func:`.to_bool()`)
         - :class:`datetime.datetime`, (ISO format with support for ``Z`` suffix,
           see :func:`.to_dt()`).
-        - Attrs/Settings classes (see :func:`.to_attrs()`)
+        - Attrs/Settings classes
         - All other types use the *type* object itself as converter, this includes
           :class:`int`, :class:`float`, :class:`str`, and
           :class:`~enum.Enum`, :class:`pathlib.Path`, ….
         - ``typing.Any`` (no conversion is performed)
 
     Supported generic types:
-        - ``typing.List[T]``, ``typing.Sequence[T]``, ``typing.MutableSequence[T]``
-          (converts to :class:`list`, see :func:`.to_iterable()`)
-        - ``typing.Tuple[T, ...]`` (converts to
-          :class:`tuple`, see :func:`.to_iterable()`)
-        - ``typing.Tuple[X, Y, Z]`` (converts to :class:`tuple`, see
-          :func:`.to_tuple()`)
-        - ``typing.Dict[K, V]``, ``typing.Mapping[K, V]``,
-          ``typing.MutableMapping[K, V]`` (converts to :class:`dict`, see
-          :func:`.to_mapping()`)
-        - ``typing.Optional[T]``, ``typing.Union[X, Y, Z]`` (converts to first
-          matching type, see :func:`.to_union()`)
+        - ``typing.List[T]``, ``typing.Sequence[T]``, ``typing.MutableSequence[T]`` (converts to :class:`list`)
+        - ``typing.Tuple[T, ...]`` (converts to :class:`tuple`)
+        - ``typing.Tuple[X, Y, Z]`` (converts to :class:`tuple`)
+        - ``typing.Dict[K, V]``, ``typing.Mapping[K, V]``, ``typing.MutableMapping[K, V]`` (converts to :class:`dict`)
+        - ``typing.Optional[T]``, ``typing.Union[X, Y, Z]`` (converts to first matching type)
 
 
 .. function:: option(*, default=NOTHING, validator=None, repr=True, hash=None, init=True, metadata=None, converter=None, factory=None, kw_only=False, eq=None, order=None, on_setattr=None, help=None, click=None)
