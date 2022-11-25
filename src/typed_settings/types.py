@@ -2,7 +2,7 @@
 Internal data structures.
 """
 from enum import Enum
-from typing import Any, ClassVar, List, MutableMapping, Type, TypeVar
+from typing import Any, ClassVar, Generic, List, MutableMapping, Type, TypeVar
 
 import attrs
 
@@ -73,3 +73,62 @@ class OptionInfo:
 
 
 OptionList = List[OptionInfo]
+
+
+class SecretStr(str):
+    """
+    A subclass of :class:`str` that masks the output of :func:`repr()`.
+
+    It is less secure than :class:`Secret` but is a drop-in replacement for
+    normal strings.
+
+    The main use case is avoiding accidental secrets leakage via tracebacks.
+    It also helps to enforce secret usage via Typing.
+
+    It does **not help** when you:
+
+    - :func:`print()` it
+    - :class:`str` it
+    - Log it
+    - Use it in an f-string (``f"{val}"``)
+    """
+
+    def __repr__(self) -> str:
+        return "*******" if str(self) else ""
+
+
+class Secret(Generic[T]):
+    """
+    A secret wrapper around any value.
+
+    It makes it very hard to accidentally leak the secret, even when printing
+    or logging it.
+
+    You need to explicitly call :meth:`get_secret_value()` to get the wrapped
+    value.  Thus, it is no drop-in replacement for the wrapped data.
+
+    See :class:`SecretStr` if you need a drop-in replacement for strings,
+    even if it is not quite as safe.
+
+    You can use :class:`bool` to get the boolean value of the wrapped secret.
+    Other protocol methods (e.g., for length or comparison operators) are not
+    implemented.
+    """
+
+    def __init__(self, secret_value: T) -> None:
+        self._secret_value = secret_value
+
+    def __bool__(self) -> bool:
+        return bool(self._secret_value)
+
+    def __repr__(self) -> str:
+        return f"{self.__class__.__name__}({self})"
+
+    def __str__(self) -> str:
+        return "*******" if self._secret_value else ""
+
+    def get_secret_value(self) -> T:
+        """
+        Return the wrapped secret value.
+        """
+        return self._secret_value
