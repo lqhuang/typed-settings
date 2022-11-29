@@ -212,7 +212,7 @@ class TestIntFloatStrParam(ParamBase):
 
     click_expected_help = [
         "  --a TEXT     [default: spam]",
-        "  --b TEXT     [default: ***]",
+        "  --b TEXT     [default: *******]",
         "  --c INTEGER  [default: 0]",
         "  --d FLOAT    [default: 0.0]",
         "  --e TEXT",
@@ -221,7 +221,7 @@ class TestIntFloatStrParam(ParamBase):
     ]
     argparse_expected_help = [
         "  --a TEXT    [default: spam]",
-        "  --b TEXT    [default: ***]",
+        "  --b TEXT    [default: *******]",
         "  --c INT     [default: 0]",
         "  --d FLOAT   [default: 0.0]",
         "  --e TEXT",
@@ -232,7 +232,7 @@ class TestIntFloatStrParam(ParamBase):
     env_vars = {"A": "eggs", "B": "bacon", "C": "42", "D": "3.14"}
     click_expected_env_var_defaults = [
         "  --a TEXT     [default: eggs]",
-        "  --b TEXT     [default: ***]",
+        "  --b TEXT     [default: *******]",
         "  --c INTEGER  [default: 42]",
         "  --d FLOAT    [default: 3.14]",
         "  --e TEXT",
@@ -241,7 +241,7 @@ class TestIntFloatStrParam(ParamBase):
     ]
     argparse_expected_env_var_defaults = [
         "  --a TEXT    [default: eggs]",
-        "  --b TEXT    [default: ***]",
+        "  --b TEXT    [default: *******]",
         "  --c INT     [default: 42]",
         "  --d FLOAT   [default: 3.14]",
         "  --e TEXT",

@@ -1,12 +1,25 @@
 """
 Internal data structures.
 """
+from collections.abc import Collection
 from enum import Enum
-from typing import Any, ClassVar, Generic, List, MutableMapping, Type, TypeVar
+from typing import (
+    Any,
+    ClassVar,
+    Final,
+    Generic,
+    List,
+    MutableMapping,
+    Type,
+    TypeVar,
+)
 
 import attrs
 
 from ._compat import Protocol
+
+
+SECRET_REPR: Final[str] = "*******"
 
 
 # A protocol to be able to statically accept an attrs class.
@@ -91,10 +104,12 @@ class SecretStr(str):
     - :class:`str` it
     - Log it
     - Use it in an f-string (``f"{val}"``)
+
+    .. versionadded:: 2.0.0
     """
 
     def __repr__(self) -> str:
-        return "*******" if str(self) else ""
+        return f"'{SECRET_REPR}'" if self else "''"
 
 
 class Secret(Generic[T]):
@@ -113,19 +128,31 @@ class Secret(Generic[T]):
     You can use :class:`bool` to get the boolean value of the wrapped secret.
     Other protocol methods (e.g., for length or comparison operators) are not
     implemented.
+
+    .. versionadded:: 2.0.0
     """
 
     def __init__(self, secret_value: T) -> None:
+        self._is_collection = isinstance(secret_value, Collection)
         self._secret_value = secret_value
 
     def __bool__(self) -> bool:
         return bool(self._secret_value)
 
     def __repr__(self) -> str:
-        return f"{self.__class__.__name__}({self})"
+        r = repr(
+            self._secret_value
+            if not self._secret_value and self._is_collection
+            else SECRET_REPR
+        )
+        return f"{self.__class__.__name__}({r})"
 
     def __str__(self) -> str:
-        return "*******" if self._secret_value else ""
+        return str(
+            self._secret_value
+            if not self._secret_value and self._is_collection
+            else SECRET_REPR
+        )
 
     def get_secret_value(self) -> T:
         """

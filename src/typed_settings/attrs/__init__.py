@@ -1,6 +1,7 @@
 """
 Helpers for and additions to :mod:`attrs`.
 """
+from collections.abc import Collection
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -15,7 +16,7 @@ from typing import (
 import attr  # The old namespaces is needed in "combine()"
 import attrs
 
-from ..types import AttrsInstance
+from ..types import SECRET_REPR, AttrsInstance
 from .hooks import auto_convert
 
 
@@ -57,8 +58,8 @@ AttrsClass = Type[AttrsInstance]
 
 
 class _SecretRepr:
-    def __call__(self, _v: Any) -> str:
-        return "***"
+    def __call__(self, v: Any) -> str:
+        return repr(v if not v and isinstance(v, Collection) else SECRET_REPR)
 
     def __repr__(self) -> str:
         return "***"
@@ -334,7 +335,7 @@ def secret(  # type: ignore[no-untyped-def]
         ...     password: str = secret()
         ...
         >>> Settings(password="1234")
-        Settings(password=***)
+        Settings(password='*******')
     """
     metadata = _get_metadata(metadata, help, click, argparse)
 

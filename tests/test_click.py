@@ -180,7 +180,7 @@ class TestDefaultsLoading:
             "\n"
             "Options:\n"
             "  --a TEXT  Help for 'a'  [default: spam]\n"
-            "  --b TEXT  bbb  [default: ***]\n"
+            "  --b TEXT  bbb  [default: *******]\n"
             "  --help    Show this message and exit.\n"
         )
         assert result.exit_code == 0

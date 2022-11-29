@@ -26,14 +26,14 @@ class TestSecretStr:
         The repr of a non empty string is seven *
         """
         secret = types.SecretStr("spam")
-        assert repr(secret) == "*******"
+        assert repr(secret) == "'*******'"
 
     def test_empty_repr(self) -> None:
         """
         The repr of a non empty string is seven \\*.
         """
         secret = types.SecretStr("")
-        assert repr(secret) == ""
+        assert repr(secret) == "''"
 
     def test_str(self) -> None:
         """
@@ -56,7 +56,7 @@ class TestSecretStr:
         """
         secret = types.SecretStr("spam")
         print(locals())
-        assert "'secret': *******" in capsys.readouterr().out
+        assert "'secret': '*******'" in capsys.readouterr().out
 
 
 class TestSecret:
@@ -66,16 +66,16 @@ class TestSecret:
         """
         secret = types.Secret("spam")
         assert_type(secret, types.Secret[str])
-        assert repr(secret) == "Secret(*******)"
+        assert repr(secret) == "Secret('*******')"
 
     def test_empty_repr(self) -> None:
         """
         The repr of a non empty string is seven \\*.
         """
         secret = types.Secret("")
-        assert repr(secret) == "Secret()"
+        assert repr(secret) == "Secret('')"
 
-    @pytest.mark.parametrize("v", ["spam", 3, [1], True])
+    @pytest.mark.parametrize("v", ["spam", 0, 3, [1], True, False])
     def test_str(self, v: Any) -> None:
         """
         The str repr is the original string.
@@ -83,15 +83,13 @@ class TestSecret:
         secret = types.Secret(v)
         assert str(secret) == "*******"
 
-    @pytest.mark.parametrize(
-        "v, t", [("", str), (0, int), ([], list), (False, bool)]
-    )
+    @pytest.mark.parametrize("v, t", [("", str), ([], list), ((), tuple)])
     def test_empty_str(self, v: Any, t: type) -> None:
         """
-        The str repr of an empty secret is an empty string.
+        The str repr of an empty collection secret is an empty string.
         """
         secret = types.Secret(v)
-        assert str(secret) == ""
+        assert str(secret) == str(v)
 
     def test_print(self, capsys: pytest.CaptureFixture) -> None:
         """
@@ -107,7 +105,7 @@ class TestSecret:
         """
         secret = types.Secret("spam")
         print(locals())
-        assert "'secret': Secret(*******)" in capsys.readouterr().out
+        assert "'secret': Secret('*******')" in capsys.readouterr().out
 
     @pytest.mark.parametrize("v", ["spam", 3, [1], True])
     def test_bool_true(self, v: Any) -> None:

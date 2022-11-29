@@ -50,7 +50,7 @@ You can either use the decorators provided by ``attrs`` or the :func:`~typed_set
    ...     password: str = ts.secret(default="")
    ...
    >>> Settings("monty", "S3cr3t!")
-   Settings(username='monty', password=***)
+   Settings(username='monty', password='*******')
 
 :func:`~typed_settings.attrs.secret()` is a wrapper for :func:`attrs.field()` and masks secrets when the settings instance is being printed.
 
@@ -63,7 +63,7 @@ Instead, you call the function :func:`load()`:
 .. code-block:: python
 
    >>> ts.load(Settings, appname="myapp")
-   Settings(username='', password=***)
+   Settings(username='', password='')
 
 The first argument of that function is your settings class and an instance of that class is returned by it.
 The second argument is your *appname*.
@@ -94,7 +94,7 @@ Typed Settings will automatically look for environment variables matching :samp:
    >>> monkeypatch.setenv("MYAPP_PASSWORD", "S3cr3t!")
    >>>
    >>> ts.load(Settings, appname="myapp")
-   Settings(username='monty', password=***)
+   Settings(username='monty', password='*******')
    >>>
    >>> monkeypatch.undo()
 
@@ -135,7 +135,7 @@ Typed Settings supports TOML files (`Why?`_) out-of-the-box and looks for the *a
    ... """)
    49
    >>> ts.load(Settings, appname="myapp", config_files=[settings_file])
-   Settings(username='monty', password=***)
+   Settings(username='monty', password='*******')
 
 You can also load settings from multiple files.
 Subsequent files override the settings of their predecessors.
@@ -159,7 +159,7 @@ You can do the same with Typed Settings:
    >>> monkeypatch.chdir(tmp_path)
    >>>
    >>> ts.load(Settings, appname="myapp", config_files=[ts.find("settings.toml")])
-   Settings(username='monty', password=***)
+   Settings(username='monty', password='*******')
    >>>
    >>> monkeypatch.undo()
 
@@ -178,7 +178,7 @@ The variable can contain one ore more paths separated by a colon (``:``):
    >>> monkeypatch.setenv("MYAPP_SETTINGS", str(settings_file))
    >>>
    >>> ts.load(Settings, appname="myapp")
-   Settings(username='monty', password=***)
+   Settings(username='monty', password='*******')
    >>>
    >>> monkeypatch.undo()
 
@@ -232,9 +232,9 @@ Argparse
      Settings options
    <BLANKLINE>
      --username TEXT  Your username [required]
-     --password TEXT  Your password [default: ***]
+     --password TEXT  Your password [default: ]
    >>> invoke(cli, "--username=guido", "--password=1234")
-   Settings(username='guido', password=***)
+   Settings(username='guido', password='*******')
 
 Click
 -----
@@ -257,11 +257,11 @@ Click
    <BLANKLINE>
    Options:
      --username TEXT  Your username  [required]
-     --password TEXT  Your password  [default: ***]
+     --password TEXT  Your password  [default: ]
      --help           Show this message and exit.
    <BLANKLINE>
    >>> invoke(cli, "--username=guido", "--password=1234")
-   Settings(username='guido', password=***)
+   Settings(username='guido', password='*******')
    <BLANKLINE>
 
 .. _argparse: https://docs.python.org/3/library/argparse.html

@@ -161,7 +161,7 @@ They are all also available directly from the :mod:`typed_settings` module.
         ...     password: str = secret()
         ...
         >>> Settings(password="1234")
-        Settings(password=***)
+        Settings(password='*******')
 
 
 Helpers
@@ -257,3 +257,9 @@ Click type handling for the
 .. autofunction:: handle_enum
 .. autodata:: DEFAULT_TYPES
 .. autoclass:: ClickHandler
+
+
+MyPy
+====
+
+.. automodule:: typed_settings.mypy

@@ -36,7 +36,7 @@ from .cli_utils import (
 )
 from .converters import BaseConverter, default_converter, from_dict
 from .loaders import Loader
-from .types import ST, OptionInfo, SettingsClass, SettingsDict, T
+from .types import ST, OptionInfo, Secret, SettingsClass, SettingsDict, T
 
 
 if PY_38:
@@ -563,7 +563,9 @@ def _mk_option(
     if isinstance(field.repr, _SecretRepr):
         kwargs["show_default"] = False
         if "default" in kwargs:  # pragma: no cover
-            kwargs["help"] = f"{kwargs['help']}  [default: {field.repr('')}]"
+            kwargs[
+                "help"
+            ] = f"{kwargs['help']}  [default: {Secret(kwargs['default'])}]"
 
     if "default" not in kwargs:
         kwargs["required"] = True

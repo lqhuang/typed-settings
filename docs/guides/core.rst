@@ -6,6 +6,188 @@ Core Functionality
 
 This page explains Typed Setting's core functionality of loading settings and customizing the process.
 
+
+Settings Classes
+================
+
+Settings classes are normal Attrs_ classes with Type Hints:
+
+.. code-block:: python
+
+    >>> import attrs
+    >>>
+    >>> @attrs.define
+    ... class Settings:
+    ...     username: str
+    ...     password: str
+
+Typed Settings provides an alias to :func:`attrs.define` named :func:`settings()`.
+
+It also defines wrappers for :func:`attrs.field()`: :func:`option()` and :func:`secret()`.
+These wrappers make it easier to add extra metadata for :doc:`CLI options <cli>`.
+:func:`secret()` also adds basic protection against :ref:`leaking secrets <secrets>`:
+
+.. code-block:: python
+
+   >>> import typed_settings as ts
+   >>>
+   >>> @ts.settings
+   ... class Settings:
+   ...      username: str
+   ...      password: str = ts.secret()
+
+Dataclasses and Pydantic models cannot be used as settings classes (yet?).
+
+.. _attrs: https://www.attrs.org/en/stable/
+
+
+.. _secrets:
+
+Secrets
+-------
+
+Secrets, even when stored in an encrypted vault, most of the time end up as plain strings in your app.
+And plain strings tend to get printed.
+This can be log messages, debug :func:`print()`\ s, tracebacks, you name it:
+
+.. code-block:: python
+
+   >>> @ts.settings
+   ... class Settings:
+   ...      username: str
+   ...      password: str
+   ...
+   >>> settings = Settings("spam", "eggs")
+   >>> print(f"Settings loaded: {settings}")
+   Settings loaded: Settings(username='spam', password='eggs')
+
+Oops!
+
+.. danger::
+
+   Never use environment variables to pass secrets to your application!
+
+   It's far easier for environment variables to leak outside than for config files.
+   You may, for example, accidentally leak your env via your CI/CD pipeline,
+   or you may be affected by a `security incident`_ for which you can't do anything.
+
+   The most secure thing is to use an encrypted vault to store your secrets.
+   If that is not possible, store them in a config file.
+
+   If you *have* to use environment variables, write the secret to a file and use the env var to point to that file,
+   e.g., :code:`MYAPP_API_TOKEN_FILE=/private/token` (instead of just :code:`MYAPP_API_TOKEN="3KX93ad..."`).
+   `GitLab CI/CD`_ supports this, for example.
+
+   .. _gitlab ci/cd: https://docs.gitlab.com/ee/ci/variables/#cicd-variable-types
+   .. _security incident: https://thehackernews.com/2021/09/travis-ci-flaw-exposes-secrets-of.html
+
+You can add basic leaking prevention by using :func:`secret()` for creating an option field:
+
+.. code-block:: python
+
+   >>> @ts.settings
+   ... class Settings:
+   ...      username: str
+   ...      password: str = ts.secret()
+   ...
+   >>> settings = Settings("spam", "eggs")
+   >>> print(f"Settings loaded: {settings}")
+   Settings loaded: Settings(username='spam', password='*******')
+
+However, we would still leak the secret if we print the field directly:
+
+.. code-block:: python
+
+   >>> print(f"{settings.username=}, {settings.password=}")
+   settings.username='spam', settings.password='eggs'
+
+You can use :class:`~typed_settings.types.SecretStr` instead of :class:`str` to protect against this:
+
+.. code-block:: python
+
+   >>> from typed_settings.types import SecretStr
+   >>>
+   >>> @ts.settings
+   ... class Settings:
+   ...      username: str
+   ...      password: SecretStr = ts.secret()
+   ...
+   >>> settings = Settings("spam", SecretStr("eggs"))
+   >>> print(f"Settings loaded: {settings}")
+   Settings loaded: Settings(username='spam', password='*******')
+   >>> print(f"{settings.username=}, {settings.password=}")
+   settings.username='spam', settings.password='*******'
+
+The good thing about :class:`~typed_settings.types.SecretStr` that it is a drop-in replacement for normal strings.
+That bad thing is, that is still not a 100% safe (and maybe, that it only works for strings):
+
+.. code-block:: python
+
+   >>> print(settings.password)
+   eggs
+   >>> print(f"Le secret: {settings.password}")
+   Le secret: eggs
+
+The generic class :class:`~typed_settings.types.Secret` makes accidental secrets leakage nearly impossible,
+since it also protects an object's string representation.
+However, it is no longer a drop-in replacement for strings
+as you have to call its :meth:`typed_settings.types.Secret.get_secret_value()` method to retrieve the actual value:
+
+.. code-block:: python
+
+   >>> from typed_settings.types import Secret
+   >>>
+   >>> @ts.settings
+   ... class Settings:
+   ...      username: str
+   ...      password: SecretStr
+   ...
+   >>> settings = Settings("spam", Secret("eggs"))
+   >>> print(f"Settings loaded: {settings}")
+   Settings loaded: Settings(username='spam', password=Secret('*******'))
+   >>> print(settings.password)
+   *******
+   >>> print(f"Le secret: {settings.password}")
+   Le secret: *******
+   >>> settings.password.get_secret_value()
+   'eggs'
+
+:class:`~typed_settings.types.SecretStr()` and `~typed_settings.secret()` usually form the best compromise between usability and safety.
+
+But now matter what you use, you should explicitly test the (log) output of your code to make sure, secrets are not contained at all or are masked at least.
+
+
+Mypy
+----
+
+Unfortunately, mypy_ still gets confused when you alias :func:`attrs.define` (or even import it from any module other than :mod:`attr` or :mod:`attrs`).
+
+Accessing you settings class' attributes does work without any problems,
+but when you manually instantiate your class, mypy will issue a ``call-arg`` error.
+
+The `suggested workaround`_ is to create a simple mypy plugin,
+so Typed Settings ships with a simple mypy plugin in :mod:`typed_settings.mypy`.
+
+You can activate the plugin via your :file:`pyproject.toml` or :file:`mypy.ini`:
+
+.. code-block:: toml
+
+    # pyproject.toml
+    [tool.mypy]
+    plugins = ["typed_settings.mypy"]
+
+.. code-block:: ini
+
+    # mypy.ini
+    [mypy]
+    plugins=typed_settings.mypy
+
+
+.. _mypy: http://mypy-lang.org/
+.. _suggested workaround:
+   https://www.attrs.org/en/stable/extending.html?highlight=mypy#wrapping-the-decorator
+
+
 ``load()`` vs. ``load_settings()``
 ==================================
 
@@ -58,18 +240,11 @@ Values loaded from environment variables are strings.
 They are converted to the type specified in the settings class via a Cattrs converter.
 The :func:`~typed_settings.converters.default_converter()` supports the most common types like booleans, dates, enums and paths.
 
-.. warning::
+.. danger::
 
    Never pass secrets via environment variables!
 
-   It's far easier for environment variables to leak outside than for config files.
-   You may, for example, accidentally leak your env via your CI/CD pipeline,
-   or you may be affected by a `security incident`_ for which you can't do anything.
-
-   Write your secret to a file and pass its path via a variable like :code:`MYAPP_API_TOKEN_FILE=/private/token` (instead of just :code:`MYAPP_API_TOKEN="3KX93ad..."`) to your app.
-   Alternatively, store it in a structured config file that you directly load with Typed Settings.
-
-   .. _security incident: https://thehackernews.com/2021/09/travis-ci-flaw-exposes-secrets-of.html
+   See :ref:`secrets` for details.
 
 
 Nested settings

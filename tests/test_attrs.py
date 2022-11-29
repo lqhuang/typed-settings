@@ -52,13 +52,13 @@ class TestFieldExtensions:
         """
         Values of secrets are obfuscated in the string repr.
         """
-        assert str(inst) == "S(u='spam', p=***)"
+        assert str(inst) == "S(u='spam', p='*******')"
 
     def test_secret_repr_call(self, inst: S) -> None:
         """
         Values of secrets are obfuscated in the repr.
         """
-        assert repr(inst) == "S(u='spam', p=***)"
+        assert repr(inst) == "S(u='spam', p='*******')"
 
     def test_meta_not_set(self, field_func: FieldFunc) -> None:
         """

@@ -42,7 +42,7 @@ from .cli_utils import (
 )
 from .converters import BaseConverter, default_converter, from_dict
 from .loaders import Loader
-from .types import ST, SettingsDict
+from .types import ST, Secret, SettingsDict
 
 
 __all__ = [
@@ -472,7 +472,7 @@ def _mk_argument(
         if kwargs["default"] is None:
             help_extra = ""
         elif isinstance(field.repr, _SecretRepr):
-            help_extra = f" [default: {field.repr('')}]"
+            help_extra = f" [default: {Secret(kwargs['default'])}]"
         else:
             help_extra = f" [default: {default_repr}]"
     else:

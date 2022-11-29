@@ -170,7 +170,7 @@ src_paths = [
 
 [tool.mypy]
 ignore_missing_imports = true
-plugins = "typed_settings.mypy"
+plugins = ["typed_settings.mypy"]
 show_error_codes = true
 
 [[tool.mypy.overrides]]
