@@ -23,9 +23,9 @@ from typing import (
 
 import attr
 import pytest
+from attrs.validators import le
 
 from typed_settings.attrs.hooks import auto_convert, auto_serialize
-from typed_settings.attrs.validators import le
 
 
 auto_converter = functools.partial(attr.frozen, field_transformer=auto_convert)
