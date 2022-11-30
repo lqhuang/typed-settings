@@ -3,20 +3,11 @@ Internal data structures.
 """
 from collections.abc import Collection
 from enum import Enum
-from typing import (
-    Any,
-    ClassVar,
-    Final,
-    Generic,
-    List,
-    MutableMapping,
-    Type,
-    TypeVar,
-)
+from typing import Any, ClassVar, Generic, List, MutableMapping, Type, TypeVar
 
 import attrs
 
-from ._compat import Protocol
+from ._compat import Final, Protocol
 
 
 SECRET_REPR: Final[str] = "*******"
