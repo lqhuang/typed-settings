@@ -2,14 +2,28 @@
 Changelog
 =========
 
-2.0.0 (2022-mm-dd)
+2.0.0 (2022-11-30)
 ==================
 
 - 💥 The `click_utils.TypeHandler` is now called `cli_utils.TypeArgsMaker` and has a completely different interface.  If you do not explicitly use this class, nothing will change for you.
 
+- 💥 Remove bundled attrs validators.  They are now in ``attrs.validators`` (see `#17`_).
+
+- ✨ Click options: Support optional types (See `#22`_).
+
+- ✨ Click options: Support dicts (e.g., ``--env VAR1=val1 --env VAR=val2``).
+
 - ✨ Add support for Argparse based CLIs via `typed_settings.cli()` (See `#14`_).
 
+- ✨ Add wrappers for secrets (``SecretStr`` and ``Secret``) that mask their values when they are printed/logged.
+
+- ✨ Add mypy plugin for our attrs extensions.
+
+- 📝 The guides for core functionality now contain a section about writing settings classes and handling secrets.
+
 .. _#14: https://gitlab.com/sscherfke/typed-settings/-/issues/14
+.. _#17: https://gitlab.com/sscherfke/typed-settings/-/issues/17
+.. _#22: https://gitlab.com/sscherfke/typed-settings/-/issues/22
 
 
 1.1.1 (2022-10-08)
