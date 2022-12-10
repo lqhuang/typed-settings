@@ -336,8 +336,10 @@ class TypeArgsMaker:
                 raise TypeError(
                     f"Default value must be of len {len(args)}: {len(default)}"
                 )
+            kwargs = {"strict": True} if PY_310 else {}
             default = tuple(
-                self.get_kwargs(a, d)["default"] for a, d in zip(args, default)
+                self.get_kwargs(a, d)["default"]
+                for a, d in zip(args, default, **kwargs)
             )
         else:
             default = None

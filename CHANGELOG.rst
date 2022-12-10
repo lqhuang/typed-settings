@@ -13,7 +13,7 @@ Changelog
 
 - ✨ Click options: Support dicts (e.g., ``--env VAR1=val1 --env VAR=val2``).
 
-- ✨ Add support for Argparse based CLIs via `typed_settings.cli()` (See `#14`_).
+- ✨ Add support for Argparse based CLIs via ``typed_settings.cli()`` (See `#14`_).
 
 - ✨ Add wrappers for secrets (``SecretStr`` and ``Secret``) that mask their values when they are printed/logged.
 
