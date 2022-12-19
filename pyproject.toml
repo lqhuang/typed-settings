@@ -103,7 +103,7 @@ line-length = 79
 [tool.coverage.paths]
 source = [
     "src",
-    ".nox/*/site-packages",
+    ".nox/test-*/**/site-packages",
 ]
 
 [tool.coverage.report]
