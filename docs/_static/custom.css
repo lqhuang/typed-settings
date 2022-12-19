@@ -1,23 +1,49 @@
+/*
+ * Improve readability of func sigs by using one line per argument
+ */
 /* Newlines (\a) and spaces (\20) before each parameter */
 .sig-param::before {
-  content: "\a\20\20\20\20";
-  white-space: pre;
+    content: "\a\20\20\20\20";
+    white-space: pre;
 }
 
 /* Newline after the last parameter (so the closing bracket is on a new line) */
 dt em.sig-param:last-of-type::after {
-  content: ",\a";
-  white-space: pre;
+    content: ",\a";
+    white-space: pre;
 }
 
-/* To have blue background of width of the block (instead of width of content) */
+/* To have blue background of width of the block (instead of width of content) */ ■
 dl.class > dt:first-of-type {
-  display: block !important;
+    display: block !important;
 }
 
+/*
+ * Improve formatting for other rubrics in docstrings (e.g. "Example:")
+ */
 dd p.rubric {
   font-weight: 500;
 }
 dd p.rubric::after {
   content: ":";
+}
+
+/*
+ * Make theme feel a bit lighter.
+ * See: https://github.com/pradyunsg/furo/discussions/586
+ */
+p { margin-bottom: 1rem; }
+h1, h2, h3, h4, h4, h5, h6 {
+  padding-top: .5rem; /* make highlight box for current heading look better */
+  font-weight: 400;
+  /* color: rgba(0, 0, 0, 0.9); ■  /* compensation for reduced font weight */ ■ */
+}
+@media not print, @media (prefers-color-scheme: dark), body:not([data-theme="light"]) {
+  /* h1, h2, h3, h4, h4, h5, h6 { */
+  /*   color: rgba(255, 255, 255, 0.9); ■ */
+  /* } */
+}
+div.content {
+  width: 44em;
+  padding: 0 4em;
 }
