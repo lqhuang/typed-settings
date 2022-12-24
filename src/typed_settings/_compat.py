@@ -9,13 +9,16 @@ PY_311 = sys.version_info[:2] >= (3, 11)
 
 
 if PY_38:
-    from typing import Final, Protocol, get_args, get_origin
+    from typing import Final, Protocol, get_args, get_origin, runtime_checkable
 else:
     import collections.abc
     from typing import Generic, _GenericAlias  # type: ignore
-    from typing import _Protocol as Protocol  # type: ignore
 
-    from typing_extensions import Final  # type: ignore
+    from typing_extensions import (  # type: ignore
+        Final,
+        Protocol,
+        runtime_checkable,
+    )
 
     def get_origin(tp: Any) -> Optional[Any]:
         # Backported from py38
@@ -38,4 +41,4 @@ else:
         return ()
 
 
-__all__ = ["Final", "Protocol", "get_args", "get_origin"]
+__all__ = ["Final", "Protocol", "get_args", "get_origin", "runtime_checkable"]
