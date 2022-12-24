@@ -416,6 +416,7 @@ def evolve(inst: "AttrsInstance", **changes: Any) -> "AttrsInstance":
             changes[init_name] = old_value
         elif attrs.has(old_value) and isinstance(changes[init_name], Mapping):
             # Evolve nested attrs classes
+            assert isinstance(old_value, AttrsInstance)  # noqa: S101
             changes[init_name] = evolve(old_value, **changes[init_name])
 
     return cls(**changes)

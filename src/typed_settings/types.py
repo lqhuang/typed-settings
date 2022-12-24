@@ -3,7 +3,16 @@ Internal data structures.
 """
 from collections.abc import Collection
 from enum import Enum
-from typing import Any, ClassVar, Generic, List, MutableMapping, Type, TypeVar
+from typing import (
+    Any,
+    ClassVar,
+    Generic,
+    List,
+    MutableMapping,
+    Type,
+    TypeVar,
+    runtime_checkable,
+)
 
 import attrs
 
@@ -15,6 +24,7 @@ SECRET_REPR: Final[str] = "*******"
 
 # A protocol to be able to statically accept an attrs class.
 # Copied from attrs b/c they only have this in their *.pyi file.
+@runtime_checkable
 class AttrsInstance(Protocol):
     __attrs_attrs__: ClassVar[Any]
 

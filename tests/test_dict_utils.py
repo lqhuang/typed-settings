@@ -9,9 +9,23 @@ from typed_settings.types import OptionInfo
 
 def mkattr(name: str, typ: type) -> attrs.Attribute:
     """Creates an Attribute with *name* and *type*."""
-    return attrs.Attribute(  # type: ignore
-        name, attrs.NOTHING, None, True, None, None, True, False, type=typ
-    )
+    try:
+        return attrs.Attribute(  # type: ignore
+            name,
+            attrs.NOTHING,
+            None,
+            True,
+            None,
+            None,
+            True,
+            False,
+            type=typ,
+            alias=name,
+        )
+    except TypeError:
+        return attrs.Attribute(  # type: ignore
+            name, attrs.NOTHING, None, True, None, None, True, False, type=typ
+        )
 
 
 class TestDeepOptions:
