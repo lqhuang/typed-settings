@@ -2,6 +2,16 @@
 Changelog
 =========
 
+23.0.0 (YYYY-MM-DD)
+===================
+
+- 🗑 This is the last version that supports Python 3.7.
+
+- 📦 Switch to CalVer_ with scheme ``YY.MINOR.MICRO`` (same as pip, attrs and cattrs).
+
+.. _calver: https://calver.org
+
+
 2.0.0 (2022-11-30)
 ==================
 
