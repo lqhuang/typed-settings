@@ -25,8 +25,8 @@ import cattrs
 from attr._make import _Nothing as NothingType
 
 from ._compat import Protocol, get_args, get_origin
-from ._dict_utils import _get_path
 from .converters import BaseConverter
+from .dict_utils import get_path
 from .types import SettingsDict
 
 
@@ -411,7 +411,7 @@ def get_default(
     """
     try:
         # Use loaded settings value
-        default = _get_path(settings, path)
+        default = get_path(settings, path)
     except KeyError:
         # Use field's default
         default = field.default

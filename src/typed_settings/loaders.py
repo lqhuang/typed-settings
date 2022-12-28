@@ -1,3 +1,7 @@
+"""
+This module contains the settings loaders provided by Typed Settings and the
+protocol specification that they must implement.
+"""
 import importlib.util
 import logging
 import os
@@ -21,7 +25,7 @@ if PY_311:
 else:
     import tomli as tomllib  # type: ignore[no-redef]
 
-from ._dict_utils import _merge_dicts, _set_path
+from .dict_utils import merge_dicts, set_path
 from .exceptions import (
     ConfigFileLoadError,
     ConfigFileNotFoundError,
@@ -52,8 +56,8 @@ class Loader(Protocol):
         Load settings for the given options.
 
         Args:
-            options: The list of available settings.
             settings_cls: The base settings class for all options.
+            options: The list of available settings.
 
         Return:
             A dict with the loaded settings.
@@ -81,8 +85,8 @@ class FileFormat(Protocol):
 
         Args:
             path: The path to the config file.
-            options: The list of available settings.
             settings_cls: The base settings class for all options.
+            options: The list of available settings.
 
         Return:
             A dict with the loaded settings.
@@ -161,7 +165,7 @@ class EnvLoader:
             varname = f"{prefix}{o.path.upper().replace('.', '_')}"
             if varname in env:
                 LOGGER.debug(f"Env var found: {varname}")
-                _set_path(values, o.path, env[varname])
+                set_path(values, o.path, env[varname])
             else:
                 LOGGER.debug(f"Env var not found: {varname}")
 
@@ -198,7 +202,7 @@ class FileLoader:
         formats: Dict[str, FileFormat],
         files: Iterable[Union[str, Path]],
         env_var: Optional[str] = None,
-    ):
+    ) -> None:
         self.files = files
         self.env_var = env_var
         self.formats = formats
@@ -227,7 +231,7 @@ class FileLoader:
         merged_settings: SettingsDict = {}
         for path in paths:
             settings = self._load_file(path, settings_cls, options)
-            _merge_dicts(options, merged_settings, settings)
+            merge_dicts(options, merged_settings, settings)
         return merged_settings
 
     def _load_file(
@@ -358,7 +362,7 @@ class PythonFormat:
                 key = f"{o.path.replace('.', '_')}"
                 if key in settings:
                     val = settings.pop(key)
-                    _set_path(settings, o.path, val)
+                    set_path(settings, o.path, val)
         return settings
 
     def _import_module(self, path: Path) -> object:
@@ -451,7 +455,7 @@ def clean_settings(
             path = f"{prefix}{key}"
 
             if path in valid_paths:
-                _set_path(cleaned, path, val)
+                set_path(cleaned, path, val)
                 continue
 
             if isinstance(val, dict):

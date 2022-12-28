@@ -88,6 +88,13 @@ Types
    :members:
 
 
+Dict Utils
+----------
+
+.. automodule:: typed_settings.dict_utils
+   :members:
+
+
 Attrs & Cattrs
 ==============
 

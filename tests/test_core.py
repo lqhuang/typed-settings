@@ -6,13 +6,13 @@ from typing import Any, Dict, List
 import pytest
 
 from typed_settings import _core
-from typed_settings._dict_utils import _deep_options
 from typed_settings.attrs import option, settings
 from typed_settings.converters import (
     BaseConverter,
     default_converter,
     register_strlist_hook,
 )
+from typed_settings.dict_utils import deep_options
 from typed_settings.loaders import EnvLoader, FileLoader, Loader, TomlFormat
 
 
@@ -69,7 +69,7 @@ class TestLoadSettings:
         """
         settings = _core._load_settings(
             cls=Settings,
-            options=_deep_options(Settings),
+            options=deep_options(Settings),
             loaders=loaders,
         )
         assert settings == {

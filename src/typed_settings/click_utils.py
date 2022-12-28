@@ -25,7 +25,6 @@ from attr._make import _Nothing as NothingType
 
 from ._compat import PY_38
 from ._core import _load_settings, default_loaders
-from ._dict_utils import _deep_options, _group_options, _merge_dicts, _set_path
 from .attrs import CLICK_KEY, METADATA_KEY, _SecretRepr
 from .cli_utils import (
     Default,
@@ -35,6 +34,7 @@ from .cli_utils import (
     get_default,
 )
 from .converters import BaseConverter, default_converter, from_dict
+from .dict_utils import deep_options, group_options, merge_dicts, set_path
 from .loaders import Loader
 from .types import ST, OptionInfo, Secret, SettingsClass, SettingsDict, T
 
@@ -148,10 +148,8 @@ def click_options(
        ``TypeArgsMaker``.
     """
     cls = attrs.resolve_types(settings_cls)
-    options = [
-        opt for opt in _deep_options(cls) if opt.field.init is not False
-    ]
-    grouped_options = _group_options(cls, options)
+    options = [opt for opt in deep_options(cls) if opt.field.init is not False]
+    grouped_options = group_options(cls, options)
 
     if isinstance(loaders, str):
         loaders = default_loaders(loaders)
@@ -195,7 +193,7 @@ def _get_wrapper(
             ctx = click.get_current_context()
             if ctx.obj is None:
                 ctx.obj = {}
-            _merge_dicts(options, settings_dict, ctx.obj.get(CTX_KEY, {}))
+            merge_dicts(options, settings_dict, ctx.obj.get(CTX_KEY, {}))
             settings = from_dict(settings_dict, cls, converter)
             if argname:
                 ctx_key = argname
@@ -597,7 +595,7 @@ def _make_callback(
         if ctx.obj is None:
             ctx.obj = {}
         settings = ctx.obj.setdefault(CTX_KEY, {})
-        _set_path(settings, path, value)
+        set_path(settings, path, value)
         return value
 
     return cb

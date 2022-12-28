@@ -1,12 +1,25 @@
+"""
+Utility functions for working settings dicts and serilizing nested settings.
+"""
 from itertools import groupby
-from typing import Any, List, Tuple
+from typing import Any, Generator, List, Tuple
 
 import attrs
 
 from .types import OptionInfo, OptionList, SettingsClass, SettingsDict
 
 
-def _deep_options(cls: SettingsClass) -> OptionList:
+__all__ = [
+    "deep_options",
+    "group_options",
+    "iter_settings",
+    "get_path",
+    "set_path",
+    "merge_dicts",
+]
+
+
+def deep_options(cls: SettingsClass) -> OptionList:
     """
     Recursively iterates *cls* and nested attrs classes and returns a flat
     list of *(path, Attribute, type)* tuples.
@@ -39,7 +52,7 @@ def _deep_options(cls: SettingsClass) -> OptionList:
     return result
 
 
-def _group_options(
+def group_options(
     cls: type, options: OptionList
 ) -> List[Tuple[type, List[OptionInfo]]]:
     """
@@ -86,11 +99,32 @@ def _group_options(
     return grouped_options
 
 
-def _get_path(dct: SettingsDict, path: str) -> Any:
+def iter_settings(
+    dct: SettingsDict, options: OptionList
+) -> Generator[Any, None, None]:
+    """
+    Iterate over the (possibly nested) options dict *dct* and yield
+    *(path, value)* tuples.
+
+    Args:
+        dct:
+        options:
+
+    Return:
+
+    """
+    for option in options:
+        try:
+            yield option.path, get_path(dct, option.path)
+        except KeyError:
+            continue
+
+
+def get_path(dct: SettingsDict, path: str) -> Any:
     """
     Performs a nested dict lookup for *path* and returns the result.
 
-    Calling ``_get_path(dct, "a.b")`` is equivalent to ``dict["a"]["b"]``.
+    Calling ``get_path(dct, "a.b")`` is equivalent to ``dict["a"]["b"]``.
 
     Args:
         dct: The source dict
@@ -108,12 +142,12 @@ def _get_path(dct: SettingsDict, path: str) -> Any:
     return dct
 
 
-def _set_path(dct: SettingsDict, path: str, val: Any) -> None:
+def set_path(dct: SettingsDict, path: str, val: Any) -> None:
     """
     Sets a value to a nested dict and automatically creates missing dicts
     should they not exist.
 
-    Calling ``_set_path(dct, "a.b", 3)`` is equivalent to ``dict["a"]["b"]
+    Calling ``set_path(dct, "a.b", 3)`` is equivalent to ``dict["a"]["b"]
     = 3``.
 
     Args:
@@ -127,7 +161,7 @@ def _set_path(dct: SettingsDict, path: str, val: Any) -> None:
     dct[key] = val
 
 
-def _merge_dicts(
+def merge_dicts(
     fields: OptionList, base: SettingsDict, updates: SettingsDict
 ) -> None:
     """
@@ -143,8 +177,8 @@ def _merge_dicts(
     """
     for field in fields:
         try:
-            value = _get_path(updates, field.path)
+            value = get_path(updates, field.path)
         except KeyError:
             pass
         else:
-            _set_path(base, field.path, value)
+            set_path(base, field.path, value)

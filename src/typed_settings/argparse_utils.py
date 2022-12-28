@@ -31,7 +31,6 @@ if TYPE_CHECKING:
 import attrs
 
 from ._core import _load_settings, default_loaders
-from ._dict_utils import _deep_options, _set_path
 from .attrs import ARGPARSE_KEY, METADATA_KEY, _SecretRepr
 from .cli_utils import (
     Default,
@@ -41,6 +40,7 @@ from .cli_utils import (
     get_default,
 )
 from .converters import BaseConverter, default_converter, from_dict
+from .dict_utils import deep_options, set_path
 from .loaders import Loader
 from .types import ST, Secret, SettingsDict
 
@@ -420,7 +420,7 @@ def _mk_parser(
     """
     Create an :class:`argparse.ArgumentParser` for all options.
     """
-    options = _deep_options(settings_cls)
+    options = deep_options(settings_cls)
     settings_dict = _load_settings(settings_cls, options, loaders)
     grouped_options = [
         (g_cls, list(g_opts))
@@ -497,11 +497,11 @@ def _ns2settings(
     Convert the :class:`argparse.Namespace` to an instance of the settings
     class and return it.
     """
-    options = _deep_options(settings_cls)
+    options = deep_options(settings_cls)
     settings_dict: SettingsDict = {}
     for option_info in options:
         value = getattr(namespace, option_info.path.replace(".", "_"))
-        _set_path(settings_dict, option_info.path, value)
+        set_path(settings_dict, option_info.path, value)
     settings = from_dict(settings_dict, settings_cls, converter)
     return settings
 

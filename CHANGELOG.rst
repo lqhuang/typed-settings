@@ -9,6 +9,8 @@ Changelog
 
 - 📦 Switch to CalVer_ with scheme ``YY.MINOR.MICRO`` (same as pip, attrs and cattrs).
 
+- ♻️ Make ``dict_utils`` part of the public API.
+
 .. _calver: https://calver.org
 
 

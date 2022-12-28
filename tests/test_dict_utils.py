@@ -3,7 +3,7 @@ from typing import Any, Dict, Type, Union
 import attrs
 import pytest
 
-from typed_settings import _dict_utils as du
+from typed_settings import dict_utils as du
 from typed_settings.types import OptionInfo
 
 
@@ -29,7 +29,7 @@ def mkattr(name: str, typ: type) -> attrs.Attribute:
 
 
 class TestDeepOptions:
-    """Tests for _deep_options()."""
+    """Tests for deep_options()."""
 
     def test_deep_options(self) -> None:
         @attrs.define
@@ -47,7 +47,7 @@ class TestDeepOptions:
             y: Child
             z: str
 
-        options = du._deep_options(Parent)
+        options = du.deep_options(Parent)
         assert options == [
             OptionInfo("x", mkattr("x", str), Parent),
             OptionInfo("y.x", mkattr("x", float), Child),
@@ -64,7 +64,7 @@ class TestDeepOptions:
             x: "X"  # type: ignore  # noqa: F821
 
         with pytest.raises(NameError, match="name 'X' is not defined"):
-            du._deep_options(C)
+            du.deep_options(C)
 
     def test_direct_recursion(self) -> None:
         """
@@ -78,7 +78,7 @@ class TestDeepOptions:
             child: "Node"
 
         with pytest.raises(NameError, match="name 'Node' is not defined"):
-            du._deep_options(Node)
+            du.deep_options(Node)
 
     def test_indirect_recursion(self) -> None:
         """
@@ -97,7 +97,7 @@ class TestDeepOptions:
             child: "Child"
 
         with pytest.raises(NameError, match="name 'Child' is not defined"):
-            du._deep_options(Parent)
+            du.deep_options(Parent)
 
 
 class TestGroupOptions:
@@ -111,8 +111,8 @@ class TestGroupOptions:
             a: str
             b: int
 
-        opts = du._deep_options(Parent)
-        grouped = du._group_options(Parent, opts)
+        opts = du.deep_options(Parent)
+        grouped = du.group_options(Parent, opts)
         assert grouped == [
             (Parent, opts[0:2]),
         ]
@@ -140,8 +140,8 @@ class TestGroupOptions:
             c: Child
             d: Child2
 
-        opts = du._deep_options(Parent)
-        grouped = du._group_options(Parent, opts)
+        opts = du.deep_options(Parent)
+        grouped = du.group_options(Parent, opts)
         assert grouped == [
             (Parent, opts[0:2]),
             (Child, opts[2:4]),
@@ -169,8 +169,8 @@ class TestGroupOptions:
             b: float
             d: Child2
 
-        opts = du._deep_options(Parent)
-        grouped = du._group_options(Parent, opts)
+        opts = du.deep_options(Parent)
+        grouped = du.group_options(Parent, opts)
         assert grouped == [
             (Parent, opts[0:1]),
             (Child, opts[1:2]),
@@ -194,8 +194,8 @@ class TestGroupOptions:
             b: Child
             c: Child
 
-        opts = du._deep_options(Parent)
-        grouped = du._group_options(Parent, opts)
+        opts = du.deep_options(Parent)
+        grouped = du.group_options(Parent, opts)
         assert grouped == [
             (Child, opts[0:2]),
             (Child, opts[2:4]),
@@ -225,12 +225,37 @@ class TestGroupOptions:
             c: Child
             d: Child2
 
-        opts = du._deep_options(Parent)
-        grouped = du._group_options(Parent, opts)
+        opts = du.deep_options(Parent)
+        grouped = du.group_options(Parent, opts)
         assert grouped == [
             (Child, opts[0:2]),
             (Child2, opts[2:4]),
         ]
+
+
+def test_iter_settings():
+    """
+    "iter_settings()" iterates the settings.  It ignores invalid settings keys
+    or non-existing settings.
+    """
+    option_list = [
+        du.OptionInfo("a", mkattr("a", int), None),
+        du.OptionInfo("b.x", mkattr("x", int), None),
+        du.OptionInfo("b.y", mkattr("y", int), None),
+        du.OptionInfo("c", mkattr("c", int), None),
+    ]
+    settings = {
+        "a": 0,
+        "b": {
+            "y": 1,
+        },
+        "z": 2,
+    }
+    result = list(du.iter_settings(settings, option_list))
+    assert result == [
+        ("a", 0),
+        ("b.y", 1),
+    ]
 
 
 @pytest.mark.parametrize(
@@ -244,7 +269,7 @@ class TestGroupOptions:
     ],
 )
 def test_get_path(path: str, expected: Union[int, Type[Exception]]) -> None:
-    """Tests for _get_path()."""
+    """Tests for get_path()."""
     dct = {
         "a": 1,
         "b": {
@@ -255,18 +280,18 @@ def test_get_path(path: str, expected: Union[int, Type[Exception]]) -> None:
         },
     }
     if isinstance(expected, int):
-        assert du._get_path(dct, path) == expected
+        assert du.get_path(dct, path) == expected
     else:
-        pytest.raises(expected, du._get_path, dct, path)
+        pytest.raises(expected, du.get_path, dct, path)
 
 
 def test_set_path() -> None:
     """We can set arbitrary paths, nested dicts will be created as needed."""
     dct: Dict[str, Any] = {}
-    du._set_path(dct, "a", 0)
-    du._set_path(dct, "a", 1)
-    du._set_path(dct, "b.d.e", 3)
-    du._set_path(dct, "b.c", 2)
+    du.set_path(dct, "a", 0)
+    du.set_path(dct, "a", 1)
+    du.set_path(dct, "b.d.e", 3)
+    du.set_path(dct, "b.c", 2)
     assert dct == {
         "a": 1,
         "b": {
@@ -305,7 +330,7 @@ def test_dict_merge() -> None:
         "1d": 5,
         "1e": {"update": "value"},
     }
-    du._merge_dicts(options, d1, d2)
+    du.merge_dicts(options, d1, d2)
     assert d1 == {
         "1a": 3,
         "1b": {"2a": "eggs", "2b": {"3a": "foo", "3b": "bar"}},
