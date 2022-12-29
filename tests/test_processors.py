@@ -80,3 +80,11 @@ def test_handle_script_error(
     )
     with pytest.raises(ValueError, match=msg):
         processors.handle_script(cmd, "script://")
+
+
+def test_handle_op() -> None:
+    """
+    The 1Password handler retrievs the secret from the "op" CLI.
+    """
+    result = processors.handle_op("Test/Test/password", "op://")
+    assert result == "eggs"

@@ -135,14 +135,14 @@ class UrlProcessor:
 
 def handle_raw(value: str, scheme: str) -> str:
     """
-    **URL hanlder:** Return *value* unchanged.
+    **URL handler:** Return *value* unchanged.
     """
     return value
 
 
 def handle_script(value: str, scheme: str) -> str:
     """
-    **URL hanlder:** Run *value* as shell script and return its output.
+    **URL handler:** Run *value* as shell script and return its output.
     """
     try:
         result = subprocess.run(
@@ -161,3 +161,16 @@ def handle_script(value: str, scheme: str) -> str:
             f"STDERR:\n{e.stderr}"
         )
         raise ValueError(msg) from e
+
+
+def handle_op(value: str, scheme: str) -> str:
+    """
+    **URL handler:** Retrieve the resource *value* from the `1Password CLI`_.
+
+    You must must have installed it and set it up in order for this to work.
+
+    .. _1Password CLI: https://developer.1password.com/docs/cli/
+    """
+    from . import onepassword
+
+    return onepassword.get_resource(f"op://{value}")

@@ -637,5 +637,5 @@ class TestOnePasswordLoader:  # pragma: no cover
             is_admin: bool = False
 
         loader = OnePasswordLoader(item="Test", vault="Test")
-        s = loader(Settings, _deep_options(Settings))
+        s = loader(Settings, deep_options(Settings))
         assert s == {"username": "spam", "password": "eggs"}

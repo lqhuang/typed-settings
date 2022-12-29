@@ -3,10 +3,8 @@ This module contains the settings loaders provided by Typed Settings and the
 protocol specification that they must implement.
 """
 import importlib.util
-import json
 import logging
 import os
-import subprocess  # noqa: S404
 from fnmatch import fnmatch
 from pathlib import Path
 from typing import Any, Callable, Dict, Iterable, List, Optional, Union
@@ -429,26 +427,43 @@ class TomlFormat:
 
 
 class OnePasswordLoader:  # pragma: no cover
+    """
+    Load settings from an item stored in a 1Password vault.
+
+    You must must have installed and set up the `1Password CLI`_ in order
+    for this loader to work.
+
+    .. _1Password CLI: https://developer.1password.com/docs/cli/
+
+    Args:
+        item: The item to load
+        vault: The vault in which to look for *item*.  By default, search all
+            vaults.
+    """
+
     def __init__(self, item: str, vault: Optional[str] = None):
         self.item = item
         self.vault = vault
 
+        from . import onepassword
+
+        self._op = onepassword
+
     def __call__(
         self, settings_cls: type, options: OptionList
     ) -> SettingsDict:
-        cmd = ["op", "item", "get", "--format=json", self.item]
-        if self.vault:
-            cmd.append(f"--vault={self.vault}")
-        result = subprocess.run(  # noqa: S603
-            cmd, capture_output=True, text=True, check=True
-        )
-        data = json.loads(result.stdout)
+        """
+        Load settings for the given options.
+
+        Args:
+            options: The list of available settings.
+            settings_cls: The base settings class for all options.
+
+        Return:
+            A dict with the loaded settings.
+        """
         option_names = [o.path for o in options]
-        settings = {
-            field["label"]: field["value"]
-            for field in data["fields"]
-            if "value" in field
-        }
+        settings = self._op.get_item(self.item, self.vault)
         settings = {k: v for k, v in settings.items() if k in option_names}
         return settings
 

@@ -13,7 +13,9 @@ Changelog
   They allow modifying loaded settings before they are passed to your app.
   This allows, e.g., using settings templates/interpolation or
   loading secrets from external resources via helper scripts.
-  (See `#19`_).
+  (See `#19`_)
+
+- ✨ Add a 1Password loader and a ``op://`` resource handler for the new URL processor (see `#19`_).
 
 - ♻️ Make ``dict_utils`` part of the public API.
 
