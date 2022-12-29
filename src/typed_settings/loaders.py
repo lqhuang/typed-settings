@@ -40,9 +40,9 @@ LOGGER = logging.getLogger("typed_settings")
 
 class Loader(Protocol):
     """
-    **Protocol:** Methods that settings loaders must implement.
+    **Protocol** that settings loaders must implement.
 
-    Custom settings loaders must implement this.
+    Loaders must be callables (e.g., functions) with the specified signature.
 
     .. versionchanged:: 1.0.0
        Renamed ``load()`` to ``__call__()`` and also pass the settings
@@ -67,10 +67,11 @@ class Loader(Protocol):
 
 class FileFormat(Protocol):
     """
-    **Protocol:** Methods that file format loaders for :class:`FileLoader`
-    must implement.
+    **Protoco** that file format loaders for :class:`FileLoader` must
+    implement.
 
-    Custom file format loaders must implement this.
+    File format loaders must be callables (e.g., functions) with the specified
+    signature.
 
     .. versionchanged:: 1.0.0
        Renamed ``load_file()`` to ``__call__()`` and also pass the settings

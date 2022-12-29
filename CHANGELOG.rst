@@ -9,9 +9,16 @@ Changelog
 
 - 📦 Switch to CalVer_ with scheme ``YY.MINOR.MICRO`` (same as pip, attrs and cattrs).
 
+- ✨ Add settings (post) processors.
+  They allow modifying loaded settings before they are passed to your app.
+  This allows, e.g., using settings templates/interpolation or
+  loading secrets from external resources via helper scripts.
+  (See `#19`_).
+
 - ♻️ Make ``dict_utils`` part of the public API.
 
 .. _calver: https://calver.org
+.. _#19: https://gitlab.com/sscherfke/typed-settings/-/issues/19
 
 
 2.0.2 (2023-01-18)

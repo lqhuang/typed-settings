@@ -81,6 +81,14 @@ Loaders
    :special-members: __call__
 
 
+Processors
+----------
+
+.. automodule:: typed_settings.processors
+   :members:
+   :special-members: __call__
+
+
 Types
 -----
 
