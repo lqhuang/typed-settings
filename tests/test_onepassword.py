@@ -1,3 +1,4 @@
+import os
 import subprocess
 from typing import Any, Optional, Tuple
 
@@ -5,6 +6,19 @@ import pytest
 from packaging.version import Version
 
 from typed_settings import onepassword as op
+
+
+try:
+    HAS_OP = op.run("account", "list") != ""
+except ValueError:
+    HAS_OP = False
+IN_CI = "CI" in os.environ
+ON_FEATURE_BRANCH = os.getenv("CI_COMMIT_BRANCH", "") not in {"main", ""}
+
+pytestmark = pytest.mark.skipif(
+    (not HAS_OP) or (IN_CI and ON_FEATURE_BRANCH),
+    reason="OP not installed or credentials not accessible",
+)
 
 
 def test_op_run() -> None:

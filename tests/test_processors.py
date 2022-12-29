@@ -82,7 +82,7 @@ def test_handle_script_error(
         processors.handle_script(cmd, "script://")
 
 
-def test_handle_op() -> None:
+def test_handle_op(mock_op: None) -> None:
     """
     The 1Password handler retrievs the secret from the "op" CLI.
     """

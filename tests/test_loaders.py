@@ -621,11 +621,10 @@ class TestInstanceLoader:
         pytest.raises(ValueError, loader, settings_cls, options)
 
 
-@pytest.mark.xfail(reason="Does not work in CI pipeline")
-class TestOnePasswordLoader:  # pragma: no cover
+class TestOnePasswordLoader:
     """Tests for OnePasswordLoader."""
 
-    def test_load(self) -> None:
+    def test_load(self, mock_op: None) -> None:
         """
         Settings can be loaded from 1Password.
         """

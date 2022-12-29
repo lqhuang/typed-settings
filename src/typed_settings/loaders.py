@@ -426,7 +426,7 @@ class TomlFormat:
         return settings
 
 
-class OnePasswordLoader:  # pragma: no cover
+class OnePasswordLoader:
     """
     Load settings from an item stored in a 1Password vault.
 
