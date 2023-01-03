@@ -4,7 +4,7 @@ protocol specification that they must implement.
 """
 import logging
 import subprocess  # noqa: S404
-from typing import Dict
+from typing import Any, Dict
 
 from ._compat import Protocol
 from .dict_utils import iter_settings, set_path
@@ -174,3 +174,136 @@ def handle_op(value: str, scheme: str) -> str:
     from . import onepassword
 
     return onepassword.get_resource(f"op://{value}")
+
+
+class FormatProcessor:
+    """
+    Perform value interpolation / templating via Python format strings.
+
+    Formatting is performed recursively as long as the value is a valid format
+    string.
+
+    No exceptions are raised.  If format strings are invalid or refer to
+    non existing values, they are returned unchanged.
+    """
+
+    def __call__(
+        self,
+        settings_dict: SettingsDict,
+        settings_cls: SettingsClass,
+        options: OptionList,
+    ) -> SettingsDict:
+        """
+        Invoke the processor to render all values in the settings dict.
+        """
+        for path, value in iter_settings(settings_dict, options):
+            value = self._render(value, settings_dict)
+            set_path(settings_dict, path, value)
+
+        return settings_dict
+
+    def _render(self, value: Any, settings_dict: SettingsDict) -> Any:
+        """
+        Recursively render *value*.
+        """
+        if not self._is_possibly_format_string(value):
+            return value
+
+        try:
+            new_value = value.format(**settings_dict)
+        except Exception:
+            return value
+
+        if new_value == value:
+            return new_value
+
+        value = self._render(new_value, settings_dict)
+        return value
+
+    def _is_possibly_format_string(self, value: Any) -> bool:
+        """
+        Guess if *value* may be format string.
+
+        It only detectecs if *value* is certainly *not* a format string and
+        returns ``False`` in that case.
+        If it returns ``True``, it may or may not be a valid format string.
+        """
+        return isinstance(value, str) and "{" in value and "}" in value
+
+
+class JinjaProcessor:
+    """
+    Perform value templating with Jinja__.
+
+    __ https://palletsprojects.com/p/jinja/
+
+    Rendering is performed recursively as long as the value is a valid Jinja
+    template.
+
+    No exceptions are raised.  If templates are invalid or refer to non
+    existing values, they are returned unchanged.
+
+    Raises:
+        ModuleNotFoundError: If ``jinja2`` is not installed.
+    """
+
+    def __init__(self) -> None:
+        try:
+            import jinja2
+        except ImportError as e:
+            raise ModuleNotFoundError(
+                "Module 'jinja2' not installed.  Please run "
+                "'python -m pip install -U typed-settings[jinja]'"
+            ) from e
+
+        self._jinja2 = jinja2
+        self._env = jinja2.Environment(autoescape=True)
+
+    def __call__(
+        self,
+        settings_dict: SettingsDict,
+        settings_cls: SettingsClass,
+        options: OptionList,
+    ) -> SettingsDict:
+        """
+        Invoke the processor to render all values in the settings dict.
+        """
+        for path, value in iter_settings(settings_dict, options):
+            value = self.render(value, settings_dict)
+            set_path(settings_dict, path, value)
+
+        return settings_dict
+
+    def render(self, value: Any, settings_dict: SettingsDict) -> Any:
+        """
+        Recursively render *value*.
+        """
+        if not self.is_possibly_template(value):
+            return value
+
+        try:
+            template = self._env.from_string(value)
+            value = template.render(**settings_dict)
+        except self._jinja2.TemplateError:
+            return value
+
+        value = self.render(value, settings_dict)
+        return value
+
+    def is_possibly_template(self, value: Any) -> bool:
+        """
+        Guess if *value* may be format string.
+
+        It only detectecs if *value* is certainly *not* a format string and
+        returns ``False`` in that case.
+        If it returns ``True``, it may or may not be a valid format string.
+        """
+        if isinstance(value, str):
+            for marker in (
+                self._env.block_start_string,
+                self._env.variable_start_string,
+                self._env.comment_start_string,
+            ):
+                if marker in value:
+                    return True
+        return False

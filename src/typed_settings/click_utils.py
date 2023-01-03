@@ -359,8 +359,8 @@ class OptionGroupFactory:
             from click_option_group import optgroup
         except ImportError as e:
             raise ModuleNotFoundError(
-                "Module 'click_option_group' not installed.  "
-                "Please run 'python -m pip install click-option-group'"
+                "Module 'click_option_group' not installed.  Please run "
+                "'python -m pip install -U typed-settings[option-groups]'"
             ) from e
         self.optgroup = optgroup
 

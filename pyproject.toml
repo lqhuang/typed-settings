@@ -52,8 +52,11 @@ option-groups = [
     "click-option-group",
     "click>=7,<9",
 ]
+jinja = [
+    "jinja2",
+]
 all = [  # All features
-    "typed-settings[click,option-groups]",
+    "typed-settings[click,option-groups,jinja]",
 ]
 docs = [
     "typed-settings[all]",
