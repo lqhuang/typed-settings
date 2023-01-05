@@ -424,7 +424,7 @@ But imagine this example, where our flag is always ``False`` and we only want to
     ... class Settings:
     ...     flag: bool = False
 
-We can achieve this by providing a custom param decl. and the *is_flag* option:
+We can achieve this by providing a custom param decl.:
 
 .. code-block:: python
 
@@ -433,7 +433,7 @@ We can achieve this by providing a custom param decl. and the *is_flag* option:
     ...     flag: bool = ts.option(
     ...         default=False,
     ...         help='Turn "flag" on.',
-    ...         click={"param_decls": ("--on", "flag"), "is_flag": True},
+    ...         click={"param_decls": ("--on")},
     ...     )
     ...
     >>> @click.command()
@@ -454,6 +454,14 @@ We can achieve this by providing a custom param decl. and the *is_flag* option:
     >>> invoke(cli, )
     Settings(flag=False)
     <BLANKLINE>
+
+.. note::
+
+   You do not need to add the option name to the param decls if the flag has a custom name.
+   Typed Settings will always be able to map the flag to the correct option.
+   You only need to take care that you don't introduce any name clashes with other options' param decls.
+
+   It is also not needed to add ``is_flag: True`` click args.
 
 Note, that we added the param decl. ``flag`` in addition to ``--on``.
 This is required for Click to map the flag to the correct option.
