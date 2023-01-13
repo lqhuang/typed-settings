@@ -22,23 +22,13 @@ from .hooks import auto_convert
 
 
 if TYPE_CHECKING:
-    try:
-        from attr import (  # type: ignore
-            _T,
-            _ConverterType,
-            _OnSetAttrArgType,
-            _ReprArgType,
-            _ValidatorArgType,
-        )
-    except ImportError:
-        # Just in case the symbols are moved from "attr" to "attrs"
-        from attrs import (  # type: ignore
-            _T,
-            _ConverterType,
-            _OnSetAttrArgType,
-            _ReprArgType,
-            _ValidatorArgType,
-        )
+    from attr import (
+        _T,
+        _ConverterType,
+        _OnSetAttrArgType,
+        _ReprArgType,
+        _ValidatorArgType,
+    )
 
 
 __all__ = [
@@ -358,8 +348,8 @@ def secret(  # type: ignore[no-untyped-def]
 
 def _get_metadata(
     metadata: Optional[Dict[str, Any]],
-    help: str,
-    click: Dict[str, Any],
+    help: Optional[str],
+    click: Optional[Dict[str, Any]],
     argparse: Optional[Dict[str, Any]],
 ) -> Dict[str, Any]:
     click_config = {"help": help}
