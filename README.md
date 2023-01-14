@@ -1,19 +1,43 @@
 # Typed Settings
 
-Typed Settings allows you to cleanly structure your settings with [attrs](https://www.attrs.org) classes.
-Type annotations will be used to automatically convert values to the proper type (using [cattrs](https://cattrs.readthedocs.io)).
-You can currently load settings from these sources:
+Merge settings from multiple different sources and present them in a structured, typed, and validated way!
 
-- TOML files (multiple, if you want to).  Paths can be statically specified or dynamically set via an environment variable.
-- Environment variables
-- [click](https://click.palletsprojects.com) command line options
+## Why?
 
-You can use Typed settings, e.g., for
+There are many different config file formats and libraries.
+Many of them have a narrow scope, don't integrate well with other libs, or lack in typing support.
+
+Typed Settings' goal is to enable you to load settings from any source (e.g., env vars, config files, vaults)
+and can convert values to anything you need.
+
+You can extend Typed Settings to support config sources that aren't supported yet
+and its extensive documentation will help you on your way.
+
+## What can it be used for?
+
+You can use Typed Settings in any context, e.g.:
 
 - server processes
 - containerized apps
 - command line applications
 - scripts and tools for scientific experiments and data analysis
+
+## What does it do?
+
+- It loads settings from multiple sources (e.g., env vars, config files, vaults) in a unified way and merges the loaded values.
+  You can add loaders for sources we cannot imagine yet.
+
+- It can post-process loaded values.
+  This allows value interpolation/templating or calling helpers that retrieve secrets from vaults.
+  You can create and add any processors you can image if the built-in ones are not enought.
+
+- You can add a CLI on top to let users update the loaded settings via command line arguments.
+  [Click](https://click.palletsprojects.com) and [argparse](https://docs.python.org/3/library/argparse.html) are currently supported.
+
+- Settings are cleanly structured and typed.
+  The type annotations are used to convert the loaded settings to the proper types.
+  This also includes higher level structures like dates, paths and various collections (lists, dicts, …).
+  This is currently done with [attrs](https://www.attrs.org) and [cattrs](https://cattrs.readthedocs.io)) (but we know people also love Pydantic or dataclasses).
 
 The documentation contains a [full list](https://typed-settings.readthedocs.io/en/latest/why.html#comprehensive-list-of-features) of all features.
 

@@ -2,61 +2,139 @@
 Why Typed Settings?
 ===================
 
+This page introduces you to similar libraries and shows why Typed Settings might be the better choice for you.
+
 Comprehensive List of Features
 ==============================
 
-- Default settings are defined by your app and can be overridden by external sources (like config files, environment variables, command line options).
+- Your app defines the structure of your settings as typed classes with defaults.
 
-- Settings are defined as attrs classes with type hints and, optionally, validators.
+- Typed settings loads settings from a number of defined sources.
+  Each source may override parts of the settings loaded by previous sources.
 
-  - Secrets are hidden when a settings instance is printed.
+- The loaded settings can optionally be post-processed.
 
-- Options can be basic data types (bool, int, float, str), Enums, lists of basic types, or nested settings classes (:ref:`full list <func-settings>`).
+- The loaded and processed values are converted to an instance of your settings class.
 
-  - Cattrs_ is used for converting settings values to the desired type.
-    You can add hooks for converting any types that are not supported out-of-the-box.
+- Alternatively, CLI options are generated for all options
+  and the loaded settings servce as default values.
 
-- You can configure from which sources settings are loaded.
+- The user invokes the CLI and an updated instance of the settings instance is passed to your CLI function.
 
-  Typed Settings ships with a file loader and an environment variable
-  loader.
 
-  The file loader supports Toml and Python files.
+Settings Layout and Structure
+-----------------------------
 
-  You can extend Typed Settings with custom loaders and add support for additional file formats.
+- Settings are defined as Attrs_ classes with type hints and, optionally, validators.
 
-- The file loader can load settings from multiple config files.
+  - Options can be marked/typed as secrets and are hidden when a settings instance is printed.
 
-  - Settings files can be optional or mandatory.
-  - Config files are allowed to contain settings for multiple apps (like :file:`pyproject.toml`)
-  - Paths to config files have to be explicitly named.
-    There are no implicit default search paths.
-  - There is a helper for searching config files in the current project or file system.
-  - Additional paths for config files can be specified via an environment variable.
-    As in ``PATH``, multiple paths are separated by a ``:``.
-    The last file in the list has the highest priority.
-  - Extra options in config files (that do not map to an attribute in the settings class) are errors.
+- Settings classes can be nested if you want to group your settings.
 
-- Environment variables with a defined prefix override settings from config files.
-  This can optionally be disabled.
+- Cattrs_ is used for converting the loaded values to the proper types.
 
-- Click_ options for a settings class can be generated.
-  They are passed to the cli function as a single object (instead of individually).
+  - By default, all basic data types (bool, int, float, str) are supported, as well as enums, paths and datetimes.  Most built-in collection types are supported and optional values, too.
 
-  - Click options support the same types as normal options.
-  - Options can define a help-string for Click options.
+  - You can extend the converter to support additional types.
 
-- Settings must be explicitly loaded, either via :func:`typed_settings.load()`/:func`typed_settings.load_settings()` or via :func:`typed_settings.click_options()`.
+- Other libraries (like dataclasses or Pydantic) are not yet supported.
+  This may change in the future.
 
-  - Both functions allow you to customize config file paths, prefixes et cetera.
 
-- Uses debug logging:
+Loading Settings
+----------------
+
+- You define a list of settings loaders that are run one after another.
+  Each loader merges its results with the previously loaded settings.
+  The last loader in the list has the highest precedence.
+
+- There are built-in loaders for:
+
+  - Config files:
+
+    - Multiple files can be loaded and their results are merged
+
+    - File paths can be statically set,
+      searched in the current project or file system,
+      or loaded from an environment variable (similarly to ``$PATH``)..
+      There are no implicit default search paths.
+
+    - Settings files can be optional or mandatory.
+
+    - Config files are allowed to contain settings for multiple apps (like :file:`pyproject.toml`)
+
+    - Extra options in config files (that do not map to an attribute in the settings class) are errors.
+
+    - Supported formats: Toml, Python.
+      Support for additional files can be added with a few lines of code.
+
+  - Environment variables.
+    Their prefix (e.g., ``MYAPP_``) can be customized.
+
+  - 1Password.
+
+
+Post Processing
+---------------
+
+- Settings can be post-processed and updated.
+
+- Like loaders, processors can be chained and extended.
+
+- Included processors:
+
+  - Interpolation with format strings (similarly to configparser_)
+
+  - Jinja_-Templating (similarly to `Ansible variables`_)
+
+  - Replace URLs with the value they return, e.g., :samp:`helper://{script}` is replaced by the output of :samp:`{script}` or :samp:`op://{resource}` is replaced by the corresponding 1Password resource.
+
+
+CLIs
+----
+
+- Typed Settings can generate CLI options for your settings.
+  The loaded (and processed) settings serve as default values for these options.
+
+- The generated options can be adjusted to your needs.
+
+- Supported libraries:
+
+  - argparse_
+
+  - Click_ (including `click-option-group`_ and `rich-click`_)
+
+
+API and Misc.
+-------------
+
+- Typed Settings provides convenience APIs with reasonable defaults but limited customizability
+  and APIs that let you configure everything in detail.
+
+- Logging via the ``typed_settings`` logger:
 
   - Config files that are being loaded or that cannot be found
   - Looked up env vars
 
+- Most aspects of Typed Settings can be customized or extended.
+
+- Many dependencies are optional.  We work towards having no mandatory dependencies.
+
+- Extensive documentation
+
+- Continued development.
+  Typed Settings is used in production in commercial products,
+  so the probability that it's getting abandoned is relatively low.
+
+.. _ansible variables: https://docs.ansible.com/ansible/latest/playbook_guide/playbooks_variables.html#referencing-simple-variables
+.. _argparse: https://docs.python.org/3/library/argparse.html
+.. _attrs: https://attrs.readthedocs.io
 .. _cattrs: https://cattrs.readthedocs.io
+.. _click-option-group: https://click-option-group.readthedocs.io
 .. _click: https://click.palletsprojects.com
+.. _configparser: https://docs.python.org/3/library/configparser.html#interpolation-of-values
+.. _jinja: https://jinja.palletsprojects.com
+.. _rich-click: https://github.com/ewels/rich-click
 
 
 What about Dynaconf?
