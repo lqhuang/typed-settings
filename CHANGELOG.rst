@@ -12,6 +12,17 @@ Changelog
 .. _calver: https://calver.org
 
 
+2.0.1 (2023-01-14)
+==================
+
+- 🐛 Fixed `#26`_: Typing error with Pyright/VSCode.
+
+- 📝 Improve documentation for custom Click flags (see `#28`_).
+
+.. _#26: https://gitlab.com/sscherfke/typed-settings/-/issues/26
+.. _#28: https://gitlab.com/sscherfke/typed-settings/-/issues/28
+
+
 2.0.0 (2022-11-30)
 ==================
 
