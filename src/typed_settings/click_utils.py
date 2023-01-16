@@ -529,7 +529,7 @@ def _mk_option(
     """
     Recursively creates click options and returns them as a list.
     """
-    user_config = field.metadata.get(METADATA_KEY, {}).get(CLICK_KEY, {})
+    user_config = dict(field.metadata.get(METADATA_KEY, {}).get(CLICK_KEY, {}))
 
     # The option type specifies the default option kwargs
     kwargs = type_args_maker.get_kwargs(field.type, default)

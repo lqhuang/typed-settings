@@ -448,7 +448,9 @@ def _mk_argument(
     default: Any,
     type_args_maker: TypeArgsMaker,
 ) -> Tuple[Tuple[str, ...], Dict[str, Any]]:
-    user_config = field.metadata.get(METADATA_KEY, {}).get(ARGPARSE_KEY, {})
+    user_config = dict(
+        field.metadata.get(METADATA_KEY, {}).get(ARGPARSE_KEY, {})
+    )
 
     # The option type specifies the default option kwargs
     kwargs = type_args_maker.get_kwargs(field.type, default)

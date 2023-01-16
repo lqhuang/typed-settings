@@ -1,6 +1,7 @@
 import sys
 from typing import Any, Callable, TypeVar
 
+import attrs
 import pytest
 
 from typed_settings import (
@@ -11,6 +12,7 @@ from typed_settings import (
     option,
     settings,
 )
+from typed_settings.attrs import ARGPARSE_KEY, METADATA_KEY
 
 
 T = TypeVar("T")
@@ -150,3 +152,24 @@ def test_invalid_bool_flag() -> None:
 
     with pytest.raises(ValueError, match="boolean flags.*--.*supported"):
         argparse_utils.make_parser(Settings, "test")
+
+
+def test_attrs_meta_not_modified() -> None:
+    """
+    The attrs meta data with with user defined argparse config is not modified.
+
+    Regression test for #29.
+    """
+
+    @settings
+    class S:
+        opt: int = option(help="spam", argparse={"param_decls": "-o"})
+
+    meta = attrs.fields(S).opt.metadata[METADATA_KEY]
+
+    assert meta[ARGPARSE_KEY] == {"help": "spam", "param_decls": "-o"}
+
+    argparse_utils.make_parser(S, "test")
+    argparse_utils.make_parser(S, "test")
+
+    assert meta[ARGPARSE_KEY] == {"help": "spam", "param_decls": "-o"}

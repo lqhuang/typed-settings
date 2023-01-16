@@ -19,6 +19,7 @@ from typed_settings import (
     secret,
     settings,
 )
+from typed_settings.attrs import CLICK_KEY, METADATA_KEY
 from typed_settings.types import SettingsClass
 
 
@@ -81,6 +82,27 @@ def test_unkown_type(invoke: Invoke) -> None:
         @click_options(Settings, "test")
         def cli(settings: Settings) -> None:
             ...
+
+
+def test_attrs_meta_not_modified() -> None:
+    """
+    The attrs meta data with with user defined click config is not modified.
+
+    Regression test for #29.
+    """
+
+    @settings
+    class S:
+        opt: int = option(help="spam", click={"callback": print})
+
+    meta = attrs.fields(S).opt.metadata[METADATA_KEY]
+
+    assert meta[CLICK_KEY] == {"help": "spam", "callback": print}
+
+    click_options(S, "test")(lambda s: None)  # pragma: no cover
+    click_options(S, "test")(lambda s: None)  # pragma: no cover
+
+    assert meta[CLICK_KEY] == {"help": "spam", "callback": print}
 
 
 class TestDefaultsLoading:
