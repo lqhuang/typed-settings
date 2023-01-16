@@ -14,6 +14,7 @@ from typed_settings.converters import (
 )
 from typed_settings.dict_utils import deep_options
 from typed_settings.loaders import EnvLoader, FileLoader, Loader, TomlFormat
+from typed_settings.types import OptionList, SettingsClass, SettingsDict
 
 
 @settings(frozen=True)
@@ -298,7 +299,9 @@ class TestLoadSettings:
         converter = BaseConverter()
         converter.register_structure_hook(Test, lambda v, t: Test(int(v)))
 
-        result = _core.load_settings(Settings, [EnvLoader("TEST_")], converter)
+        result = _core.load_settings(
+            Settings, [EnvLoader("TEST_")], converter=converter
+        )
         assert result == Settings(Test(42))
 
     @pytest.mark.parametrize(
@@ -337,7 +340,7 @@ class TestLoadSettings:
         monkeypatch.setenv("EXAMPLE_X", vals[0])
         monkeypatch.setenv("EXAMPLE_Y", vals[1])
 
-        result = _core.load_settings(Settings, loaders, c)
+        result = _core.load_settings(Settings, loaders, converter=c)
         assert result == Settings(
             x=[3, 4, 42], y=[Path("spam"), Path("eggs")], z=[1, 2]
         )
@@ -353,6 +356,50 @@ class TestLoadSettings:
 
         result = _core.load(Settings, "example")
         assert result == Settings()
+
+    def test_processors_applied(self, loaders: List[Loader]) -> None:
+        """
+        Processors are applied to the loaded settings (including the defaults).
+        """
+
+        def p1(
+            settings_dict: SettingsDict,
+            settings_cls: SettingsClass,
+            options: OptionList,
+        ) -> SettingsDict:
+            assert settings_dict == {
+                "url": "https://example.com",
+                "default": 3,
+                "host": {
+                    "name": "example.com",
+                    "port": "42",
+                },
+            }
+            settings_dict["url"] = "spam"
+            return settings_dict
+
+        def p2(
+            settings_dict: SettingsDict,
+            settings_cls: SettingsClass,
+            options: OptionList,
+        ) -> SettingsDict:
+            assert settings_dict["url"] == "spam"
+            settings_dict["host"]["port"] = "2"
+            return settings_dict
+
+        settings = _core.load_settings(
+            cls=Settings,
+            loaders=loaders,
+            processors=[p1, p2],
+        )
+        assert settings == Settings(
+            url="spam",
+            default=3,
+            host=Host(
+                name="example.com",
+                port=2,
+            ),
+        )
 
 
 class TestLogging:

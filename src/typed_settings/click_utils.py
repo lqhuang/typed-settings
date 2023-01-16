@@ -36,6 +36,7 @@ from .cli_utils import (
 from .converters import BaseConverter, default_converter, from_dict
 from .dict_utils import deep_options, group_options, merge_dicts, set_path
 from .loaders import Loader
+from .processors import Processor
 from .types import ST, OptionInfo, Secret, SettingsClass, SettingsDict, T
 
 
@@ -70,6 +71,8 @@ Decorator = Callable[[AnyFunc], AnyFunc]
 def click_options(
     settings_cls: Type[ST],
     loaders: Union[str, Sequence[Loader]],
+    *,
+    processors: Sequence[Processor] = (),
     converter: Optional[BaseConverter] = None,
     type_args_maker: Optional[TypeArgsMaker] = None,
     argname: Optional[str] = None,
@@ -146,6 +149,11 @@ def click_options(
     .. versionchanged:: 2.0.0
        Renamed *type_handler* to *type_args_maker* and changed it's type to
        ``TypeArgsMaker``.
+    .. versionchanged:: 23.0.0
+       Made *converter*, *type_args_maker*, *argname*, and *decorator_factory*
+       a keyword-only argument
+    .. versionchanged:: 23.0.0
+       Added the *processors* argument
     """
     cls = attrs.resolve_types(settings_cls)
     options = [opt for opt in deep_options(cls) if opt.field.init is not False]
@@ -154,7 +162,9 @@ def click_options(
     if isinstance(loaders, str):
         loaders = default_loaders(loaders)
 
-    settings_dict = _load_settings(cls, options, loaders)
+    settings_dict = _load_settings(
+        cls, options, loaders, processors=processors
+    )
 
     converter = converter or default_converter()
     type_args_maker = type_args_maker or TypeArgsMaker(ClickHandler())

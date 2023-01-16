@@ -9,6 +9,7 @@ from .argparse_utils import cli
 from .attrs import combine, evolve, option, secret, settings
 from .converters import default_converter, register_strlist_hook
 from .loaders import EnvLoader, FileLoader, TomlFormat
+from .processors import Processor
 
 
 __all__ = [
@@ -22,6 +23,8 @@ __all__ = [
     "EnvLoader",
     "FileLoader",
     "TomlFormat",
+    # Processors
+    "Processor",
     # Attrs helpers
     "combine",
     "evolve",

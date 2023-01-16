@@ -14,7 +14,7 @@ from .types import OptionList, SettingsClass, SettingsDict
 LOGGER = logging.getLogger("typed_settings")
 
 
-class Processors(Protocol):
+class Processor(Protocol):
     """
     **Protocol** that settings processors must implement.
 

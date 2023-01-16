@@ -42,6 +42,7 @@ from .cli_utils import (
 from .converters import BaseConverter, default_converter, from_dict
 from .dict_utils import deep_options, set_path
 from .loaders import Loader
+from .processors import Processor
 from .types import ST, Secret, SettingsDict
 
 
@@ -216,6 +217,8 @@ class ArgparseHandler:
 def cli(
     settings_cls: Type[ST],
     loaders: Union[str, Sequence[Loader]],
+    *,
+    processors: Sequence[Processor] = (),
     converter: Optional[BaseConverter] = None,
     type_args_maker: Optional[TypeArgsMaker] = None,
     **parser_kwargs: Any,
@@ -232,6 +235,8 @@ def cli(
             :class:`.Loader`\\ s.  If it's a string, use it with
             :func:`~typed_settings.default_loaders()` to get the default
             loaders.
+
+        processors: A list of settings :class:`.Processor`'s.
 
         converter: An optional :class:`~cattrs.Converter` used for converting
             option values to the required type.
@@ -268,6 +273,11 @@ def cli(
            >>> @ts.cli(Settings, "example")
            ... def cli(settings: Settings) -> None:
            ...     print(settings)
+
+    .. versionchanged:: 23.0.0
+       Made *converter* and *type_args_maker* a keyword-only argument
+    .. versionchanged:: 23.0.0
+       Added the *processors* argument
     """
     if isinstance(loaders, str):
         loaders = default_loaders(loaders)
@@ -275,7 +285,12 @@ def cli(
     type_args_maker = type_args_maker or TypeArgsMaker(ArgparseHandler())
 
     decorator = _get_decorator(
-        settings_cls, loaders, converter, type_args_maker, **parser_kwargs
+        settings_cls,
+        loaders,
+        processors,
+        converter,
+        type_args_maker,
+        **parser_kwargs,
     )
     return decorator
 
@@ -283,6 +298,8 @@ def cli(
 def make_parser(
     settings_cls: Type[ST],
     loaders: Union[str, Sequence[Loader]],
+    *,
+    processors: Sequence[Processor] = (),
     converter: Optional[BaseConverter] = None,
     type_args_maker: Optional[TypeArgsMaker] = None,
     **parser_kwargs: Any,
@@ -300,6 +317,8 @@ def make_parser(
             :class:`.Loader`\\ s.  If it's a string, use it with
             :func:`~typed_settings.default_loaders()` to get the default
             loaders.
+
+        processors: A list of settings :class:`.Processor`'s.
 
         converter: An optional :class:`~cattrs.Converter` used for converting
             option values to the required type.
@@ -324,6 +343,11 @@ def make_parser(
         cattrs.StructureHandlerNotFoundError: If cattrs has no handler for a
             given type.
         cattrs.BaseValidationError: If cattrs structural validation fails.
+
+    .. versionchanged:: 23.0.0
+       Made *converter* and *type_args_maker* a keyword-only argument
+    .. versionchanged:: 23.0.0
+       Added the *processors* argument
     """
     if isinstance(loaders, str):
         loaders = default_loaders(loaders)
@@ -331,7 +355,12 @@ def make_parser(
     type_args_maker = type_args_maker or TypeArgsMaker(ArgparseHandler())
 
     return _mk_parser(
-        settings_cls, loaders, converter, type_args_maker, **parser_kwargs
+        settings_cls,
+        loaders,
+        processors,
+        converter,
+        type_args_maker,
+        **parser_kwargs,
     )
 
 
@@ -369,6 +398,7 @@ def namespace2settings(
 def _get_decorator(
     settings_cls: Type[ST],
     loaders: Sequence[Loader],
+    processors: Sequence[Processor],
     converter: BaseConverter,
     type_args_maker: TypeArgsMaker,
     **parser_kwargs: Any,
@@ -396,6 +426,7 @@ def _get_decorator(
             parser = _mk_parser(
                 settings_cls,
                 loaders,
+                processors,
                 converter,
                 type_args_maker,
                 **parser_kwargs,
@@ -413,6 +444,7 @@ def _get_decorator(
 def _mk_parser(
     settings_cls: Type[ST],
     loaders: Sequence[Loader],
+    processors: Sequence[Processor],
     converter: BaseConverter,
     type_args_maker: TypeArgsMaker,
     **parser_kwargs: Any,
@@ -421,7 +453,7 @@ def _mk_parser(
     Create an :class:`argparse.ArgumentParser` for all options.
     """
     options = deep_options(settings_cls)
-    settings_dict = _load_settings(settings_cls, options, loaders)
+    settings_dict = _load_settings(settings_cls, options, loaders, processors)
     grouped_options = [
         (g_cls, list(g_opts))
         for g_cls, g_opts in itertools.groupby(options, key=lambda o: o.cls)
