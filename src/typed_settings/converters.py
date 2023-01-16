@@ -174,8 +174,8 @@ def to_dt(value: Union[datetime, str], _type: type = datetime) -> datetime:
     """
     if not isinstance(value, (datetime, str)):
         raise TypeError(
-            f'Invalid type "{type(value).__name__}"; expected "datetime" or '
-            f'"str".'
+            f"Invalid type {type(value).__name__!r}; expected 'datetime' or "
+            f"'str'."
         )
     if isinstance(value, str):
         if value[-1] == "Z":

@@ -49,7 +49,7 @@ def __getattr__(name: str) -> Any:
 
         return pass_settings
 
-    raise AttributeError(f"module '{__name__}' has no attribute '{name}'")
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
 
 
 def __dir__() -> List[str]:

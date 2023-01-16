@@ -101,7 +101,7 @@ class SecretStr(str):
     """
 
     def __repr__(self) -> str:
-        return f"'{SECRET_REPR}'" if self else "''"
+        return f"{SECRET_REPR!r}" if self else "''"
 
 
 class Secret(Generic[T]):
