@@ -12,6 +12,15 @@ Changelog
 .. _calver: https://calver.org
 
 
+2.0.2 (2023-01-18)
+==================
+
+- 🐛 Fixed `#29`_: Do not modify attrs metadata when creating CLI options.
+  The metadata dict is now copied before popping items from it.
+
+.. _#29: https://gitlab.com/sscherfke/typed-settings/-/issues/29
+
+
 2.0.1 (2023-01-14)
 ==================
 
