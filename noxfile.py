@@ -1,4 +1,5 @@
 import glob
+import os
 import pathlib
 
 
@@ -34,6 +35,15 @@ DEPS_MATRIX = {
     "attrs",
     "cattrs",
 }
+
+IN_CI = "CI" in os.environ
+if IN_CI:
+    OMMIT_IN_REPORT = [
+        "src/typed_settings/onepassword.py",
+        "tests/test_onepassword.py",
+    ]
+else:
+    OMMIT_IN_REPORT = []
 
 
 @nox.session
@@ -109,12 +119,16 @@ def test(
 
 @nox.session(name="coverage-report")
 def coverage_report(session: nox.Session) -> None:
+    args = []
+    if OMMIT_IN_REPORT:
+        args.append(f"--omit={','.join(OMMIT_IN_REPORT)}")
+
     session.install(".[test]")
     session.run("coverage", "combine")
     # Only let the "report" command fail under 100%
     session.run("coverage", "xml", "--fail-under=0")
     session.run("coverage", "html", "--fail-under=0")
-    session.run("coverage", "report")
+    session.run("coverage", "report", *args)
 
 
 @nox.session(python=False)

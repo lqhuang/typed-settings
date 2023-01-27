@@ -30,7 +30,16 @@ Available features:
 
 - ``typed-settings[click]``: Enable support for Click options
 - ``typed-settings[option-groups]``: Enable support for Click and Click option groups
+- ``typed-settings[jinja]``: Enable support for value interpolation with Jinja templates
 - ``typed-settings[all]``: Install all optional requirements
+
+.. hint::
+
+   You can install multiple features by separating them with a ``,``:
+
+   .. code-block:: console
+
+      $ python -m pip install typed-settings[click,jinja]
 
 
 Basic Settings Definition and Loading

@@ -1,3 +1,7 @@
+"""
+This module contains the settings loaders provided by Typed Settings and the
+protocol specification that they must implement.
+"""
 import importlib.util
 import logging
 import os
@@ -21,7 +25,7 @@ if PY_311:
 else:
     import tomli as tomllib  # type: ignore[no-redef]
 
-from ._dict_utils import _merge_dicts, _set_path
+from .dict_utils import merge_dicts, set_path
 from .exceptions import (
     ConfigFileLoadError,
     ConfigFileNotFoundError,
@@ -36,9 +40,9 @@ LOGGER = logging.getLogger("typed_settings")
 
 class Loader(Protocol):
     """
-    **Protocol:** Methods that settings loaders must implement.
+    **Protocol** that settings loaders must implement.
 
-    Custom settings loaders must implement this.
+    Loaders must be callables (e.g., functions) with the specified signature.
 
     .. versionchanged:: 1.0.0
        Renamed ``load()`` to ``__call__()`` and also pass the settings
@@ -52,8 +56,8 @@ class Loader(Protocol):
         Load settings for the given options.
 
         Args:
-            options: The list of available settings.
             settings_cls: The base settings class for all options.
+            options: The list of available settings.
 
         Return:
             A dict with the loaded settings.
@@ -63,10 +67,11 @@ class Loader(Protocol):
 
 class FileFormat(Protocol):
     """
-    **Protocol:** Methods that file format loaders for :class:`FileLoader`
-    must implement.
+    **Protoco** that file format loaders for :class:`FileLoader` must
+    implement.
 
-    Custom file format loaders must implement this.
+    File format loaders must be callables (e.g., functions) with the specified
+    signature.
 
     .. versionchanged:: 1.0.0
        Renamed ``load_file()`` to ``__call__()`` and also pass the settings
@@ -81,8 +86,8 @@ class FileFormat(Protocol):
 
         Args:
             path: The path to the config file.
-            options: The list of available settings.
             settings_cls: The base settings class for all options.
+            options: The list of available settings.
 
         Return:
             A dict with the loaded settings.
@@ -161,7 +166,7 @@ class EnvLoader:
             varname = f"{prefix}{o.path.upper().replace('.', '_')}"
             if varname in env:
                 LOGGER.debug(f"Env var found: {varname}")
-                _set_path(values, o.path, env[varname])
+                set_path(values, o.path, env[varname])
             else:
                 LOGGER.debug(f"Env var not found: {varname}")
 
@@ -198,7 +203,7 @@ class FileLoader:
         formats: Dict[str, FileFormat],
         files: Iterable[Union[str, Path]],
         env_var: Optional[str] = None,
-    ):
+    ) -> None:
         self.files = files
         self.env_var = env_var
         self.formats = formats
@@ -227,7 +232,7 @@ class FileLoader:
         merged_settings: SettingsDict = {}
         for path in paths:
             settings = self._load_file(path, settings_cls, options)
-            _merge_dicts(options, merged_settings, settings)
+            merge_dicts(options, merged_settings, settings)
         return merged_settings
 
     def _load_file(
@@ -358,7 +363,7 @@ class PythonFormat:
                 key = f"{o.path.replace('.', '_')}"
                 if key in settings:
                     val = settings.pop(key)
-                    _set_path(settings, o.path, val)
+                    set_path(settings, o.path, val)
         return settings
 
     def _import_module(self, path: Path) -> object:
@@ -421,6 +426,48 @@ class TomlFormat:
         return settings
 
 
+class OnePasswordLoader:
+    """
+    Load settings from an item stored in a 1Password vault.
+
+    You must must have installed and set up the `1Password CLI`_ in order
+    for this loader to work.
+
+    .. _1Password CLI: https://developer.1password.com/docs/cli/
+
+    Args:
+        item: The item to load
+        vault: The vault in which to look for *item*.  By default, search all
+            vaults.
+    """
+
+    def __init__(self, item: str, vault: Optional[str] = None):
+        self.item = item
+        self.vault = vault
+
+        from . import onepassword
+
+        self._op = onepassword
+
+    def __call__(
+        self, settings_cls: type, options: OptionList
+    ) -> SettingsDict:
+        """
+        Load settings for the given options.
+
+        Args:
+            options: The list of available settings.
+            settings_cls: The base settings class for all options.
+
+        Return:
+            A dict with the loaded settings.
+        """
+        option_names = [o.path for o in options]
+        settings = self._op.get_item(self.item, self.vault)
+        settings = {k: v for k, v in settings.items() if k in option_names}
+        return settings
+
+
 def clean_settings(
     settings: SettingsDict, options: OptionList, source: Any
 ) -> SettingsDict:
@@ -451,7 +498,7 @@ def clean_settings(
             path = f"{prefix}{key}"
 
             if path in valid_paths:
-                _set_path(cleaned, path, val)
+                set_path(cleaned, path, val)
                 continue
 
             if isinstance(val, dict):

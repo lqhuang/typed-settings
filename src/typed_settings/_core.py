@@ -3,15 +3,16 @@ Core functionality for loading settings.
 """
 import logging
 from pathlib import Path
-from typing import Any, Dict, Iterable, List, Optional, Sequence, Type, Union
+from typing import Iterable, List, Optional, Sequence, Type, Union
 
 import attrs
 
-from ._dict_utils import _deep_options, _merge_dicts, _set_path
 from .attrs import METADATA_KEY
 from .converters import BaseConverter, default_converter, from_dict
+from .dict_utils import deep_options, merge_dicts, set_path
 from .loaders import EnvLoader, FileLoader, Loader, TomlFormat
-from .types import AUTO, ST, OptionList, SettingsClass, _Auto
+from .processors import Processor
+from .types import AUTO, ST, OptionList, SettingsClass, SettingsDict, _Auto
 
 
 LOGGER = logging.getLogger(METADATA_KEY)
@@ -178,7 +179,7 @@ def load(
     )
     settings = _load_settings(
         cls=cls,
-        options=_deep_options(cls),
+        options=deep_options(cls),
         loaders=loaders,
     )
 
@@ -189,6 +190,8 @@ def load(
 def load_settings(
     cls: Type[ST],
     loaders: Sequence[Loader],
+    *,
+    processors: Sequence[Processor] = (),
     converter: Optional[BaseConverter] = None,
 ) -> ST:
     """
@@ -197,6 +200,7 @@ def load_settings(
     Args:
         cls: Attrs class with options (and default values).
         loaders: A list of settings :class:`.Loader`'s.
+        processors: A list of settings :class:`.Processor`'s.
         converter: An optional :class:`cattrs.converters.BaseConverter` used
             for converting option values to the required type.
 
@@ -208,13 +212,19 @@ def load_settings(
     Raise:
         TsError: Depending on the configured loaders, any subclass of this
             exception.
+
+    .. versionchanged:: 23.0.0
+       Made *converter* a keyword-only argument
+    .. versionchanged:: 23.0.0
+       Added the *processors* argument
     """
     if converter is None:
         converter = default_converter()
     settings = _load_settings(
         cls=cls,
-        options=_deep_options(cls),
+        options=deep_options(cls),
         loaders=loaders,
+        processors=processors,
     )
     return from_dict(settings, cls, converter)
 
@@ -223,14 +233,15 @@ def _load_settings(
     cls: SettingsClass,
     options: OptionList,
     loaders: Sequence[Loader],
-) -> Dict[str, Any]:
+    processors: Sequence[Processor] = (),
+) -> SettingsDict:
     """
     Loads settings for *options* and returns them as dict.
 
     This function makes it easier to extend settings since it returns a dict
     that can easily be updated.
     """
-    settings: Dict[str, Any] = {}
+    settings: SettingsDict = {}
 
     # Populate dict with default settings.  This avoids problems with nested
     # settings classes for which no settings are loaded.
@@ -239,11 +250,14 @@ def _load_settings(
             continue
         if isinstance(opt.field.default, attrs.Factory):  # type: ignore
             continue
-        _set_path(settings, opt.path, opt.field.default)
+        set_path(settings, opt.path, opt.field.default)
 
     loaded_settings = [loader(cls, options) for loader in loaders]
 
     for ls in loaded_settings:
-        _merge_dicts(options, settings, ls)
+        merge_dicts(options, settings, ls)
+
+    for processor in processors:
+        settings = processor(settings, cls, options)
 
     return settings

@@ -6,8 +6,8 @@ from typing import Any, Dict, List, Optional
 import pytest
 from pytest import MonkeyPatch
 
-from typed_settings._dict_utils import _deep_options
 from typed_settings.attrs import settings
+from typed_settings.dict_utils import deep_options
 from typed_settings.exceptions import (
     ConfigFileLoadError,
     ConfigFileNotFoundError,
@@ -19,6 +19,7 @@ from typed_settings.loaders import (
     FileFormat,
     FileLoader,
     InstanceLoader,
+    OnePasswordLoader,
     PythonFormat,
     TomlFormat,
     clean_settings,
@@ -64,7 +65,7 @@ class TestCleanSettings:
             "sub-section": {"b-1": "bacon"},
         }
 
-        result = clean_settings(s, _deep_options(Settings), "test")
+        result = clean_settings(s, deep_options(Settings), "test")
         assert result == {
             "a_1": "spam",
             "a_2": "eggs",
@@ -89,7 +90,7 @@ class TestCleanSettings:
             "option-2": {"another-key": 23},
         }
 
-        result = clean_settings(s, _deep_options(Settings), "test")
+        result = clean_settings(s, deep_options(Settings), "test")
         assert result == {
             "option_1": {"my-key": "val1"},
             "option_2": {"another-key": 23},
@@ -106,7 +107,7 @@ class TestCleanSettings:
             "spam": 23,
         }
         with pytest.raises(InvalidOptionsError) as exc_info:
-            clean_settings(s, _deep_options(Settings), "t")
+            clean_settings(s, deep_options(Settings), "t")
         assert str(exc_info.value) == (
             "Invalid options found in t: host.eggs, spam"
         )
@@ -126,7 +127,7 @@ class TestCleanSettings:
 
         s = {"host": {"port": 23, "eggs": 42}}
         with pytest.raises(InvalidOptionsError) as exc_info:
-            clean_settings(s, _deep_options(Settings), "t")
+            clean_settings(s, deep_options(Settings), "t")
         assert str(exc_info.value) == "Invalid options found in t: host.eggs"
 
     def test_clean_settings_dict_values(self) -> None:
@@ -140,7 +141,7 @@ class TestCleanSettings:
             option: Dict[str, Any]
 
         s = {"option": {"a": 1, "b": 2}}
-        clean_settings(s, _deep_options(Settings), "t")
+        clean_settings(s, deep_options(Settings), "t")
 
 
 class TestPythonFormat:
@@ -197,7 +198,7 @@ class TestPythonFormat:
         """
         config_file = tmp_path.joinpath("settings.py")
         config_file.write_text(textwrap.dedent(data))
-        result = fmt(config_file, Settings, _deep_options(Settings))
+        result = fmt(config_file, Settings, deep_options(Settings))
         assert result == {
             "url": "spam",
             "host": {"port": 42},
@@ -212,7 +213,7 @@ class TestPythonFormat:
         config_file = tmp_path.joinpath("settings.py")
         config_file.write_text("class spam:\n    a = 'spam'\n")
         result = PythonFormat(section)(
-            config_file, Settings, _deep_options(Settings)
+            config_file, Settings, deep_options(Settings)
         )
         assert result == {}
 
@@ -224,7 +225,7 @@ class TestPythonFormat:
             ConfigFileNotFoundError,
             PythonFormat(""),
             Path("x"),
-            _deep_options(Settings),
+            deep_options(Settings),
             Settings,
         )
 
@@ -238,7 +239,7 @@ class TestPythonFormat:
             ConfigFileLoadError,
             PythonFormat(""),
             config_file,
-            _deep_options(Settings),
+            deep_options(Settings),
             Settings,
         )
 
@@ -268,7 +269,7 @@ class TestTomlFormat:
         """
         config_file = tmp_path.joinpath("settings.toml")
         config_file.write_text(textwrap.dedent(data))
-        result = fmt(config_file, Settings, _deep_options(Settings))
+        result = fmt(config_file, Settings, deep_options(Settings))
         assert result == {
             "url": "spam",
             "host": {"port": 42},
@@ -289,7 +290,7 @@ class TestTomlFormat:
         result = TomlFormat("tool.example")(
             config_file,
             Settings,
-            _deep_options(Settings),
+            deep_options(Settings),
         )
         assert result == {
             "a": "spam",
@@ -309,7 +310,7 @@ class TestTomlFormat:
         """
         )
         result = TomlFormat(section)(
-            config_file, Settings, _deep_options(Settings)
+            config_file, Settings, deep_options(Settings)
         )
         assert result == {}
 
@@ -321,7 +322,7 @@ class TestTomlFormat:
             ConfigFileNotFoundError,
             TomlFormat(""),
             Path("x"),
-            _deep_options(Settings),
+            deep_options(Settings),
             Settings,
         )
 
@@ -348,7 +349,7 @@ class TestTomlFormat:
             ConfigFileLoadError,
             TomlFormat(""),
             config_file,
-            _deep_options(Settings),
+            deep_options(Settings),
             Settings,
         )
 
@@ -362,7 +363,7 @@ class TestTomlFormat:
             ConfigFileLoadError,
             TomlFormat(""),
             config_file,
-            _deep_options(Settings),
+            deep_options(Settings),
             Settings,
         )
 
@@ -446,7 +447,7 @@ class TestFileLoader:
             formats={"*.toml": TomlFormat("le-section")},
             files=[config_file],
         )
-        s = loader._load_file(config_file, Settings, _deep_options(Settings))
+        s = loader._load_file(config_file, Settings, deep_options(Settings))
         assert s == {"le_option": "spam"}
 
     def test_load_file2(self, tmp_path: Path) -> None:
@@ -471,7 +472,7 @@ class TestFileLoader:
             formats={"*.toml": TomlFormat("le-section")},
             files=[config_file],
         )
-        s = loader._load_file(config_file, Settings, _deep_options(Settings))
+        s = loader._load_file(config_file, Settings, deep_options(Settings))
         assert s == {"le_option": "spam"}
 
     def test_load_file_invalid_format(self) -> None:
@@ -508,7 +509,7 @@ class TestFileLoader:
             le_eggs: str = ""
 
         loader = FileLoader({"*.toml": TomlFormat("le-section")}, [cf1, cf2])
-        s = loader(Settings, _deep_options(Settings))
+        s = loader(Settings, deep_options(Settings))
         assert s == {"le_spam": "spam", "le_eggs": "eggs"}
 
     @pytest.mark.parametrize(
@@ -618,3 +619,22 @@ class TestInstanceLoader:
         inst = Settings(Host("spam", 42), "eggs", 23)
         loader = InstanceLoader(inst)
         pytest.raises(ValueError, loader, settings_cls, options)
+
+
+class TestOnePasswordLoader:
+    """Tests for OnePasswordLoader."""
+
+    def test_load(self, mock_op: None) -> None:
+        """
+        Settings can be loaded from 1Password.
+        """
+
+        @settings(frozen=True)
+        class Settings:
+            username: str
+            password: str
+            is_admin: bool = False
+
+        loader = OnePasswordLoader(item="Test", vault="Test")
+        s = loader(Settings, deep_options(Settings))
+        assert s == {"username": "spam", "password": "eggs"}

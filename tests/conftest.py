@@ -1,7 +1,10 @@
+from typing import Any, Dict, Optional
+
 import pytest
 
-from typed_settings._dict_utils import _deep_options
+from typed_settings import onepassword
 from typed_settings.attrs import option, settings
+from typed_settings.dict_utils import deep_options
 from typed_settings.types import OptionList
 
 
@@ -27,4 +30,20 @@ def settings_cls() -> type:
 
 @pytest.fixture
 def options(settings_cls: type) -> OptionList:
-    return _deep_options(settings_cls)
+    return deep_options(settings_cls)
+
+
+@pytest.fixture
+def mock_op(monkeypatch: pytest.MonkeyPatch) -> None:
+    def get_item(item: str, vault: Optional[str] = None) -> Dict[str, Any]:
+        if item == "Test" and vault in {"Test", "", None}:
+            return {"username": "spam", "password": "eggs"}
+        raise ValueError("op error")  # pragma: no cover
+
+    def get_resource(resource: str) -> str:
+        if resource == "op://Test/Test/password":
+            return "eggs"
+        raise ValueError("op error")  # pragma: no cover
+
+    monkeypatch.setattr(onepassword, "get_item", get_item)
+    monkeypatch.setattr(onepassword, "get_resource", get_resource)

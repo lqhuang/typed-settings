@@ -3,7 +3,7 @@ Internal data structures.
 """
 from collections.abc import Collection
 from enum import Enum
-from typing import Any, ClassVar, Generic, List, MutableMapping, Type, TypeVar
+from typing import Any, ClassVar, Dict, Generic, List, Type, TypeVar
 
 import attrs
 
@@ -25,7 +25,7 @@ ET = TypeVar("ET", bound=Enum)  # Enum type
 ST = TypeVar("ST", bound=AttrsInstance)  # SettingsInstance
 SettingsClass = Type[AttrsInstance]
 SettingsInstance = AttrsInstance
-SettingsDict = MutableMapping[str, Any]
+SettingsDict = Dict[str, Any]
 
 
 class _Auto:

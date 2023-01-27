@@ -25,7 +25,6 @@ from attr._make import _Nothing as NothingType
 
 from ._compat import PY_38
 from ._core import _load_settings, default_loaders
-from ._dict_utils import _deep_options, _group_options, _merge_dicts, _set_path
 from .attrs import CLICK_KEY, METADATA_KEY, _SecretRepr
 from .cli_utils import (
     Default,
@@ -35,7 +34,9 @@ from .cli_utils import (
     get_default,
 )
 from .converters import BaseConverter, default_converter, from_dict
+from .dict_utils import deep_options, group_options, merge_dicts, set_path
 from .loaders import Loader
+from .processors import Processor
 from .types import ST, OptionInfo, Secret, SettingsClass, SettingsDict, T
 
 
@@ -70,6 +71,8 @@ Decorator = Callable[[AnyFunc], AnyFunc]
 def click_options(
     settings_cls: Type[ST],
     loaders: Union[str, Sequence[Loader]],
+    *,
+    processors: Sequence[Processor] = (),
     converter: Optional[BaseConverter] = None,
     type_args_maker: Optional[TypeArgsMaker] = None,
     argname: Optional[str] = None,
@@ -146,17 +149,22 @@ def click_options(
     .. versionchanged:: 2.0.0
        Renamed *type_handler* to *type_args_maker* and changed it's type to
        ``TypeArgsMaker``.
+    .. versionchanged:: 23.0.0
+       Made *converter*, *type_args_maker*, *argname*, and *decorator_factory*
+       a keyword-only argument
+    .. versionchanged:: 23.0.0
+       Added the *processors* argument
     """
     cls = attrs.resolve_types(settings_cls)
-    options = [
-        opt for opt in _deep_options(cls) if opt.field.init is not False
-    ]
-    grouped_options = _group_options(cls, options)
+    options = [opt for opt in deep_options(cls) if opt.field.init is not False]
+    grouped_options = group_options(cls, options)
 
     if isinstance(loaders, str):
         loaders = default_loaders(loaders)
 
-    settings_dict = _load_settings(cls, options, loaders)
+    settings_dict = _load_settings(
+        cls, options, loaders, processors=processors
+    )
 
     converter = converter or default_converter()
     type_args_maker = type_args_maker or TypeArgsMaker(ClickHandler())
@@ -195,7 +203,7 @@ def _get_wrapper(
             ctx = click.get_current_context()
             if ctx.obj is None:
                 ctx.obj = {}
-            _merge_dicts(options, settings_dict, ctx.obj.get(CTX_KEY, {}))
+            merge_dicts(options, settings_dict, ctx.obj.get(CTX_KEY, {}))
             settings = from_dict(settings_dict, cls, converter)
             if argname:
                 ctx_key = argname
@@ -361,8 +369,8 @@ class OptionGroupFactory:
             from click_option_group import optgroup
         except ImportError as e:
             raise ModuleNotFoundError(
-                "Module 'click_option_group' not installed.  "
-                "Please run 'python -m pip install click-option-group'"
+                "Module 'click_option_group' not installed.  Please run "
+                "'python -m pip install -U typed-settings[option-groups]'"
             ) from e
         self.optgroup = optgroup
 
@@ -597,7 +605,7 @@ def _make_callback(
         if ctx.obj is None:
             ctx.obj = {}
         settings = ctx.obj.setdefault(CTX_KEY, {})
-        _set_path(settings, path, value)
+        set_path(settings, path, value)
         return value
 
     return cb
