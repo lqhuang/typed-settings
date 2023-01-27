@@ -34,7 +34,6 @@ dd p.rubric::after {
  */
 p { margin-bottom: 1rem; }
 h1, h2, h3, h4, h4, h5, h6 {
-  padding-top: .5rem; /* make highlight box for current heading look better */
   font-weight: 400;
   /* color: rgba(0, 0, 0, 0.9); ■  /* compensation for reduced font weight */ ■ */
 }

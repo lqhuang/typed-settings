@@ -321,6 +321,33 @@ class TestJinjaProcessor:
             id="chain-templates",
         ),
         pytest.param(
+            {
+                "a": {
+                    "aa": "{{ c }}",
+                    "ab": "{{ b.ba }}",
+                },
+                "b": {
+                    "ba": "{% if a.aa == 'spam' %}x{% else %}y{% endif %}",
+                    "bb": "{{ b.ba }}",
+                },
+                "c": "{{ d }}",
+                "d": "spam",
+            },
+            {
+                "a": {
+                    "aa": "spam",
+                    "ab": "x",
+                },
+                "b": {
+                    "ba": "x",
+                    "bb": "x",
+                },
+                "c": "spam",
+                "d": "spam",
+            },
+            id="if-expressions",
+        ),
+        pytest.param(
             {"c": "{}"},
             {"c": "{}"},
             id="format-string",

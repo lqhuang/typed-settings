@@ -85,6 +85,8 @@ class UrlProcessor:
 
     Args:
         handlers: A dictionary mapping URL schemes to handler functions.
+
+    .. versionadded:: 23.0.0
     """
 
     def __init__(self, handlers: Dict[str, UrlHandler]) -> None:
@@ -136,6 +138,8 @@ class UrlProcessor:
 def handle_raw(value: str, scheme: str) -> str:
     """
     **URL handler:** Return *value* unchanged.
+
+    .. versionadded:: 23.0.0
     """
     return value
 
@@ -143,6 +147,8 @@ def handle_raw(value: str, scheme: str) -> str:
 def handle_script(value: str, scheme: str) -> str:
     """
     **URL handler:** Run *value* as shell script and return its output.
+
+    .. versionadded:: 23.0.0
     """
     try:
         result = subprocess.run(
@@ -170,6 +176,8 @@ def handle_op(value: str, scheme: str) -> str:
     You must must have installed it and set it up in order for this to work.
 
     .. _1Password CLI: https://developer.1password.com/docs/cli/
+
+    .. versionadded:: 23.0.0
     """
     from . import onepassword
 
@@ -185,6 +193,8 @@ class FormatProcessor:
 
     No exceptions are raised.  If format strings are invalid or refer to
     non existing values, they are returned unchanged.
+
+    .. versionadded:: 23.0.0
     """
 
     def __call__(
@@ -245,6 +255,8 @@ class JinjaProcessor:
 
     Raises:
         ModuleNotFoundError: If ``jinja2`` is not installed.
+
+    .. versionadded:: 23.0.0
     """
 
     def __init__(self) -> None:
@@ -257,7 +269,9 @@ class JinjaProcessor:
             ) from e
 
         self._jinja2 = jinja2
-        self._env = jinja2.Environment(autoescape=True)
+        # autoescape msut be False or recursive rendering will not work
+        # properly.
+        self._env = jinja2.Environment(autoescape=False)  # noqa: S701
 
     def __call__(
         self,

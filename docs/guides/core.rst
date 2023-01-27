@@ -756,3 +756,347 @@ Using the new loader works the same way as we've seen before:
 .. note::
 
    The :class:`~typed_settings.loaders.InstanceLoader` was added to Typed Settings in version 1.0.0 but we'll keep this example.
+
+
+Post-processign Settings
+========================
+
+Processors are applied after all settings have been loaded but before the loaded settings are converted to your settings class.
+
+.. note::
+
+   This approach allows you to, e.g., use template strings where an ``int`` is expected –
+   as long as the template results in a valid ``int``.
+
+As with loaders, you can configure a list of processors that are applied one after another.
+
+Interpolation
+-------------
+
+*Interpolation* is basically a simple form of templating.
+The stdlib's configparser_ uses old-school string formatting for this.
+Typed Settings uses new style format strings:
+
+.. code-block:: python
+
+   >>> @ts.settings
+   ... class Settings:
+   ...     a: str
+   ...     b: str
+   ...
+   >>> config_file = getfixture("tmp_path").joinpath("settings.toml")
+   >>> config_file.write_text("""\
+   ... [example]
+   ... a = "spam"
+   ... b = "{a}{a}"
+   ... """)
+   34
+   >>>
+   >>> ts.load_settings(
+   ...     cls=Settings,
+   ...     loaders=ts.default_loaders("example", [config_file]),
+   ...     processors=[ts.processors.FormatProcessor()],
+   ... )
+   Settings(a='spam', b='spamspam')
+
+You can access nested settings like dictionary items but you have to leave out the quotes.
+It is also okay to refer to values that are themselves format strings:
+
+.. code-block:: python
+
+   >>> @ts.settings
+   ... class Nested:
+   ...     x: str
+   ...
+   >>> @ts.settings
+   ... class Settings:
+   ...     a: str
+   ...     b: str
+   ...     nested: Nested
+   ...
+   >>> config_file = getfixture("tmp_path").joinpath("settings.toml")
+   >>> config_file.write_text("""\
+   ... [example]
+   ... a = "{nested[x]}"
+   ... b = "spam"
+   ...
+   ... [example.nested]
+   ... x = "{b}"
+   ... """)
+   67
+   >>>
+   >>> ts.load_settings(
+   ...     cls=Settings,
+   ...     loaders=ts.default_loaders("example", [config_file]),
+   ...     processors=[ts.processors.FormatProcessor()],
+   ... )
+   Settings(a='spam', b='spam', nested=Nested(x='spam'))
+
+.. _configparser: https://docs.python.org/3/library/configparser.html#interpolation-of-values
+
+
+Templating
+----------
+
+If interpolation via format strings is not expressive enough,
+you can also use templating via Jinja_.
+This works very similarly to how Ansible_ templates its variables.
+
+The package :program:`jinja2` is required for this feature:
+
+.. code-block:: bash
+
+   $ pip install -U jinja2
+
+.. code-block:: python
+
+   >>> @ts.settings
+   ... class Settings:
+   ...     a: str
+   ...     b: str
+   ...
+   >>> config_file = getfixture("tmp_path").joinpath("settings.toml")
+   >>> config_file.write_text("""\
+   ... [example]
+   ... a = "spam"
+   ... b = "{{ a }}{{ a }}"
+   ... """)
+   42
+   >>>
+   >>> ts.load_settings(
+   ...     cls=Settings,
+   ...     loaders=ts.default_loaders("example", [config_file]),
+   ...     processors=[ts.processors.JinjaProcessor()],
+   ... )
+   Settings(a='spam', b='spamspam')
+
+You can access nested settings by normal attribute access.
+It is also okay to refer to values that are themselves templates:
+
+.. code-block:: python
+
+   >>> @ts.settings
+   ... class Nested:
+   ...     x: str
+   ...
+   >>> @ts.settings
+   ... class Settings:
+   ...     a: bool
+   ...     b: str
+   ...     nested: Nested
+   ...
+   >>> config_file = getfixture("tmp_path").joinpath("settings.toml")
+   >>> _ = config_file.write_text("""\
+   ... [example]
+   ... a = "{{ nested.x }}"
+   ... b = "spam"
+   ...
+   ... [example.nested]
+   ... x = "{% if b == 'spam'%}True{% else %}False{% endif %}"
+   ... """)
+   >>>
+   >>> ts.load_settings(
+   ...     cls=Settings,
+   ...     loaders=ts.default_loaders("example", [config_file]),
+   ...     processors=[ts.processors.JinjaProcessor()],
+   ... )
+   Settings(a=True, b='spam', nested=Nested(x='True'))
+
+.. _ansible: https://docs.ansible.com/ansible/latest/playbook_guide/playbooks_variables.html#simple-variables
+.. _jinja: http://jinja.pocoo.org/
+
+
+Loading Secrets via Helper Scripts
+----------------------------------
+
+The :class:`~typed_settings.processors.UrlProcessor` allows you to reference and query external resources,
+e.g., scripts or secrets in a given location.
+
+You pass a mapping of URL schemas and handlers to it.
+If a settings value starts with one of the configured schemas,
+the corresponding handler is invoked and the original settings value is replaced with the handler's result.
+
+.. hint::
+
+   The URL processor is not very strict in what "schemas" it accepts.
+   You can pass any string to it as the following example shows.
+
+Let's create a settings class and define some exemplary default values:
+
+.. code-block:: python
+
+   >>> @ts.settings
+   ... class Settings:
+   ...     a: str = "script://echo password"
+   ...     b: str = "helper: echo password"
+   ...     c: str = "raw://script://echo password"
+
+The first two values indicate that the script :code:`echo password` should be run and its output (``"password"``) be used as new settings value.
+
+The ``raw://`` schema for the setting ``c`` works like an escape sequence if the literal value should be ``script://echo password``.
+
+You configure the :class:`~typed_settings.processors.UrlProcessor` by passing a dict that maps your prefixes / schemas to handler functions:
+
+.. code-block:: python
+
+   >>> url_processor = ts.processors.UrlProcessor({
+   ...     "raw://": ts.processors.handle_raw,
+   ...     "script://": ts.processors.handle_script,
+   ...     "helper: ": ts.processors.handle_script,
+   ... })
+
+We can pass the processor to :func:`load_settings()` and check the result:
+
+.. code-block:: python
+
+   >>> ts.load_settings(
+   ...     cls=Settings,
+   ...     loaders=[],
+   ...     processors=[url_processor],
+   ... )
+   Settings(a='password', b='password', c='script://echo password')
+
+
+1Password
+=========
+
+Typed Settings allows you to load settings from your 1Password vault.
+
+There is a :class:`~typed_settings.loaders.OnePasswordLoader` that can load complete items from your vault,
+and the :class:`~typed_settings.processors.UrlProcessor` handler :class:`~typed_settings.processors.handle_op` that queries 1Password via resource URLs (e.g., :samp:`op://{vault}/{item}/{field}`).
+
+In order for this to work, you need to install and setup the `1Password CLI`_.
+When you are done, you can verify that it works by running ``op item list`` in your terminal.
+
+We'll assume that there is a vault named *Test* that contains an item *api-a*.
+That item has the fields *username* and *credential*, and *hostname*.
+
+.. image:: ../_static/1password-test-light.png
+   :align: center
+   :class: only-light
+   :alt: A screenshot of 1Password showing the *Test* item from the *Test* vault.
+
+.. image:: ../_static/1password-test-dark.png
+   :align: center
+   :class: only-dark
+   :alt: A screenshot of 1Password showing the *Test* item from the *Test* vault.
+
+.. _1Password CLI: https://developer.1password.com/docs/cli/
+
+1Password Loader
+----------------
+
+The :class:`~typed_settings.loaders.OnePasswordLoader` needs to be configured with the item name to load and, optionally, the vault name.
+
+You can define this statically or via another settings class,
+which we'll do in the following example.
+
+Let's assume we work on an API client that can be configured with several different instances of that API.
+The config file might look like this:
+
+.. code-block:: python
+
+   >>> config_file = getfixture("tmp_path").joinpath("myapi.toml")
+   >>> _ = config_file.write_text("""\
+   ... [global]
+   ... vault = "Test"
+   ... default_item = "api-a"
+   ...
+   ... # Loaded from 1password
+   ... # [api-a]
+   ... # hostname = ...
+   ... # username = ...
+   ... # credential = ...
+   ...
+   ... [api-b]
+   ... hostname = "https://api-b.example.com"
+   ... username = "bot"
+   ... credential = "1234"
+   ... """)
+
+.. important::
+
+   The field name of the 1Password item *must* match the settings names in order for this to work!
+
+Let's start by defining and loading the global settings:
+
+.. code-block:: python
+
+   >>> @ts.settings
+   ... class GlobalSettings:
+   ...     vault: str
+   ...     default_item: str
+   ...     verify_ssl: bool = True
+   ...
+   >>> global_settings = ts.load(
+   ...     GlobalSettings, "myapi", [config_file], config_file_section="global"
+   ... )
+   >>> global_settings
+   GlobalSettings(vault='Test', default_item='api-a', verify_ssl=True)
+
+We can now define the API settings and load them:
+
+.. code-block:: python
+
+   >>> @ts.settings
+   ... class ApiSettings:
+   ...     hostname: str
+   ...     username: str
+   ...     credential: ts.types.SecretStr
+   ...
+   >>> item = global_settings.default_item  # Or ask the user instead :)
+   >>> # Get the default loaders and let them look for "item" config:
+   >>> loaders = ts.default_loaders("api-a", [config_file])
+   >>> # Add the 1Password loader:
+   >>> op_loader = ts.loaders.OnePasswordLoader(item=item, vault=global_settings.vault)
+   >>> loaders.append(op_loader)
+   >>>
+   >>> ts.load_settings(ApiSettings, loaders=loaders)
+   ApiSettings(hostname='https://api-a.example.com', username='user', credential='*******')
+
+
+URL Processor with 1Password handler
+------------------------------------
+
+The URL processor may be easier to use if you just want to get a single secret from a vault:
+
+- You can specify the vault and item name in the URL and don't need to use another setting for this.
+- The name of your option and the item's field name don't need to match.
+
+We can change the example from above by removing the 1Password loader and adding processors instead.
+We can also remove the *vault* option from the global settings:
+
+.. code-block:: python
+
+   >>> config_file = getfixture("tmp_path").joinpath("myapi.toml")
+   >>> _ = config_file.write_text("""\
+   ... [global]
+   ... default_item = "api-a"
+   ...
+   ... [api-a]
+   ... hostname = "https://api-a.example.com"
+   ... username = "user"
+   ... api-token = "op://Test/api-a/credential"
+   ...
+   ... [api-b]
+   ... hostname = "https://api-b.example.com"
+   ... username = "bot"
+   ... credential = "op://Test/api-b/credential"
+   ... """)
+   ...
+   >>> # We'll skip loading the global settings for the sake of simplicity:
+   >>> item = "api-a"
+   >>>
+   >>> @ts.settings
+   ... class ApiSettings:
+   ...     hostname: str
+   ...     username: str
+   ...     api_token: ts.types.SecretStr
+   ...
+   >>> url_processor = ts.processors.UrlProcessor({
+   ...     "op://": ts.processors.handle_op,
+   ...     # You can add additional handlers to support more password managers
+   ... })
+   >>> loaders = ts.default_loaders(item, [config_file])
+   >>> ts.load_settings(ApiSettings, loaders=loaders, processors=[url_processor])
+   ApiSettings(hostname='https://api-a.example.com', username='user', api_token='*******')
