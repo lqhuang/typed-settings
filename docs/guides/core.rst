@@ -996,23 +996,23 @@ The config file might look like this:
 
 .. code-block:: python
 
-   >>> config_file = getfixture("tmp_path").joinpath("myapi.toml")
-   >>> _ = config_file.write_text("""\
-   ... [global]
-   ... vault = "Test"
-   ... default_item = "api-a"
-   ...
-   ... # Loaded from 1password
-   ... # [api-a]
-   ... # hostname = ...
-   ... # username = ...
-   ... # credential = ...
-   ...
-   ... [api-b]
-   ... hostname = "https://api-b.example.com"
-   ... username = "bot"
-   ... credential = "1234"
-   ... """)
+   config_file = getfixture("tmp_path").joinpath("myapi.toml")
+   _ = config_file.write_text("""\
+   [global]
+   vault = "Test"
+   default_item = "api-a"
+
+   # Loaded from 1password
+   # [api-a]
+   # hostname = ...
+   # username = ...
+   # credential = ...
+
+   [api-b]
+   hostname = "https://api-b.example.com"
+   username = "bot"
+   credential = "1234"
+   """)
 
 .. important::
 
@@ -1022,37 +1022,40 @@ Let's start by defining and loading the global settings:
 
 .. code-block:: python
 
-   >>> @ts.settings
-   ... class GlobalSettings:
-   ...     vault: str
-   ...     default_item: str
-   ...     verify_ssl: bool = True
-   ...
-   >>> global_settings = ts.load(
-   ...     GlobalSettings, "myapi", [config_file], config_file_section="global"
-   ... )
-   >>> global_settings
-   GlobalSettings(vault='Test', default_item='api-a', verify_ssl=True)
+   @ts.settings
+   class GlobalSettings:
+       vault: str
+       default_item: str
+       verify_ssl: bool = True
+
+   global_settings = ts.load(
+       GlobalSettings, "myapi", [config_file], config_file_section="global"
+   )
+   assert global_settings == GlobalSettings(
+       vault='Test', default_item='api-a', verify_ssl=True
+   )
 
 We can now define the API settings and load them:
 
 .. code-block:: python
 
-   >>> @ts.settings
-   ... class ApiSettings:
-   ...     hostname: str
-   ...     username: str
-   ...     credential: ts.types.SecretStr
-   ...
-   >>> item = global_settings.default_item  # Or ask the user instead :)
-   >>> # Get the default loaders and let them look for "item" config:
-   >>> loaders = ts.default_loaders("api-a", [config_file])
-   >>> # Add the 1Password loader:
-   >>> op_loader = ts.loaders.OnePasswordLoader(item=item, vault=global_settings.vault)
-   >>> loaders.append(op_loader)
-   >>>
-   >>> ts.load_settings(ApiSettings, loaders=loaders)
-   ApiSettings(hostname='https://api-a.example.com', username='user', credential='*******')
+   @ts.settings
+   class ApiSettings:
+       hostname: str
+       username: str
+       credential: ts.types.SecretStr
+
+   item = global_settings.default_item  # Or ask the user instead :)
+   # Get the default loaders and let them look for "item" config:
+   loaders = ts.default_loaders("api-a", [config_file])
+   # Add the 1Password loader:
+   op_loader = ts.loaders.OnePasswordLoader(item=item, vault=global_settings.vault)
+   loaders.append(op_loader)
+
+   api_settings = ts.load_settings(ApiSettings, loaders=loaders)
+   assert api_settings == ApiSettings(
+        hostname='https://api-a.example.com', username='user', credential='*******'
+   )
 
 
 URL Processor with 1Password handler
@@ -1068,35 +1071,37 @@ We can also remove the *vault* option from the global settings:
 
 .. code-block:: python
 
-   >>> config_file = getfixture("tmp_path").joinpath("myapi.toml")
-   >>> _ = config_file.write_text("""\
-   ... [global]
-   ... default_item = "api-a"
-   ...
-   ... [api-a]
-   ... hostname = "https://api-a.example.com"
-   ... username = "user"
-   ... api-token = "op://Test/api-a/credential"
-   ...
-   ... [api-b]
-   ... hostname = "https://api-b.example.com"
-   ... username = "bot"
-   ... credential = "op://Test/api-b/credential"
-   ... """)
-   ...
-   >>> # We'll skip loading the global settings for the sake of simplicity:
-   >>> item = "api-a"
-   >>>
-   >>> @ts.settings
-   ... class ApiSettings:
-   ...     hostname: str
-   ...     username: str
-   ...     api_token: ts.types.SecretStr
-   ...
-   >>> url_processor = ts.processors.UrlProcessor({
-   ...     "op://": ts.processors.handle_op,
-   ...     # You can add additional handlers to support more password managers
-   ... })
-   >>> loaders = ts.default_loaders(item, [config_file])
-   >>> ts.load_settings(ApiSettings, loaders=loaders, processors=[url_processor])
-   ApiSettings(hostname='https://api-a.example.com', username='user', api_token='*******')
+   config_file = getfixture("tmp_path").joinpath("myapi.toml")
+   _ = config_file.write_text("""\
+   [global]
+   default_item = "api-a"
+
+   [api-a]
+   hostname = "https://api-a.example.com"
+   username = "user"
+   api-token = "op://Test/api-a/credential"
+
+   [api-b]
+   hostname = "https://api-b.example.com"
+   username = "bot"
+   credential = "op://Test/api-b/credential"
+   """)
+
+   # We'll skip loading the global settings for the sake of simplicity:
+   item = "api-a"
+
+   @ts.settings
+   class ApiSettings:
+       hostname: str
+       username: str
+       api_token: ts.types.SecretStr
+
+   url_processor = ts.processors.UrlProcessor({
+       "op://": ts.processors.handle_op,
+       # You can add additional handlers to support more password managers
+   })
+   loaders = ts.default_loaders(item, [config_file])
+   api_settings = ts.load_settings(ApiSettings, loaders=loaders, processors=[url_processor])
+   assert api_settings == ApiSettings(
+        hostname='https://api-a.example.com', username='user', api_token='*******'
+   )
