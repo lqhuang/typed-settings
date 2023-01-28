@@ -62,6 +62,7 @@ docs = [
     "typed-settings[all]",
     "furo",
     "sphinx",
+    "sphinx-copybutton",
 ]
 lint = [
     "typed-settings[all]",
