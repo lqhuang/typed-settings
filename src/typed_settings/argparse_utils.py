@@ -265,14 +265,14 @@ def cli(
 
         .. code-block:: python
 
-           >>> import typed_settings as ts
-           >>>
-           >>> @ts.settings
-           ... class Settings: ...
-           ...
-           >>> @ts.cli(Settings, "example")
-           ... def cli(settings: Settings) -> None:
-           ...     print(settings)
+           import typed_settings as ts
+
+           @ts.settings
+           class Settings: ...
+
+           @ts.cli(Settings, "example")
+           def cli(settings: Settings) -> None:
+               print(settings)
 
     .. versionchanged:: 23.0.0
        Made *converter* and *type_args_maker* a keyword-only argument
@@ -550,7 +550,6 @@ class BooleanOptionalAction(argparse.Action):
         help: Optional[str] = None,
         metavar: Union[str, Tuple[str, ...], None] = None,
     ) -> None:
-
         _option_strings = []
         for option_string in option_strings:
             _option_strings.append(option_string)

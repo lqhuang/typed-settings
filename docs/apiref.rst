@@ -25,6 +25,14 @@ Core Functions
 Aliases
 -------
 
+.. class:: Secret
+
+   Alias for :class:`typed_settings.types.Secret`
+
+.. class:: SecretStr
+
+   Alias for :class:`typed_settings.types.SecretStr`
+
 .. function:: settings()
 
    Alias for :func:`typed_settings.attrs.settings()`
@@ -167,16 +175,14 @@ They are all also available directly from the :mod:`typed_settings` module.
 
     Example:
 
-    .. code-block:: python
-
-        >>> from typed_settings import settings, secret
-        >>>
-        >>> @settings
-        ... class Settings:
-        ...     password: str = secret()
-        ...
-        >>> Settings(password="1234")
-        Settings(password='*******')
+      >>> from typed_settings import settings, secret
+      >>>
+      >>> @settings
+      ... class Settings:
+      ...     password: str = secret()
+      ...
+      >>> Settings(password="1234")
+      Settings(password='*******')
 
 
 Helpers

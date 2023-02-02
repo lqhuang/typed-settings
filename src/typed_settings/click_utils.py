@@ -128,16 +128,16 @@ def click_options(
 
         .. code-block:: python
 
-           >>> import click
-           >>> import typed_settings as ts
-           >>>
-           >>> @ts.settings
-           ... class Settings: ...
-           ...
-           >>> @click.command()
-           ... @ts.click_options(Settings, "example")
-           ... def cli(settings: Settings) -> None:
-           ...     print(settings)
+           import click
+           import typed_settings as ts
+
+           @ts.settings
+           class Settings: ...
+
+           @click.command()
+           @ts.click_options(Settings, "example")
+           def cli(settings: Settings) -> None:
+               print(settings)
 
     .. versionchanged:: 1.0.0
        Instead of a list of loaders, you can also just pass an application
@@ -265,22 +265,22 @@ def pass_settings(
 
         .. code-block:: python
 
-           >>> import click
-           >>> import typed_settings as ts
-           >>>
-           >>> @ts.settings
-           ... class Settings: ...
-           ...
-           >>> @click.group()
-           ... @click_options(Settings, "example", argname="my_settings")
-           ... def cli(my_settings):
-           ...     pass
-           ...
-           >>> @cli.command()
-           ... # Use the same "argname" as above!
-           ... @pass_settings(argname="my_settings")
-           ... def sub_cmd(*, my_settings):
-           ...     print(my_settings)
+           import click
+           import typed_settings as ts
+
+           @ts.settings
+           class Settings: ...
+
+           @click.group()
+           @click_options(Settings, "example", argname="my_settings")
+           def cli(my_settings):
+               pass
+
+           @cli.command()
+           # Use the same "argname" as above!
+           @pass_settings(argname="my_settings")
+           def sub_cmd(*, my_settings):
+               print(my_settings)
 
     .. versionchanged:: 1.1.0
        Add the *argname* parameter.

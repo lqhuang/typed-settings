@@ -9,6 +9,7 @@ from .argparse_utils import cli
 from .attrs import combine, evolve, option, secret, settings
 from .converters import default_converter, register_strlist_hook
 from .loaders import EnvLoader, FileLoader, TomlFormat
+from .types import Secret, SecretStr
 
 
 __all__ = [
@@ -16,6 +17,9 @@ __all__ = [
     "default_loaders",
     "load",
     "load_settings",
+    # Types
+    "Secret",
+    "SecretStr",
     # File utils
     "find",
     # Loaders

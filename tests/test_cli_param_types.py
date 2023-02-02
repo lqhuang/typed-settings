@@ -735,7 +735,6 @@ def param_cls(request: pytest.FixtureRequest) -> Type[ParamBase]:
 
 
 class TestClick:
-
     prefix = "click"
 
     @pytest.fixture
@@ -795,7 +794,6 @@ class TestClick:
 
 
 class TestArgparse:
-
     prefix = "argparse"
 
     @pytest.fixture

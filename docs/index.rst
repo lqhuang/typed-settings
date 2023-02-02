@@ -29,6 +29,8 @@ You can use Typed settings, e.g., for
 Installation
 ============
 
+.. skip: start
+
 Install and update using `pip <https://pip.pypa.io/en/stable/quickstart/>`_:
 
 .. code-block:: console
@@ -45,6 +47,8 @@ Available features:
 
 - ``typed-settings[click]``: Enable support for Click options
 - ``typed-settings[option-groups]``: Enable support for Click and Click option groups
+
+.. skip: end
 
 
 Example
@@ -78,7 +82,7 @@ This is a very simple example that demonstrates how you can load settings from e
 .. code-block:: console
 
    $ EXAMPLE_OPTION_TWO=2 python example.py
-   Settings(option_one="value", option_two=2)
+   Settings(option_one='value', option_two=2)
 
 
 Documentation

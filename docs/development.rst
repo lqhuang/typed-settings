@@ -2,6 +2,8 @@
 Development
 ===========
 
+.. skip: start
+
 Typed Settings uses Hatch_ for environment management, building and publishing.
 However, you can also use pip_  and virtualenv_, if you like.
 

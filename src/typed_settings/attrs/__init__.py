@@ -317,8 +317,6 @@ def secret(  # type: ignore[no-untyped-def]
 
     Example:
 
-    .. code-block:: python
-
         >>> from typed_settings import settings, secret
         >>>
         >>> @settings
@@ -327,6 +325,7 @@ def secret(  # type: ignore[no-untyped-def]
         ...
         >>> Settings(password="1234")
         Settings(password='*******')
+
     """
     metadata = _get_metadata(metadata, help, click, argparse)
 
@@ -443,41 +442,38 @@ def combine(
 
     Example:
 
-        .. code-block:: python
-
-           >>> import typed_settings as ts
-           >>>
-           >>> @ts.settings
-           ... class Nested1:
-           ...     a: str = ""
-           >>>
-           >>> @ts.settings
-           ... class Nested2:
-           ...     a: str = ""
-           >>>
-           >>> # Static composition
-           >>> @ts.settings
-           ... class Composed1:
-           ...     a: str = ""
-           ...     n1: Nested1 = Nested1()
-           ...     n2: Nested2 = Nested2()
-           ...
-           >>> Composed1()
-           Composed1(a='', n1=Nested1(a=''), n2=Nested2(a=''))
-           >>>
-           >>> # Dynamic composition
-           >>> @ts.settings
-           ... class BaseSettings:
-           ...     a: str = ""
-           >>>
-           >>> Composed2 = ts.combine(
-           ...     "Composed2",
-           ...     BaseSettings,
-           ...     {"n1": Nested1(), "n2": Nested2()},
-           ... )
-           >>> Composed2()
-           Composed2(a='', n1=Nested1(a=''), n2=Nested2(a=''))
-
+        >>> import typed_settings as ts
+        >>>
+        >>> @ts.settings
+        ... class Nested1:
+        ...     a: str = ""
+        >>>
+        >>> @ts.settings
+        ... class Nested2:
+        ...     a: str = ""
+        >>>
+        >>> # Static composition
+        >>> @ts.settings
+        ... class Composed1:
+        ...     a: str = ""
+        ...     n1: Nested1 = Nested1()
+        ...     n2: Nested2 = Nested2()
+        ...
+        >>> Composed1()
+        Composed1(a='', n1=Nested1(a=''), n2=Nested2(a=''))
+        >>>
+        >>> # Dynamic composition
+        >>> @ts.settings
+        ... class BaseSettings:
+        ...     a: str = ""
+        >>>
+        >>> Composed2 = ts.combine(
+        ...     "Composed2",
+        ...     BaseSettings,
+        ...     {"n1": Nested1(), "n2": Nested2()},
+        ... )
+        >>> Composed2()
+        Composed2(a='', n1=Nested1(a=''), n2=Nested2(a=''))
 
     .. versionadded:: 1.1.0
     """

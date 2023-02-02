@@ -44,6 +44,8 @@ def test_dir():
     assert names == [
         "EnvLoader",
         "FileLoader",
+        "Secret",
+        "SecretStr",
         "TomlFormat",
         "cli",
         "click_options",

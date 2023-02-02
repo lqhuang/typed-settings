@@ -12,26 +12,35 @@ At the end you'll find some hints how to proceed from here.
 Installation
 ============
 
-Install *typed-settings* into your virtualenv_:
+Install :program:`typed-settings` into your virtualenv_:
+
+.. skip: start
 
 .. code-block:: console
 
    $ python -m pip install typed-settings
-   ...
-   Successfully installed ... typed-settings-x.y.z
 
-You can install dependencies for optional features via
+Typed Settings has some optional dependencies for some features that some people might not need:
 
-.. code-block:: console
+Support for :program:`Click` options:
+  .. code-block:: console
 
-   $ python -m pip install typed-settings[<feature>]
+     $ python -m pip install typed-settings[click]
 
-Available features:
+Support for :program:`Click` and :program:`click-option-groups`:
+  .. code-block:: console
 
-- ``typed-settings[click]``: Enable support for Click options
-- ``typed-settings[option-groups]``: Enable support for Click and Click option groups
-- ``typed-settings[jinja]``: Enable support for value interpolation with Jinja templates
-- ``typed-settings[all]``: Install all optional requirements
+     $ python -m pip install typed-settings[option-groups]
+
+Support for value interpolation with :program:`Jinja` templates:
+  .. code-block:: console
+
+     $ python -m pip install typed-settings[jinja]
+
+Install all optional requirements:
+  .. code-block:: console
+
+     $ python -m pip install typed-settings[all]
 
 .. hint::
 
@@ -40,6 +49,8 @@ Available features:
    .. code-block:: console
 
       $ python -m pip install typed-settings[click,jinja]
+
+.. skip: end
 
 
 Basic Settings Definition and Loading
@@ -51,15 +62,16 @@ You can either use the decorators provided by ``attrs`` or the :func:`~typed_set
 
 .. code-block:: python
 
-   >>> import typed_settings as ts
-   >>>
-   >>> @ts.settings
-   ... class Settings:
-   ...     username: str = ""
-   ...     password: str = ts.secret(default="")
-   ...
-   >>> Settings("monty", "S3cr3t!")
-   Settings(username='monty', password='*******')
+   import typed_settings as ts
+
+   @ts.settings
+   class Settings:
+       username: str = ""
+       password: ts.SecretStr = ""
+
+   settings = Settings("monty", ts.SecretStr("S3cr3t!"))
+
+   assert str(settings) == "Settings(username='monty', password='*******')"
 
 :func:`~typed_settings.attrs.secret()` is a wrapper for :func:`attrs.field()` and masks secrets when the settings instance is being printed.
 
@@ -71,8 +83,17 @@ Instead, you call the function :func:`load()`:
 
 .. code-block:: python
 
-   >>> ts.load(Settings, appname="myapp")
-   Settings(username='', password='')
+   import typed_settings as ts
+
+   @ts.settings
+   class Settings:
+       username: str = ""
+       password: ts.SecretStr = ""
+
+   settings = ts.load(Settings, appname="myapp")
+
+   # Secrets are obfuscated when printing settings:
+   assert settings == Settings(username='', password='')
 
 The first argument of that function is your settings class and an instance of that class is returned by it.
 The second argument is your *appname*.
@@ -97,15 +118,25 @@ Typed Settings will automatically look for environment variables matching :samp:
 
 .. code-block:: python
 
-   >>> # Temporarily set some environment variables:
-   >>> monkeypatch = getfixture("monkeypatch")
-   >>> monkeypatch.setenv("MYAPP_USERNAME", "monty")
-   >>> monkeypatch.setenv("MYAPP_PASSWORD", "S3cr3t!")
-   >>>
-   >>> ts.load(Settings, appname="myapp")
-   Settings(username='monty', password='*******')
-   >>>
-   >>> monkeypatch.undo()
+   import os
+   import typed_settings as ts
+
+   @ts.settings
+   class Settings:
+       username: str = ""
+       password: ts.SecretStr = ""
+
+   # Set some environment variables to load settings from:
+   os.environ["MYAPP_USERNAME"] = "monty"
+   os.environ["MYAPP_PASSWORD"] = "S3cr3t!"
+
+   settings = ts.load(Settings, appname="myapp")
+   assert settings == Settings(username="monty", password="S3cr3t!")
+
+.. invisible-code-block: python
+
+   del os.environ["MYAPP_USERNAME"]
+   del os.environ["MYAPP_PASSWORD"]
 
 You can optionally change the prefix or disable loading environment variables completely.
 The guide :ref:`guide-settings-from-env-vars` shows you how.
@@ -130,20 +161,33 @@ Settings from Config Files
 To pass secrets or to persist settings (and avoid exporting environment variables again and again), you may want to use config files.
 Typed Settings supports TOML files (`Why?`_) out-of-the-box and looks for the *appname* section by default:
 
+.. code-block:: toml
+
+   # settings.toml
+   [myapp]
+   username = "monty"
+   password = "S3cr3t!"
+
 .. code-block:: python
 
-   >>> from pathlib import Path
-   >>>
-   >>> # Create a temporary config file:
-   >>> tmp_path: Path = getfixture("tmp_path")
-   >>> settings_file = tmp_path.joinpath("settings.toml")
-   >>> settings_file.write_text("""
-   ... [myapp]
-   ... username = "monty"
-   ... password = "S3cr3t!"
-   ... """)
-   49
-   >>> ts.load(Settings, appname="myapp", config_files=[settings_file])
+   # settings.py
+   from pathlib import Path
+
+   import typed_settings as ts
+
+
+   @ts.settings
+   class Settings:
+       username: str = ""
+       password: ts.SecretStr = ""
+
+
+   settings = ts.load(Settings, appname="myapp", config_files=["settings.toml"])
+   print(settings)
+
+.. code-block:: console
+
+   $ python settings.py
    Settings(username='monty', password='*******')
 
 You can also load settings from multiple files.
@@ -163,14 +207,35 @@ Take `black <https://black.readthedocs.io>`_, for example, which searches for :f
 
 You can do the same with Typed Settings:
 
-.. code-block:: python
+.. code-block:: toml
 
-   >>> monkeypatch.chdir(tmp_path)
-   >>>
-   >>> ts.load(Settings, appname="myapp", config_files=[ts.find("settings.toml")])
+   # settings.toml
+   [myapp]
+   username = "monty"
+   password = "S3cr3t!"
+
+.. code-block:: python
+   :emphasize-lines: 13
+
+   # settings.py
+   from pathlib import Path
+
+   import typed_settings as ts
+
+
+   @ts.settings
+   class Settings:
+       username: str = ""
+       password: ts.SecretStr = ""
+
+
+   settings = ts.load(Settings, appname="myapp", config_files=[ts.find("settings.toml")])
+   print(settings)
+
+.. code-block:: console
+
+   $ python settings.py
    Settings(username='monty', password='*******')
-   >>>
-   >>> monkeypatch.undo()
 
 :func:`~typed_settings.find()` returns a single path, so you can combine its result with a static list of files as shown in the section above.
 
@@ -182,14 +247,36 @@ A third way to specify config files is via an environment variable.
 By default, Typed Settings looks for a variable named :samp:`{APPNAME}_SETTINGS` (you can change or disable this).
 The variable can contain one ore more paths separated by a colon (``:``):
 
-.. code-block:: python
+.. code-block:: toml
 
-   >>> monkeypatch.setenv("MYAPP_SETTINGS", str(settings_file))
-   >>>
-   >>> ts.load(Settings, appname="myapp")
+   # settings.toml
+   [myapp]
+   username = "monty"
+   password = "S3cr3t!"
+
+.. code-block:: python
+   :emphasize-lines: 13
+
+   # settings.py
+   from pathlib import Path
+
+   import typed_settings as ts
+
+
+   @ts.settings
+   class Settings:
+       username: str = ""
+       password: ts.SecretStr = ""
+
+
+   settings = ts.load(Settings, appname="myapp")
+   print(settings)
+
+.. code-block:: console
+   :emphasize-lines: 1
+
+   $ MYAPP_SETTINGS="settings.toml" python settings.py
    Settings(username='monty', password='*******')
-   >>>
-   >>> monkeypatch.undo()
 
 Config files specified via an environment variable are loaded *after* statically defined ones.
 
@@ -210,39 +297,48 @@ The loaded values then serve as defaults for the corresponding CLI options.
 
 Your CLI function receives all options as the single instance of your settings class.
 
-Below you'll find two examples how to generate an Argparse and a Click CLI for the following settings:
-
-.. code-block:: python
-
-   >>> @ts.settings
-   ... class Settings:
-   ...     username: str = ts.option(help="Your username")
-   ...     password: str = ts.secret(default="", help="Your password")
+Below you'll find two examples how to generate an Argparse and a Click CLI.
 
 Argparse
 --------
 
 .. code-block:: python
 
-   >>> @ts.cli(Settings, "myapp")
-   ... def cli(settings: Settings) -> None:
-   ...     """My App"""
-   ...     print(settings)
-   ...
-   >>> invoke(cli, "--help")
-   usage: cli [-h] --username TEXT [--password TEXT]
-   <BLANKLINE>
+   # cli.py
+   import typed_settings as ts
+
+
+   @ts.settings
+   class Settings:
+       username: str = ts.option(help="Your username")
+       password: str = ts.secret(default="", help="Your password")
+
+
+   @ts.cli(Settings, "myapp")
+   def cli(settings: Settings) -> None:
+       """My App"""
+       print(settings)
+
+
+   if __name__ == "__main__":
+       cli()
+
+.. code-block:: console
+
+   $ python cli.py --help
+   usage: cli.py [-h] --username TEXT [--password TEXT]
+
    My App
-   <BLANKLINE>
+
    options:
      -h, --help       show this help message and exit
-   <BLANKLINE>
+
    Settings:
      Settings options
-   <BLANKLINE>
+
      --username TEXT  Your username [required]
      --password TEXT  Your password [default: ]
-   >>> invoke(cli, "--username=guido", "--password=1234")
+   $ python cli.py --username="guido" --password="1234"
    Settings(username='guido', password='*******')
 
 Click
@@ -250,28 +346,39 @@ Click
 
 .. code-block:: python
 
-   >>> import click
-   >>>
-   >>>
-   >>> @click.command()
-   ... @ts.click_options(Settings, "myapp")
-   ... def cli(settings):
-   ...     """My App"""
-   ...     print(settings)
-   ...
-   >>> invoke(cli, "--help")
-   Usage: cli [OPTIONS]
-   <BLANKLINE>
+   # cli.py
+   import click
+   import typed_settings as ts
+
+
+   @ts.settings
+   class Settings:
+       username: str = ts.option(help="Your username")
+       password: str = ts.secret(default="", help="Your password")
+
+
+   @click.command()
+   @ts.click_options(Settings, "myapp")
+   def cli(settings):
+       """My App"""
+       print(settings)
+
+   if __name__ == "__main__":
+       cli()
+
+.. code-block:: console
+
+   $ python cli.py --help
+   Usage: cli.py [OPTIONS]
+
      My App
-   <BLANKLINE>
+
    Options:
      --username TEXT  Your username  [required]
      --password TEXT  Your password  [default: ]
      --help           Show this message and exit.
-   <BLANKLINE>
-   >>> invoke(cli, "--username=guido", "--password=1234")
+   $ python cli.py --username="guido" --password="1234"
    Settings(username='guido', password='*******')
-   <BLANKLINE>
 
 .. _argparse: https://docs.python.org/3/library/argparse.html
 .. _click: https://click.palletsprojects.com
@@ -287,8 +394,10 @@ Frozen Settings and Updating Them
 
 Settings are mutable by default but can optionally be made immutable:
 
-.. code-block:: python
+::
 
+   >>> import typed_settings as ts
+   >>>
    >>> @ts.settings(frozen=True)
    ... class FrozenSettings:
    ...     x: int
@@ -302,7 +411,7 @@ Settings are mutable by default but can optionally be made immutable:
 
 However, this does not extend to mutable option values:
 
-.. code-block:: python
+::
 
    >>> settings.y.append(4)
    >>> print(settings)
@@ -313,7 +422,7 @@ Immutable settings can be desirable because they prevent you or your users from 
 However, when you are testing your app, you may still want to modify your settings.
 You can create an updated copy of your settings via :func:`~typed_settings.attrs.evolve()`, which is a recursive version of :func:`attrs.evolve()`:
 
-.. code-block:: python
+::
 
    >>> updated = ts.evolve(settings, x=7)
    >>> print(settings)

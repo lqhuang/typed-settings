@@ -82,6 +82,7 @@ test = [
     "pytest-cov",
     "pytest>=7.2.0",
     "rich-click>=1.6",
+    "sybil",
     "typing-extensions",
 ]
 dev = [  # Everything needed for development
@@ -188,3 +189,4 @@ disallow_untyped_defs = true
 
 [tool.pytest.ini_options]
 addopts = "--doctest-glob='*.md' --doctest-glob='*.rst' --doctest-modules --ignore=docs/_build"
+# addopts = "-p no:doctest"

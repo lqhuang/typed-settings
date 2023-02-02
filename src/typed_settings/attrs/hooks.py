@@ -44,33 +44,31 @@ def make_auto_converter(converter: BaseConverter) -> "_FieldTransformer":
 
     Example:
 
-        .. code-block:: python
-
-            >>> from datetime import datetime
-            >>> from pathlib import Path
-            >>>
-            >>> import attrs
-            >>> import cattrs
-            >>>
-            >>> converter = cattrs.Converter()
-            >>> converter.register_structure_hook(
-            ...     datetime, lambda v, _t: datetime.fromisoformat(v)
-            ... )
-            >>> converter.register_structure_hook(Path, lambda v, t: t(v))
-            >>>
-            >>> auto_convert = make_auto_converter(converter)
-            >>>
-            >>> @attrs.define(field_transformer=auto_convert)
-            ... class C:
-            ...     a: Path
-            ...     b: datetime
-            ...
-            >>> inst = C(a="spam.md", b="2020-05-04")
-            >>> inst
-            C(a=PosixPath('spam.md'), b=datetime.datetime(2020, 5, 4, 0, 0))
-            >>> inst.b = "2022-01-01"
-            >>> inst
-            C(a=PosixPath('spam.md'), b=datetime.datetime(2022, 1, 1, 0, 0))
+        >>> from datetime import datetime
+        >>> from pathlib import Path
+        >>>
+        >>> import attrs
+        >>> import cattrs
+        >>>
+        >>> converter = cattrs.Converter()
+        >>> converter.register_structure_hook(
+        ...     datetime, lambda v, _t: datetime.fromisoformat(v)
+        ... )
+        >>> converter.register_structure_hook(Path, lambda v, t: t(v))
+        >>>
+        >>> auto_convert = make_auto_converter(converter)
+        >>>
+        >>> @attrs.define(field_transformer=auto_convert)
+        ... class C:
+        ...     a: Path
+        ...     b: datetime
+        ...
+        >>> inst = C(a="spam.md", b="2020-05-04")
+        >>> inst
+        C(a=PosixPath('spam.md'), b=datetime.datetime(2020, 5, 4, 0, 0))
+        >>> inst.b = "2022-01-01"
+        >>> inst
+        C(a=PosixPath('spam.md'), b=datetime.datetime(2022, 1, 1, 0, 0))
 
     """
 

@@ -81,21 +81,19 @@ def register_strlist_hook(
 
     Example:
 
-        .. code-block:: python
-
-            >>> from typing import List
-            >>>
-            >>> converter = default_converter()
-            >>> register_strlist_hook(converter, sep=":")
-            >>> converter.structure("1:2:3", List[int])
-            [1, 2, 3]
-            >>>
-            >>> import json
-            >>>
-            >>> converter = default_converter()
-            >>> register_strlist_hook(converter, fn=json.loads)
-            >>> converter.structure("[1,2,3]", List[int])
-            [1, 2, 3]
+        >>> from typing import List
+        >>>
+        >>> converter = default_converter()
+        >>> register_strlist_hook(converter, sep=":")
+        >>> converter.structure("1:2:3", List[int])
+        [1, 2, 3]
+        >>>
+        >>> import json
+        >>>
+        >>> converter = default_converter()
+        >>> register_strlist_hook(converter, fn=json.loads)
+        >>> converter.structure("[1,2,3]", List[int])
+        [1, 2, 3]
 
 
     """

@@ -48,6 +48,10 @@ html_title = "Typed Settings"
 # Autodoc
 autodoc_member_order = "bysource"
 
+# Copybutton
+copybutton_prompt_text = r">>> |\.\.\. |\$ "
+copybutton_prompt_is_regexp = True
+
 # Intersphinx
 intersphinx_mapping = {
     "python": ("https://docs.python.org/3/", None),
