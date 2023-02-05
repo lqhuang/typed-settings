@@ -4,24 +4,49 @@
 
 ### Deprecated
 
-- 🗑 This is the last version that supports Python 3.7.
+- 🗑 The next regular release (23.1.0) will drop support for Python 3.7.
+
+- 🗑 The next regular release (23.1.0) will introduce breaking changes
+  to the converter API and settings dict.
+  See [!16] for details and for feedback.
+
+  Your code will break when:
+
+  - You extend the default converter or pass in your own
+  - You have written custom loaders
 
 ### Changed
 
-- 📦 Switch to [CalVer] with scheme `YY.MINOR.MICRO` (same as pip, attrs and cattrs).
+- 📦 Switch to [CalVer] with scheme `YY.MINOR.MICRO` (same as pip, attrs
+  and cattrs).
+
 - ♻️ Make `dict_utils` part of the public API.
+
+- 📝 Added a copy button to the examples in the docs.
+  Prompt characters and out for doctest examples or bash are not
+  copied, only the actual code / command.
+
+- 📝 Start migration to Markdown docs with [MyST-Parser].
+
+- 📝 Start using [Sybil] for doctests and examples.
 
 ### Added
 
-- ✨ Add settings (post) processors.
-  They allow modifying loaded settings before they are passed to your app.
-  This allows, e.g., using settings templates/interpolation or
-  loading secrets from external resources via helper scripts.
-  (See [#19])
-- ✨ Add a 1Password loader and a `op://` resource handler for the new URL processor (see [#19]).
+- ✨ Added settings (post) processors.  They allow modifying loaded
+  settings before they are passed to your app.  This allows, e.g., using
+  settings templates/interpolation or loading secrets from external
+  resources via helper scripts. (See [#19])
 
+- ✨ Added a 1Password loader.
+
+- ✨ Added an `op://` resource handler for the new URL processor (see
+  [#19]).
+
+[!16]: https://gitlab.com/sscherfke/typed-settings/-/merge_requests/16
 [#19]: https://gitlab.com/sscherfke/typed-settings/-/issues/19
 [calver]: https://calver.org
+[myst-parser]: https://myst-parser.readthedocs.io
+[sybil]: https://sybil.readthedocs.io
 
 
 ## 2.0.2 (2023-01-18)
