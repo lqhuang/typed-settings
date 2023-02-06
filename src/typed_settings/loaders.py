@@ -32,7 +32,7 @@ from .exceptions import (
     InvalidOptionsError,
     UnknownFormatError,
 )
-from .types import OptionList, SettingsClass, SettingsDict
+from .types import OptionInfo, OptionList, SettingsClass, SettingsDict
 
 
 LOGGER = logging.getLogger("typed_settings")
@@ -157,13 +157,12 @@ class EnvLoader:
         Return:
             A dict with the loaded settings.
         """
-        prefix = self.prefix
-        LOGGER.debug(f"Looking for env vars with prefix: {prefix}")
+        LOGGER.debug(f"Looking for env vars with prefix: {self.prefix}")
 
         env = os.environ
         values: Dict[str, Any] = {}
         for o in options:
-            varname = f"{prefix}{o.path.upper().replace('.', '_')}"
+            varname = self.get_envvar(o)
             if varname in env:
                 LOGGER.debug(f"Env var found: {varname}")
                 set_path(values, o.path, env[varname])
@@ -171,6 +170,12 @@ class EnvLoader:
                 LOGGER.debug(f"Env var not found: {varname}")
 
         return values
+
+    def get_envvar(self, option: OptionInfo) -> str:
+        """
+        Return the envvar name for the he given option.
+        """
+        return f"{self.prefix}{option.path.upper().replace('.', '_')}"
 
 
 class FileLoader:

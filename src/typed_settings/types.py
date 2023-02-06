@@ -151,3 +151,9 @@ class Secret(Generic[T]):
         Return the wrapped secret value.
         """
         return self._secret_value
+
+
+SECRETS_TYPES = (Secret, SecretStr)
+"""
+Types that mask the repr of their values.
+"""

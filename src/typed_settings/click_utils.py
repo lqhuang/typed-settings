@@ -3,7 +3,7 @@ Utilities for generating Click options.
 """
 from datetime import datetime
 from enum import Enum
-from functools import update_wrapper
+from functools import partial, update_wrapper
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -38,9 +38,18 @@ from .cli_utils import (
 )
 from .converters import BaseConverter, default_converter, from_dict
 from .dict_utils import deep_options, group_options, merge_dicts, set_path
-from .loaders import Loader
+from .loaders import EnvLoader, Loader
 from .processors import Processor
-from .types import ST, OptionInfo, Secret, SettingsClass, SettingsDict, T
+from .types import (
+    SECRET_REPR,
+    SECRETS_TYPES,
+    ST,
+    OptionInfo,
+    SecretStr,
+    SettingsClass,
+    SettingsDict,
+    T,
+)
 
 
 if PY_38:
@@ -95,6 +104,7 @@ def click_options(
     type_args_maker: Optional[TypeArgsMaker] = None,
     argname: Optional[str] = None,
     decorator_factory: "Optional[DecoratorFactory]" = None,
+    show_envvars_in_help: bool = False,
 ) -> Callable[["Callable[Concatenate[ST, P], R]"], "Callable[P, R]"]:
     """
     **Decorator:** Generate :mod:`click` options for a CLI which override
@@ -130,6 +140,10 @@ def click_options(
             generates normal Click options via :class:`ClickOptionFactory`.
 
             .. _option groups: https://click-option-group.readthedocs.io
+
+        show_envvars_in_help: If ``True`` and if the
+            :class:`~typed_settings.loaders.EnvLoader` is being used, show the
+            names of the environment variable a value is loaded from.
 
     Return:
         A decorator for a click command.
@@ -180,6 +194,12 @@ def click_options(
     if isinstance(loaders, str):
         loaders = default_loaders(loaders)
 
+    env_loader: Optional[EnvLoader] = None
+    if show_envvars_in_help:
+        _loaders = [ldr for ldr in loaders if isinstance(ldr, EnvLoader)]
+        if _loaders:
+            env_loader = _loaders[-1]
+
     settings_dict = _load_settings(
         cls, options, loaders, processors=processors
     )
@@ -197,6 +217,7 @@ def click_options(
         type_args_maker,
         argname,
         decorator_factory,
+        env_loader,
     )
     return wrapper
 
@@ -210,6 +231,7 @@ def _get_wrapper(
     type_args_maker: TypeArgsMaker,
     argname: Optional[str],
     decorator_factory: "DecoratorFactory",
+    env_loader: Optional[EnvLoader],
 ) -> Callable[["Callable[Concatenate[ST, P], R]"], "Callable[P, R]"]:
     def pass_settings(
         f: "Callable[Concatenate[ST, P], R]",
@@ -246,12 +268,14 @@ def _get_wrapper(
                 default = get_default(
                     oinfo.field, oinfo.path, settings_dict, converter
                 )
+                envvar = env_loader.get_envvar(oinfo) if env_loader else None
                 option = _mk_option(
                     option_decorator,
                     oinfo.path,
                     oinfo.field,
                     default,
                     type_args_maker,
+                    envvar,
                 )
                 f = option(f)
             f = decorator_factory.get_group_decorator(g_cls)(f)
@@ -351,6 +375,11 @@ def pass_settings(
     return decorator(f)
 
 
+class TSOption(click.Option):
+    def value_from_envvar(self, ctx: click.Context) -> Optional[Any]:
+        return None
+
+
 class DecoratorFactory(Protocol):
     """
     **Protocol:** Methods that a Click decorator factory must implement.
@@ -387,7 +416,7 @@ class ClickOptionFactory:
         """
         Return :func:`click.option()`.
         """
-        return click.option
+        return partial(click.option, cls=TSOption)
 
     def get_group_decorator(self, settings_cls: SettingsClass) -> Decorator:
         """
@@ -404,7 +433,7 @@ class OptionGroupFactory:
 
     def __init__(self) -> None:
         try:
-            from click_option_group import optgroup
+            from click_option_group import GroupedOption, optgroup
         except ImportError as e:
             raise ModuleNotFoundError(
                 "Module 'click_option_group' not installed.  Please run "
@@ -412,11 +441,17 @@ class OptionGroupFactory:
             ) from e
         self.optgroup = optgroup
 
+        class TSGroupedOption(GroupedOption):
+            def value_from_envvar(self, ctx: click.Context) -> Optional[Any]:
+                return None
+
+        self.opt_cls = TSGroupedOption
+
     def get_option_decorator(self) -> Callable[..., Decorator]:
         """
         Return :class:`click_option_group.optgroup` option.
         """
-        return self.optgroup.option
+        return partial(self.optgroup.option, cls=self.opt_cls)
 
     def get_group_decorator(self, settings_cls: SettingsClass) -> Decorator:
         """
@@ -504,8 +539,11 @@ class ClickHandler:
             kwargs["default"] = default
         elif is_optional:
             kwargs["default"] = None
-        if type and issubclass(type, bool):
-            kwargs["is_flag"] = True
+        if type:
+            if issubclass(type, bool):
+                kwargs["is_flag"] = True
+            elif issubclass(type, SecretStr):
+                kwargs["metavar"] = "TEXT"
 
         return kwargs
 
@@ -571,6 +609,7 @@ def _mk_option(
     field: attrs.Attribute,
     default: Any,
     type_args_maker: TypeArgsMaker,
+    envvar: Optional[str],
 ) -> Decorator:
     """
     Recursively creates click options and returns them as a list.
@@ -579,6 +618,9 @@ def _mk_option(
 
     # The option type specifies the default option kwargs
     kwargs = type_args_maker.get_kwargs(field.type, default)
+    if envvar:
+        kwargs["envvar"] = envvar
+        kwargs["show_envvar"] = True
 
     param_decls: Tuple[str, ...]
     user_param_decls: Union[str, Sequence[str]]
@@ -606,14 +648,13 @@ def _mk_option(
     # below.  Also replace "None" with "".
     kwargs["help"] = user_config.pop("help", None) or ""
 
-    if isinstance(field.repr, _SecretRepr):
-        kwargs["show_default"] = False
-        if "default" in kwargs:  # pragma: no cover
-            kwargs[
-                "help"
-            ] = f"{kwargs['help']}  [default: {Secret(kwargs['default'])}]"
-
-    if "default" not in kwargs:
+    kwtyp: Any = kwargs.get("type")
+    if "default" in kwargs:  # pragma: no cover
+        if isinstance(field.repr, _SecretRepr) or (
+            isinstance(kwtyp, type) and issubclass(kwtyp, SECRETS_TYPES)
+        ):
+            kwargs["show_default"] = SECRET_REPR
+    else:
         kwargs["required"] = True
 
     # The user has the last word, though.
