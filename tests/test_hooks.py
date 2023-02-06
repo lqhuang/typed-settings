@@ -43,7 +43,9 @@ class TestTransformHook:
         """
         results: List[Tuple[str, Optional[type]]] = []
 
-        def hook(cls, attribs: List[attr.Attribute]) -> List[attr.Attribute]:
+        def hook(
+            cls: type, attribs: List[attr.Attribute]
+        ) -> List[attr.Attribute]:
             results[:] = [(a.name, a.type) for a in attribs]
             return attribs
 

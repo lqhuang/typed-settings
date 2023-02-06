@@ -287,8 +287,8 @@ class TestLoadSettings:
             def __init__(self, x: int):
                 self.attr = x
 
-            def __eq__(self, other):
-                return self.attr == other.attr
+            def __eq__(self, other: object) -> bool:
+                return self.attr == other.attr  # type: ignore
 
         @settings
         class Settings:

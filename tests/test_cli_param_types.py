@@ -18,6 +18,7 @@ from typing import (
     Tuple,
     Type,
     Union,
+    cast,
 )
 
 import click
@@ -55,7 +56,7 @@ def make_cli(settings_cls: Type[ST]) -> Cli:
     class Runner(click.testing.CliRunner):
         settings: Optional[ST]
 
-        def invoke(self, *args, **kwargs) -> CliResult:
+        def invoke(self, *args: Any, **kwargs: Any) -> CliResult:
             result = super().invoke(*args, **kwargs)
             cli_result: CliResult[ST] = CliResult(**result.__dict__)
             try:
@@ -66,7 +67,7 @@ def make_cli(settings_cls: Type[ST]) -> Cli:
 
     runner = Runner()
 
-    def run(*args, **kwargs) -> CliResult:
+    def run(*args: Any, **kwargs: Any) -> CliResult:
         @click.group(invoke_without_command=True)
         @click_options(settings_cls, default_loaders("test"))
         def cli(settings: ST) -> None:
@@ -124,9 +125,9 @@ class ParamBase:
     cli_options: List[str] = []
     expected_settings: Any = None
 
-    classes: ClassVar[List["ParamBase"]] = []
+    classes: ClassVar[List[Type["ParamBase"]]] = []
 
-    def __init_subclass__(cls, **kwargs):
+    def __init_subclass__(cls, **kwargs: Any) -> None:
         super().__init_subclass__(**kwargs)
         cls.classes.append(cls)
 
@@ -585,7 +586,7 @@ class TestTupleParam(ParamBase):
     cli_options = ["--a=1", "--a=2", "--b", "1", "2.3", "spam"]
     expected_settings = Settings((1, 2), (1, 2.3, "spam"))
 
-    def test_wrong_default_length(self):
+    def test_wrong_default_length(self) -> None:
         """
         Default values for tuples must have the exact shape defined in by
         their type.
@@ -731,7 +732,7 @@ class TestNoTypeParam(ParamBase):
 
 @pytest.fixture(params=ParamBase.classes)
 def param_cls(request: pytest.FixtureRequest) -> Type[ParamBase]:
-    return request.param
+    return cast(Type[ParamBase], request.param)
 
 
 class TestClick:
@@ -741,7 +742,7 @@ class TestClick:
     def cli(self, param_cls: Type[ParamBase]) -> Cli:
         return make_cli(param_cls.Settings)
 
-    def test_help(self, param_cls: Type[ParamBase], cli: Cli[ST]):
+    def test_help(self, param_cls: Type[ParamBase], cli: Cli[ST]) -> None:
         """
         The genereated CLI has a proper help output.
         """
@@ -758,7 +759,7 @@ class TestClick:
         param_cls: Type[ParamBase],
         cli: Cli[ST],
         monkeypatch: pytest.MonkeyPatch,
-    ):
+    ) -> None:
         """
         Previously loaded settings (e.g., from env vars) can be converted
         to click options.
@@ -776,7 +777,7 @@ class TestClick:
             "Options:",
         ] + param_cls.get_expected_env_var_defaults(self.prefix)
 
-    def test_defaults(self, param_cls: Type[ParamBase], cli: Cli[ST]):
+    def test_defaults(self, param_cls: Type[ParamBase], cli: Cli[ST]) -> None:
         """
         Arguments of the generated CLI have default values.
         """
@@ -784,7 +785,7 @@ class TestClick:
         assert result.output == ""
         assert result.settings == param_cls.expected_defaults
 
-    def test_options(self, param_cls: Type[ParamBase], cli: Cli[ST]):
+    def test_options(self, param_cls: Type[ParamBase], cli: Cli[ST]) -> None:
         """
         Default values can be overriden by passing the corresponding args.
         """
@@ -827,7 +828,7 @@ class TestArgparse:
         arg_parser: ArgParser,
         capsys: pytest.CaptureFixture,
         monkeypatch: pytest.MonkeyPatch,
-    ):
+    ) -> None:
         """
         Previously loaded settings (e.g., from env vars) can be converted
         to click options.
@@ -852,7 +853,7 @@ class TestArgparse:
         self,
         param_cls: Type[ParamBase],
         arg_parser: ArgParser,
-    ):
+    ) -> None:
         """
         Arguments of the generated CLI have default values.
         """
@@ -863,7 +864,7 @@ class TestArgparse:
         self,
         param_cls: Type[ParamBase],
         arg_parser: ArgParser,
-    ):
+    ) -> None:
         """
         Default values can be overriden by passing the corresponding args.
         """

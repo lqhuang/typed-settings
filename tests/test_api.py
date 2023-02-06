@@ -1,6 +1,9 @@
 """
 Test that all public functions are properly exposed.
 """
+from pathlib import Path
+from typing import Type
+
 import pytest
 
 import typed_settings as ts
@@ -22,8 +25,10 @@ classes = [Settings, FrozenSettings]
 
 
 @pytest.mark.parametrize("cls", classes)
-def test_load(cls, tmp_path):
-    """We can load settings with a class decorated with our decorator."""
+def test_load(cls: Type[Settings], tmp_path: Path) -> None:
+    """
+    We can load settings with a class decorated with our decorator.
+    """
     f = tmp_path.joinpath("cfg.toml")
     f.write_text('[test]\nu = "spam"\np = "eggs"\n')
     settings = ts.load(cls, "test", [f])
@@ -31,15 +36,21 @@ def test_load(cls, tmp_path):
 
 
 @pytest.mark.parametrize("cls", classes)
-def test_load_settings(cls, tmp_path):
-    """We can load settings with a class decorated with our decorator."""
+def test_load_settings(cls: Type[Settings], tmp_path: Path) -> None:
+    """
+    We can load settings with a class decorated with our decorator.
+    """
     f = tmp_path.joinpath("cfg.toml")
     f.write_text('[test]\nu = "spam"\np = "eggs"\n')
     settings = ts.load(cls, "test", [f])
     assert settings == cls("spam", "eggs")
 
 
-def test_dir():
+def test_dir() -> None:
+    """
+    dir(typed_settings) returns the expected list of names, including the
+    ones requiring optional dependencies.
+    """
     names = dir(ts)
     assert names == [
         "EnvLoader",

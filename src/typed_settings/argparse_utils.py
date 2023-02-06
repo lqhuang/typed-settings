@@ -222,7 +222,7 @@ def cli(
     converter: Optional[BaseConverter] = None,
     type_args_maker: Optional[TypeArgsMaker] = None,
     **parser_kwargs: Any,
-) -> Callable[[CliFn], DecoratedCliFn]:
+) -> Callable[[CliFn[ST]], DecoratedCliFn]:
     """
     **Decorator:** Generate an argument parser for the options of the given
     settings class and pass an instance of that class to the decorated

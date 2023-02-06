@@ -5,6 +5,7 @@ from datetime import datetime
 from enum import Enum
 from functools import update_wrapper
 from typing import (
+    TYPE_CHECKING,
     Any,
     Callable,
     Collection,
@@ -17,13 +18,15 @@ from typing import (
     Tuple,
     Type,
     Union,
+    cast,
+    overload,
 )
 
 import attrs
 import click
 from attr._make import _Nothing as NothingType
 
-from ._compat import PY_38
+from ._compat import PY_38, PY_310
 from ._core import _load_settings, default_loaders
 from .attrs import CLICK_KEY, METADATA_KEY, _SecretRepr
 from .cli_utils import (
@@ -44,6 +47,21 @@ if PY_38:
     from typing import Protocol
 else:
     from typing import _Protocol as Protocol  # type: ignore
+
+
+if TYPE_CHECKING:
+    from typing import TypeVar
+
+    if PY_310:
+        from typing import Concatenate, ParamSpec
+    else:
+        from typing_extensions import (  # type: ignore[assignment]
+            Concatenate,
+            ParamSpec,
+        )
+
+    P = ParamSpec("P")
+    R = TypeVar("R")
 
 
 __all__ = [
@@ -77,7 +95,7 @@ def click_options(
     type_args_maker: Optional[TypeArgsMaker] = None,
     argname: Optional[str] = None,
     decorator_factory: "Optional[DecoratorFactory]" = None,
-) -> Callable[[Callable], Callable]:
+) -> Callable[["Callable[Concatenate[ST, P], R]"], "Callable[P, R]"]:
     """
     **Decorator:** Generate :mod:`click` options for a CLI which override
     settings loaded via :func:`.load_settings()`.
@@ -192,14 +210,16 @@ def _get_wrapper(
     type_args_maker: TypeArgsMaker,
     argname: Optional[str],
     decorator_factory: "DecoratorFactory",
-) -> Callable[[Callable], Callable]:
-    def pass_settings(f: AnyFunc) -> Decorator:
+) -> Callable[["Callable[Concatenate[ST, P], R]"], "Callable[P, R]"]:
+    def pass_settings(
+        f: "Callable[Concatenate[ST, P], R]",
+    ) -> "Callable[P, R]":
         """
         Create a *cls* instances from the settings dict stored in
         :attr:`click.Context.obj` and passes it to the decorated function *f*.
         """
 
-        def new_func(*args: Any, **kwargs: Any) -> Any:
+        def new_func(*args: "P.args", **kwargs: "P.kwargs") -> "R":
             ctx = click.get_current_context()
             if ctx.obj is None:
                 ctx.obj = {}
@@ -207,16 +227,16 @@ def _get_wrapper(
             settings = from_dict(settings_dict, cls, converter)
             if argname:
                 ctx_key = argname
-                kwargs = {argname: settings, **kwargs}
+                kwargs = {argname: settings, **kwargs}  # type: ignore
             else:
                 ctx_key = CTX_KEY
-                args = (settings,) + args
+                args = (settings,) + args  # type: ignore
             ctx.obj[ctx_key] = settings
             return f(*args, **kwargs)
 
         return update_wrapper(new_func, f)
 
-    def wrap(f: AnyFunc) -> AnyFunc:
+    def wrap(f: "Callable[Concatenate[ST, P], R]") -> "Callable[P, R]":
         """
         The wrapper that actually decorates a function with all options.
         """
@@ -236,15 +256,33 @@ def _get_wrapper(
                 f = option(f)
             f = decorator_factory.get_group_decorator(g_cls)(f)
 
-        f = pass_settings(f)
-        return f
+        return pass_settings(f)
 
     return wrap
 
 
+@overload
 def pass_settings(
-    f: Optional[AnyFunc] = None, *, argname: Optional[str] = None
-) -> AnyFunc:
+    f: None = None, *, argname: Optional[str] = ...
+) -> Callable[["Callable[Concatenate[ST, P], R]"], "Callable[P, R]"]:
+    ...
+
+
+@overload
+def pass_settings(
+    f: "Callable[Concatenate[ST, P], R]", *, argname: Optional[str] = ...
+) -> "Callable[P, R]":
+    ...
+
+
+def pass_settings(
+    f: Optional["Callable[Concatenate[ST, P], R]"] = None,
+    *,
+    argname: Optional[str] = None,
+) -> Union[
+    Callable[["Callable[Concatenate[ST, P], R]"], "Callable[P, R]"],
+    "Callable[P, R]",
+]:
     """
     **Decorator:** Mark a callback as wanting to receive the innermost settings
     instance as first argument.
@@ -389,7 +427,7 @@ class OptionGroupFactory:
             name = settings_cls.__doc__.strip().splitlines()[0]  # type: ignore
         except (AttributeError, IndexError):
             name = f"{settings_cls.__name__} options"
-        return self.optgroup.group(name)
+        return cast(Decorator, self.optgroup.group(name))
 
 
 def handle_datetime(

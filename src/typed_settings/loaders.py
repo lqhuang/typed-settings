@@ -7,7 +7,7 @@ import logging
 import os
 from fnmatch import fnmatch
 from pathlib import Path
-from typing import Any, Callable, Dict, Iterable, List, Optional, Union
+from typing import Any, Callable, Dict, Iterable, List, Optional, Union, cast
 
 from ._compat import PY_38, PY_311
 
@@ -375,7 +375,7 @@ class PythonFormat:
             )
         module = importlib.util.module_from_spec(spec)
         try:
-            spec.loader.exec_module(module)  # type: ignore
+            spec.loader.exec_module(module)
         except SyntaxError as e:
             raise ConfigFileLoadError(str(e)) from e
         return module
@@ -423,7 +423,7 @@ class TomlFormat:
                 settings = settings[s]
             except KeyError:
                 return {}
-        return settings
+        return cast(SettingsDict, settings)
 
 
 class OnePasswordLoader:

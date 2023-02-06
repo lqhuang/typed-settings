@@ -303,7 +303,7 @@ def test_get_default_factory() -> None:
     instance.
     """
 
-    def factory(self) -> str:
+    def factory(self: None) -> str:
         assert self is None
         return "eggs"
 

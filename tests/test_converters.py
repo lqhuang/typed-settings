@@ -4,7 +4,6 @@ Tests for `typed_settings.attrs.converters`.
 import json
 from datetime import datetime, timedelta, timezone
 from enum import Enum
-from itertools import product
 from pathlib import Path
 from typing import Any, Dict, FrozenSet, List, Optional, Sequence, Set, Tuple
 
@@ -207,7 +206,7 @@ class TestToPath:
         (Optional[LeEnum], "spam", LeEnum.spam),
     ],
 )
-def test_supported_types(typ, value: Any, expected: Any) -> None:
+def test_supported_types(typ: type, value: Any, expected: Any) -> None:
     """
     All oficially supported types can be converted by attrs.
 
@@ -251,22 +250,16 @@ if PY_39:
         [
             (list[int], [1, 2, 3]),
             (set[int], {1, 2, 3}),
-            (tuple[int, ...], (1, 2, 3)),  # type: ignore
+            (tuple[int, ...], (1, 2, 3)),
         ]
     )
 
 
 @pytest.mark.parametrize(
-    "input, kw, typ, expected",
-    [
-        (input, kw, typ, expected)
-        for (input, kw), (typ, expected) in product(
-            [("1:2:3", {"sep": ":"}), ("[1,2,3]", {"fn": json.loads})],
-            STRLIST_TEST_DATA,
-        )
-    ],
+    "input, kw", [("1:2:3", {"sep": ":"}), ("[1,2,3]", {"fn": json.loads})]
 )
-def test_strlist_hook(input, kw, typ, expected):
+@pytest.mark.parametrize("typ, expected", STRLIST_TEST_DATA)
+def test_strlist_hook(input: str, kw: dict, typ: type, expected: Any) -> None:
     @settings
     class Settings:
         a: typ  # type: ignore

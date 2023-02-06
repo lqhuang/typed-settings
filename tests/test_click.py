@@ -140,7 +140,7 @@ class TestDefaultsLoading:
         have an instance.
         """
 
-        def factory(self) -> str:
+        def factory(self: None) -> str:
             assert self is None
             return "eggs"
 
@@ -538,7 +538,7 @@ class TestPassSettings:
         @click.command()
         @click_options(self.Settings, "test", argname="le_settings")
         @pass_settings(argname="le_settings")
-        def cli(*, le_settings):
+        def cli(*, le_settings: "TestPassSettings.Settings") -> None:
             assert le_settings == self.Settings("spam")
 
         invoke(cli, "--opt=spam")
@@ -609,7 +609,7 @@ class TestClickConfig:
         "flag, value", [(None, False), ("--opt", True), ("--no-opt", False)]
     )
     def test_create_a_flag_without_off_switch(
-        self, invoke: Invoke, flag, value
+        self, invoke: Invoke, flag: Optional[str], value: bool
     ) -> None:
         """
         The "off"-flag for flag options can be removed.
@@ -639,7 +639,7 @@ class TestClickConfig:
         "flag, value", [(None, False), ("-x", True), ("--exitfirst", True)]
     )
     def test_create_a_short_handle_for_a_flag(
-        self, invoke: Invoke, flag, value
+        self, invoke: Invoke, flag: Optional[str], value: bool
     ) -> None:
         """
         Create a shorter handle for a command similar to pytest's -x.

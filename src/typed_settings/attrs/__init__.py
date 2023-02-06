@@ -479,19 +479,19 @@ def combine(
     """
 
     attribs = {
-        a.name: attr.attrib(  # type: ignore[misc]
+        a.name: attr.attrib(
             default=a.default,
-            validator=a.validator,  # type: ignore[arg-type]
+            validator=a.validator,
             repr=a.repr,
             hash=a.hash,
             init=a.init,
             metadata=a.metadata,
-            type=a.type,  # type: ignore[arg-type]
-            converter=a.converter,  # type: ignore[arg-type]
+            type=a.type,
+            converter=a.converter,
             kw_only=a.kw_only,
             eq=a.eq,
             order=a.order,
-            on_setattr=a.on_setattr,  # type: ignore[arg-type]
+            on_setattr=a.on_setattr,
         )
         for a in attr.fields(base_cls)
     }

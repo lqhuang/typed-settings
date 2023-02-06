@@ -6,14 +6,14 @@ from typing_extensions import assert_type
 from typed_settings import types
 
 
-def test_auto_singleton():
+def test_auto_singleton() -> None:
     """
     `_Auto()`  is a singleton.
     """
     assert types._Auto() is types.AUTO
 
 
-def test_auto_repr():
+def test_auto_repr() -> None:
     """
     `_Auto()` has a nice repr.
     """

@@ -12,7 +12,7 @@ if PY_38:
     from typing import Final, Protocol, get_args, get_origin, runtime_checkable
 else:
     import collections.abc
-    from typing import Generic, _GenericAlias  # type: ignore
+    from typing import Generic, _GenericAlias, cast  # type: ignore
 
     from typing_extensions import (  # type: ignore
         Final,
@@ -37,7 +37,7 @@ else:
                 and res[0] is not Ellipsis  # noqa: W503
             ):
                 res = (list(res[:-1]), res[-1])  # pragma: no cover
-            return res
+            return cast(Tuple[Any, ...], res)
         return ()
 
 
