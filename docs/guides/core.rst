@@ -162,7 +162,7 @@ Mypy
 
 Unfortunately, mypy_ still gets confused when you alias :func:`attrs.define` (or even import it from any module other than :mod:`attr` or :mod:`attrs`).
 
-Accessing you settings class' attributes does work without any problems,
+Accessing your settings class' attributes does work without any problems,
 but when you manually instantiate your class, mypy will issue a ``call-arg`` error.
 
 The `suggested workaround`_ is to create a simple mypy plugin,
@@ -251,7 +251,7 @@ Nested settings
 ---------------
 
 Settings classes can be nested but environment variables have a flat namespace.
-So Typed Settings builds a flat list of all option and uses the "dotted path" to an attribute (e.g., :code:`attrib.nested_attrib.nested_nested_attrib`) for mapping flat names to nested attributes.
+So Typed Settings builds a flat list of all options and uses the "dotted path" to an attribute (e.g., :code:`attrib.nested_attrib.nested_nested_attrib`) for mapping flat names to nested attributes.
 
 Here's an example:
 
@@ -287,7 +287,7 @@ Overriding the var name for a single option
 -------------------------------------------
 
 Sometimes, you may want to read an option from another variable than Typed Settings would normally do.
-For example, you company's convention might be to use :code:`SSH_PRIVATE_KEY_FILE`, but your app would look for :code:`MYAPP_SSH_KEY_FILE`:
+For example, your company's convention might be to use :code:`SSH_PRIVATE_KEY_FILE`, but your app would look for :code:`MYAPP_SSH_KEY_FILE`:
 
 .. code-block:: python
 
@@ -406,7 +406,7 @@ The following example first loads a global configuration file and overrides it w
 Finding Files at Runtime
 ------------------------
 
-Especially tools that are used for software development (i.e. linters or code formatters) search for their configuration in the current (Git) project.
+Some tools, especially those that are used for software development (i.e. linters or code formatters), search for their configuration in the current (Git) project.
 
 The function :func:`find()` does exactly that: It searches for a given filename from the current working directory upwards until it hits a defined stop directory or file.
 By default it stops when the current directory contains a :file:`.git` or :file:`.hg` folder.
@@ -603,7 +603,7 @@ However, the supported file formats are not hard-coded but can be configured and
 
 If you use :func:`load_settings()`, you can (and must) pass a custom :class:`~typed_settings.loaders.FileLoader` instance that can be configured with loaders for different file formats.
 
-Before we start, we'll need a setting class and Pyton config file:
+Before we start, we'll need a setting class and Python config file:
 
 .. code-block:: python
 
@@ -758,7 +758,7 @@ Using the new loader works the same way as we've seen before:
    The :class:`~typed_settings.loaders.InstanceLoader` was added to Typed Settings in version 1.0.0 but we'll keep this example.
 
 
-Post-processign Settings
+Post-processing Settings
 ========================
 
 Processors are applied after all settings have been loaded but before the loaded settings are converted to your settings class.

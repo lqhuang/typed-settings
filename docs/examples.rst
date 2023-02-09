@@ -39,7 +39,7 @@ The code
 
 First we define our settings class and the Enum that holds all supported Python versions.
 
-We than create a click command.
+We then create a click command.
 The decorator :func:`click_options()` creates commnand line options and makes Click pass an instance of our settings class to the CLI function.
 
 The decorator needs to know our settings class and which loaders to use.
@@ -213,10 +213,10 @@ What you'll learn
 -----------------
 
 - Dynamically creating settings for applications with a plug-in system.
-- Customizing how click options are create.  This includes:
+- Customizing how click options are created.  This includes:
   - Setting help texts
-  - Change the parameter declaration ("what the option looks like")
-  - Create on-way switches for boolean options
+  - Changing the parameter declaration ("what the option looks like")
+  - Creating switches for boolean options
 - Creating command line applications for your settings
 - Using click options groups for nested settings
 
@@ -234,7 +234,7 @@ They also override the Click parameter declarations and add help texts for the o
 The next step is to combine the base settings with the settings of of all Plugins.
 We use :func:`~typed_settings.attrs.combine()` for that which is a convenience wrapper around :func:`attrs.make_class()`.
 
-Now that we habe class that contains Pytests own settings as well as the settings of all plugins,
+Now that we have a class that contains Pytests own settings as well as the settings of all plugins,
 we can create a command line application.
 We create option groups by passing :class:`~typed_settings.click_utils.OptionGroupFactory` to :func:`.click_options()`.
 
