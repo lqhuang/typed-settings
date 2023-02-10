@@ -216,7 +216,7 @@ applications like [Pytest].
 - ✨ Add `InstanceLoader` which loads settings from an existing instance
   of the settings class.
 
-- ✨ `click_options()` accepts just an appname and than works similar to
+- ✨ `click_options()` accepts just an appname and then works similar to
   `load()`. The old behavior (which is comparable to `load_settings()`
   still exists.
 
