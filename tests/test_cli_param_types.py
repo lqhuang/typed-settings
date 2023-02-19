@@ -26,11 +26,11 @@ import click.testing
 import pytest
 
 from typed_settings import (
+    SecretStr,
     argparse_utils,
     click_options,
     default_loaders,
     option,
-    secret,
     settings,
 )
 from typed_settings.types import ST
@@ -203,7 +203,7 @@ class TestIntFloatStrParam(ParamBase):
     @settings(kw_only=True)
     class Settings:
         a: str = option(default="spam")
-        b: str = secret(default="spam")
+        b: SecretStr = option(default=SecretStr("spam"))
         c: int = 0
         d: float = 0
         # Test explicit and implicit "Optional" variants
@@ -213,7 +213,7 @@ class TestIntFloatStrParam(ParamBase):
 
     click_expected_help = [
         "  --a TEXT     [default: spam]",
-        "  --b TEXT     [default: *******]",
+        "  --b TEXT     [default: (*******)]",
         "  --c INTEGER  [default: 0]",
         "  --d FLOAT    [default: 0.0]",
         "  --e TEXT",
@@ -222,7 +222,7 @@ class TestIntFloatStrParam(ParamBase):
     ]
     argparse_expected_help = [
         "  --a TEXT    [default: spam]",
-        "  --b TEXT    [default: *******]",
+        "  --b TEXT    [default: (*******)]",
         "  --c INT     [default: 0]",
         "  --d FLOAT   [default: 0.0]",
         "  --e TEXT",
@@ -233,7 +233,7 @@ class TestIntFloatStrParam(ParamBase):
     env_vars = {"A": "eggs", "B": "bacon", "C": "42", "D": "3.14"}
     click_expected_env_var_defaults = [
         "  --a TEXT     [default: eggs]",
-        "  --b TEXT     [default: *******]",
+        "  --b TEXT     [default: (*******)]",
         "  --c INTEGER  [default: 42]",
         "  --d FLOAT    [default: 3.14]",
         "  --e TEXT",
@@ -242,7 +242,7 @@ class TestIntFloatStrParam(ParamBase):
     ]
     argparse_expected_env_var_defaults = [
         "  --a TEXT    [default: eggs]",
-        "  --b TEXT    [default: *******]",
+        "  --b TEXT    [default: (*******)]",
         "  --c INT     [default: 42]",
         "  --d FLOAT   [default: 3.14]",
         "  --e TEXT",
@@ -253,7 +253,9 @@ class TestIntFloatStrParam(ParamBase):
     expected_defaults = Settings(e=None)
 
     cli_options = ["--a=eggs", "--b=pwd", "--c=3", "--d=3.1"]
-    expected_settings = Settings(a="eggs", b="pwd", c=3, d=3.1, e=None)
+    expected_settings = Settings(
+        a="eggs", b=SecretStr("pwd"), c=3, d=3.1, e=None
+    )
 
 
 class TestDateTimeParam(ParamBase):

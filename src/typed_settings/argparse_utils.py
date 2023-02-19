@@ -43,7 +43,7 @@ from .converters import BaseConverter, default_converter, from_dict
 from .dict_utils import deep_options, set_path
 from .loaders import Loader
 from .processors import Processor
-from .types import ST, Secret, SettingsDict
+from .types import SECRET_REPR, SECRETS_TYPES, ST, SettingsDict
 
 
 __all__ = [
@@ -503,10 +503,13 @@ def _mk_argument(
     kwargs["help"] = user_config.pop("help", None) or ""
     if "default" in kwargs and kwargs["default"] is not attrs.NOTHING:
         default_repr = kwargs.pop("default_repr", kwargs["default"])
+        kwtyp: Any = kwargs.get("type")
         if kwargs["default"] is None:
             help_extra = ""
-        elif isinstance(field.repr, _SecretRepr):
-            help_extra = f" [default: {Secret(kwargs['default'])}]"
+        elif isinstance(field.repr, _SecretRepr) or (
+            isinstance(kwtyp, type) and issubclass(kwtyp, SECRETS_TYPES)
+        ):
+            help_extra = f" [default: ({SECRET_REPR})]"
         else:
             help_extra = f" [default: {default_repr}]"
     else:

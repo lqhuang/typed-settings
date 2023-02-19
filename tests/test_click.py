@@ -20,7 +20,7 @@ from typed_settings import (
     settings,
 )
 from typed_settings.attrs import CLICK_KEY, METADATA_KEY
-from typed_settings.types import SettingsClass
+from typed_settings.types import SecretStr, SettingsClass
 
 
 T = TypeVar("T")
@@ -202,7 +202,59 @@ class TestDefaultsLoading:
             "\n"
             "Options:\n"
             "  --a TEXT  Help for 'a'  [default: spam]\n"
-            "  --b TEXT  bbb  [default: *******]\n"
+            "  --b TEXT  bbb  [default: (*******)]\n"
+            "  --help    Show this message and exit.\n"
+        )
+        assert result.exit_code == 0
+
+    def test_help_text_secrets(self, invoke: Invoke) -> None:
+        """
+        Defaults for Secret(Str) type defaults are not show even if "option()"
+        and not "secret()" is used.
+        """
+
+        @settings
+        class Settings:
+            a: SecretStr = SecretStr("spam")
+            # b: Secret[int] = Secret(42)
+
+        @click.command()
+        @click_options(Settings, default_loaders("test"))
+        def cli(settings: Settings) -> None:
+            ...
+
+        result = invoke(cli, "--help")
+        assert result.output == (
+            "Usage: cli [OPTIONS]\n"
+            "\n"
+            "Options:\n"
+            "  --a TEXT  [default: (*******)]\n"
+            "  --help    Show this message and exit.\n"
+        )
+        assert result.exit_code == 0
+
+    def test_show_envvar_not_in_help(self, invoke: Invoke) -> None:
+        """
+        The env var will not be shown if the envloader is not being used.
+        """
+
+        @settings
+        class Settings:
+            a: str = "spam"
+            b: str = secret(default="eggs")
+
+        @click.command()
+        @click_options(Settings, [], show_envvars_in_help=True)
+        def cli(settings: Settings) -> None:
+            ...
+
+        result = invoke(cli, "--help")
+        assert result.output == (
+            "Usage: cli [OPTIONS]\n"
+            "\n"
+            "Options:\n"
+            "  --a TEXT  [default: spam]\n"
+            "  --b TEXT  [default: (*******)]\n"
             "  --help    Show this message and exit.\n"
         )
         assert result.exit_code == 0
@@ -836,3 +888,96 @@ class TestDecoratorFactory:
             "    --n2-a INTEGER    [default: 0]",
             "  --help              Show this message and exit.",
         ]
+
+
+@pytest.mark.parametrize(
+    "factory",
+    [None, click_utils.ClickOptionFactory(), click_utils.OptionGroupFactory()],
+)
+def test_show_envvar_in_help(
+    factory: Optional[click_utils.DecoratorFactory], invoke: Invoke
+) -> None:
+    """
+    An option's help can optionally show the env var that will be loaded.
+    """
+
+    @settings
+    class Settings:
+        a: str = "spam"
+        b: str = secret(default="eggs")
+
+    @click.command()
+    @click_options(
+        Settings,
+        default_loaders("test"),
+        decorator_factory=factory,
+        show_envvars_in_help=True,
+    )
+    def cli(settings: Settings) -> None:
+        ...
+
+    result = invoke(cli, "--help")
+    if isinstance(factory, click_utils.OptionGroupFactory):
+        print(result.output)
+        assert result.output == (
+            "Usage: cli [OPTIONS]\n"
+            "\n"
+            "Options:\n"
+            "  Settings options: \n"
+            "    --a TEXT          [env var: TEST_A; default: spam]\n"
+            "    --b TEXT          [env var: TEST_B; default: (*******)]\n"
+            "  --help              Show this message and exit.\n"
+        )
+    else:
+        assert result.output == (
+            "Usage: cli [OPTIONS]\n"
+            "\n"
+            "Options:\n"
+            "  --a TEXT  [env var: TEST_A; default: spam]\n"
+            "  --b TEXT  [env var: TEST_B; default: (*******)]\n"
+            "  --help    Show this message and exit.\n"
+        )
+    assert result.exit_code == 0
+
+
+@pytest.mark.parametrize(
+    "factory",
+    [None, click_utils.ClickOptionFactory(), click_utils.OptionGroupFactory()],
+)
+def test_click_no_load_envvar(
+    factory: Optional[click_utils.DecoratorFactory],
+    invoke: Invoke,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """
+    The "show_envvars_in_help" option does not cause Click to load settings
+    from envvars
+    """
+    tmp_path.joinpath("settings.toml").write_text('[test]\na = "x"\n')
+    spath = tmp_path.joinpath("settings2.toml")
+    spath.write_text('[test]\na = "spam"\n')
+    monkeypatch.setenv("TEST_A", "onoes")
+
+    @settings
+    class Settings:
+        a: str = "spam"
+
+    # Reverse loaders so that env loader is used first and the file loader
+    # is used last (and thus has priority)
+    loaders = list(reversed(default_loaders("test", [spath])))
+
+    @click.command()
+    @click_options(
+        Settings,
+        loaders,
+        decorator_factory=factory,
+        show_envvars_in_help=True,
+    )
+    def cli(settings: Settings) -> None:
+        print(settings.a)
+
+    result = invoke(cli)
+    # If click read from the envvar, the output would be "onoes"
+    assert result.output == "spam\n"
+    assert result.exit_code == 0

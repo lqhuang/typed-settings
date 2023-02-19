@@ -311,7 +311,7 @@ Argparse
    @ts.settings
    class Settings:
        username: str = ts.option(help="Your username")
-       password: str = ts.secret(default="", help="Your password")
+       password: str = ts.secret(help="Your password")
 
 
    @ts.cli(Settings, "myapp")
@@ -326,7 +326,7 @@ Argparse
 .. code-block:: console
 
    $ python cli.py --help
-   usage: cli.py [-h] --username TEXT [--password TEXT]
+   usage: cli.py [-h] --username TEXT --password TEXT
 
    My App
 
@@ -337,7 +337,7 @@ Argparse
      Settings options
 
      --username TEXT  Your username [required]
-     --password TEXT  Your password [default: ]
+     --password TEXT  Your password [required]
    $ python cli.py --username="guido" --password="1234"
    Settings(username='guido', password='*******')
 
@@ -354,7 +354,7 @@ Click
    @ts.settings
    class Settings:
        username: str = ts.option(help="Your username")
-       password: str = ts.secret(default="", help="Your password")
+       password: ts.SecretStr = ts.secret(help="Your password")
 
 
    @click.command()
@@ -375,7 +375,7 @@ Click
 
    Options:
      --username TEXT  Your username  [required]
-     --password TEXT  Your password  [default: ]
+     --password TEXT  Your password  [required]
      --help           Show this message and exit.
    $ python cli.py --username="guido" --password="1234"
    Settings(username='guido', password='*******')
