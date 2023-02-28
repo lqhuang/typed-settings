@@ -57,8 +57,8 @@ Example
 This is a very simple example that demonstrates how you can load settings from environment variables.
 
 .. code-block:: python
+   :caption: example.py
 
-   # example.py
    import typed_settings as ts
 
    @ts.settings
@@ -74,8 +74,8 @@ This is a very simple example that demonstrates how you can load settings from e
    print(settings)
 
 .. code-block:: toml
+   :caption: settings.toml
 
-   # settings.toml
    [example]
    option_one = "value"
 

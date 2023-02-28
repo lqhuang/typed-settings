@@ -162,15 +162,15 @@ To pass secrets or to persist settings (and avoid exporting environment variable
 Typed Settings supports TOML files (`Why?`_) out-of-the-box and looks for the *appname* section by default:
 
 .. code-block:: toml
+   :caption: settings.toml
 
-   # settings.toml
    [myapp]
    username = "monty"
    password = "S3cr3t!"
 
 .. code-block:: python
+   :caption: settings.py
 
-   # settings.py
    from pathlib import Path
 
    import typed_settings as ts
@@ -208,16 +208,16 @@ Take `black <https://black.readthedocs.io>`_, for example, which searches for :f
 You can do the same with Typed Settings:
 
 .. code-block:: toml
+   :caption: settings.toml
 
-   # settings.toml
    [myapp]
    username = "monty"
    password = "S3cr3t!"
 
 .. code-block:: python
+   :caption: settings.py
    :emphasize-lines: 13
 
-   # settings.py
    from pathlib import Path
 
    import typed_settings as ts
@@ -248,16 +248,16 @@ By default, Typed Settings looks for a variable named :samp:`{APPNAME}_SETTINGS`
 The variable can contain one ore more paths separated by a colon (``:``):
 
 .. code-block:: toml
+   :caption: settings.toml
 
-   # settings.toml
    [myapp]
    username = "monty"
    password = "S3cr3t!"
 
 .. code-block:: python
+   :caption: settings.py
    :emphasize-lines: 13
 
-   # settings.py
    from pathlib import Path
 
    import typed_settings as ts
@@ -303,8 +303,8 @@ Argparse
 --------
 
 .. code-block:: python
+   :caption: cli.py
 
-   # cli.py
    import typed_settings as ts
 
 
@@ -345,8 +345,8 @@ Click
 -----
 
 .. code-block:: python
+   :caption: cli.py
 
-   # cli.py
    import click
    import typed_settings as ts
 

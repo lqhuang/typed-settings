@@ -171,14 +171,14 @@ so Typed Settings ships with a simple mypy plugin in :mod:`typed_settings.mypy`.
 You can activate the plugin via your :file:`pyproject.toml` or :file:`mypy.ini`:
 
 .. code-block:: toml
+   :caption: pyproject.toml
 
-    # pyproject.toml
     [tool.mypy]
     plugins = ["typed_settings.mypy"]
 
 .. code-block:: ini
+   :caption: mypy.ini
 
-    # mypy.ini
     [mypy]
     plugins=typed_settings.mypy
 

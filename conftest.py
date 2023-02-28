@@ -1,38 +1,148 @@
 import os
+import re
 import subprocess
 from doctest import ELLIPSIS
+from itertools import chain
 from pathlib import Path
 from textwrap import dedent
-from typing import Iterator, List, Tuple
+from typing import Dict, Iterable, Iterator, List, Optional, Sequence, Tuple
 
 import pytest
-from sybil import Example, Sybil
-from sybil.evaluators.python import PythonEvaluator
-from sybil.parsers.rest import CodeBlockParser, DocTestParser, SkipParser
+from sybil import Document, Example, Region, Sybil
+from sybil.evaluators.python import PythonEvaluator, pad
+from sybil.parsers.abstract.lexers import BlockLexer
+from sybil.parsers.rest import DocTestParser, SkipParser
+from sybil.parsers.rest.lexers import DirectiveInCommentLexer
+from sybil.region import LexedRegion
+from sybil.typing import Evaluator, Lexer
 
 
-class PythonCodeBlockParser(CodeBlockParser):
-    language = "python"
+START_PATTERN_TEMPLATE = (
+    r"^(?P<prefix>[ \t]*)\.\.\s*(?P<directive>{directive})"
+    r"{delimiter}\s*"
+    r"(?P<arguments>[\w-]+\b)?"
+    r"(?P<options>(?:\s*\:[\w-]+\:.*\n)*)"
+    r"(?:\s*\n)*\n"
+)
+
+END_PATTERN_TEMPLATE = "(\n\\Z|\n[ \t]{{0,{len_prefix}}}(?=\\S))"
+
+
+class DirectiveLexer(BlockLexer):
+    delimiter = "::"
+
+    def __init__(
+        self,
+        directive: str,
+        arguments: str = "",
+        mapping: Optional[Dict[str, str]] = None,
+    ):
+        """
+        A lexer for ReST directives.
+        Both ``directive`` and ``arguments`` are regex patterns.
+        """
+        super().__init__(
+            start_pattern=re.compile(
+                START_PATTERN_TEMPLATE.format(
+                    directive=directive,
+                    delimiter=self.delimiter,
+                    arguments=arguments,
+                ),
+                re.MULTILINE,
+            ),
+            end_pattern_template=END_PATTERN_TEMPLATE,
+            mapping=mapping,
+        )
+
+    def __call__(self, document: Document) -> Iterable[LexedRegion]:
+        for region in super().__call__(document):
+            if isinstance(region, LexedRegion):
+                option_strs = region.lexemes.get("options", "").splitlines()
+                options: Dict[str, str] = {}
+                for option_str in option_strs:
+                    optname, _, optval = option_str.strip().partition(" ")
+                    optname = optname[1:-1]
+                    options[optname] = optval
+                region.lexemes["options"] = options
+            yield region
+
+
+class AbstractCodeBlockParser:
+    language: str
+
+    def __init__(
+        self,
+        lexers: Sequence[Lexer],
+        language: Optional[str] = None,
+        evaluator: Evaluator = None,
+    ):
+        self.lexers = lexers
+        if language is not None:
+            self.language = language
+        assert self.language, "language must be specified!"
+        if evaluator is not None:
+            self.evaluate = evaluator  # type: ignore[assignment]
+
+    def evaluate(self, example: Example) -> Optional[str]:
+        raise NotImplementedError
+
+    def __call__(self, document: Document) -> Iterable[Region]:
+        for lexed in chain(*(lexer(document) for lexer in self.lexers)):
+            if lexed.lexemes["arguments"] == self.language:
+                r = Region(
+                    lexed.start,
+                    lexed.end,
+                    lexed.lexemes["source"],
+                    self.evaluate,
+                )
+                r.options = lexed.lexemes.get("options", {})
+                yield r
+
+
+class CodeBlockParser(AbstractCodeBlockParser):
+    def __init__(
+        self,
+        language: Optional[str] = None,
+        evaluator: Optional[Evaluator] = None,
+    ):
+        super().__init__(
+            [
+                DirectiveLexer(directive=r"code-block"),
+                DirectiveInCommentLexer(
+                    directive=r"(invisible-)?code(-block)?"
+                ),
+            ],
+            language,
+            evaluator,
+        )
+
+    pad = staticmethod(pad)
+
+
+class CodeFileParser(CodeBlockParser):
+    ext: str
+
+    def __init__(
+        self,
+        language: Optional[str] = None,
+        *,
+        ext: Optional[str] = None,
+        fallback_evaluator: Evaluator = None,
+    ) -> None:
+        super().__init__(language=language)  # type: ignore[arg-type]
+        if ext is not None:
+            self.ext = ext
+        if self.ext is None:
+            raise ValueError('"ext" must be specified!')
+        self.evaluator = fallback_evaluator
 
     def evaluate(self, example: Example) -> None:
-        raw_text = dedent(example.parsed)
-        first_line, *lines = raw_text.strip().split("\n")
-        comment, _, filename = first_line.partition(" ")
-        if comment == "#" and filename:
-            Path(filename).write_text(raw_text)
-        else:
-            PythonEvaluator()(example)
-
-
-class TomlCodeBlockParser(CodeBlockParser):
-    language = "toml"
-
-    def evaluate(self, example: Example) -> None:
-        raw_text = dedent(example.parsed)
-        first_line, *lines = raw_text.strip().split("\n")
-        comment, _, filename = first_line.partition(" ")
-        if comment == "#" and filename:
-            Path(filename).write_text(raw_text)
+        caption = example.region.options.get("caption")
+        if caption and caption.endswith(self.ext):
+            raw_text = dedent(example.parsed)
+            Path(caption).write_text(raw_text)
+        elif self.evaluator is not None:
+            self.evaluator(example)
 
 
 class ConsoleCodeBlockParser(CodeBlockParser):
@@ -104,8 +214,10 @@ pytest_collect_file = Sybil(
     parsers=[
         SkipParser(),
         DocTestParser(optionflags=ELLIPSIS),
-        PythonCodeBlockParser(),
-        TomlCodeBlockParser(),
+        CodeFileParser(
+            "python", ext=".py", fallback_evaluator=PythonEvaluator()
+        ),
+        CodeFileParser("toml", ext=".toml"),
         ConsoleCodeBlockParser(),
     ],
     # patterns=["*.md", "*.rst", "*.py"],
