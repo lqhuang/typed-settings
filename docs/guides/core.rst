@@ -10,7 +10,7 @@ This page explains Typed Setting's core functionality of loading settings and cu
 Settings Classes
 ================
 
-Settings classes are normal Attrs_ classes with Type Hints:
+Settings classes are normal Attrs_ classes with type hints:
 
 .. code-block:: python
 
@@ -37,6 +37,16 @@ These wrappers make it easier to add extra metadata for :doc:`CLI options <cli>`
    ...      password: str = ts.secret()
 
 Dataclasses and Pydantic models cannot be used as settings classes (yet?).
+
+.. hint::
+
+   Using :func:`settings()` keeps your input a bit cleaner,
+   but using :func:`attrs.define()` causes fewer problems with type checkers (see :ref:`sec-mypy`).
+
+   You *should* use :func:`attrs.define` if possible and
+   :func:`settings()` *may* be deprecated at some point.
+
+   However, for the sake of brevity we will use :func:`settings()` in most examples.
 
 .. _attrs: https://www.attrs.org/en/stable/
 
@@ -156,6 +166,8 @@ as you have to call its :meth:`typed_settings.types.Secret.get_secret_value()` m
 
 But now matter what you use, you should explicitly test the (log) output of your code to make sure, secrets are not contained at all or are masked at least.
 
+
+.. _sec-mypy:
 
 Mypy
 ----
