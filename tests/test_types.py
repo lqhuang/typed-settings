@@ -10,7 +10,7 @@ def test_auto_singleton() -> None:
     """
     `_Auto()`  is a singleton.
     """
-    assert types._Auto() is types.AUTO
+    assert types._Auto() is types.AUTO  # noqa: E721
 
 
 def test_auto_repr() -> None:

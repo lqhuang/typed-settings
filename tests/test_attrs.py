@@ -166,7 +166,7 @@ class TestEvolve:
         """
 
         @settings
-        class C(object):
+        class C:
             a: int = option(validator=attrs.validators.instance_of(int))
 
         with pytest.raises(TypeError) as e:
@@ -181,7 +181,7 @@ class TestEvolve:
         """
 
         @settings
-        class C(object):
+        class C:
             _a: str
 
         assert evolve(C(1), a=2)._a == 2  # type: ignore
@@ -198,7 +198,7 @@ class TestEvolve:
         """
 
         @settings
-        class C(object):
+        class C:
             a: str
             b: int = option(init=False, default=0)
 
@@ -212,11 +212,11 @@ class TestEvolve:
         """
 
         @settings
-        class Child(object):
+        class Child:
             param2: str
 
         @settings
-        class Parent(object):
+        class Parent:
             param1: Child
 
         obj2a = Child(param2="a")
@@ -233,16 +233,16 @@ class TestEvolve:
         """
 
         @settings
-        class N2(object):
+        class N2:
             e: int
 
         @settings
-        class N1(object):
+        class N1:
             c: N2
             d: int
 
         @settings
-        class C(object):
+        class C:
             a: N1
             b: int
 

@@ -66,13 +66,8 @@ docs = [
 ]
 lint = [
     "typed-settings[all]",
-    "autoflake",
-    "bandit",
-    "flake8-bandit",
-    "flake8-black",
-    "flake8-bugbear",
-    "flake8-isort",
-    "flake8>=4.0.0,<5.0.0",
+    "black",
+    "ruff",
     "mypy",
     "types-toml",
 ]
@@ -98,10 +93,40 @@ Changelog = "https://typed-settings.readthedocs.io/en/latest/changelog.html"
 "Bug Tracker" = "https://gitlab.com/sscherfke/typed-settings/-/issues"
 "Source Code" = "https://gitlab.com/sscherfke/typed-settings"
 
-[tool.autoflake]
-in_place = true
-recursive = true
-remove_all_unused_imports = true
+[tool.hatch.build.targets.sdist]
+include = [
+    "/docs",
+    "/src",
+    "/tests",
+]
+
+[tool.hatch.build.targets.wheel]
+
+[tool.hatch.envs.default]
+features = ["dev"]
+post-install-commands = [
+    "pre-commit install --install-hooks",
+]
+
+[tool.hatch.envs.default.scripts]
+test = "pytest {args:docs src tests}"
+cov = "pytest --cov --cov-config=pyproject.toml --cov-report=term-missing {args:docs src tests}"
+lint = [
+  "ruff .",
+  "mypy src/ tests/ ./noxfile.py",
+  "mypy docs/conf.py docs/conftest.py",
+  "mypy docs/examples",
+]
+fix = [
+  "ruff --fix-only {args:.}",
+  "black {args:.}",
+]
+docs = [
+  "make -C docs html",
+]
+clean-docs = [
+  "make -C docs clean html",
+]
 
 [tool.black]
 line-length = 79
@@ -133,51 +158,6 @@ source_pkgs = [
     "tests",
 ]
 
-[tool.hatch.build.targets.sdist]
-include = [
-    "/docs",
-    "/src",
-    "/tests",
-]
-
-[tool.hatch.build.targets.wheel]
-
-[tool.hatch.envs.default]
-features = ["dev"]
-post-install-commands = [
-    "pre-commit install --install-hooks",
-]
-
-[tool.hatch.envs.default.scripts]
-test = "pytest {args:docs src tests}"
-cov = "pytest --cov --cov-config=pyproject.toml --cov-report=term-missing {args:docs src tests}"
-lint = [
-  "flake8 docs/ src/ tests/ ./noxfile.py",
-  "mypy src/ tests/ ./noxfile.py",
-  "mypy docs/conf.py docs/conftest.py",
-  "mypy docs/examples",
-]
-fix = [
-  "autoflake {args:.}",
-  "isort {args:.}",
-  "black {args:.}",
-]
-docs = [
-  "make -C docs html",
-]
-clean-docs = [
-  "make -C docs clean html",
-]
-
-[tool.isort]
-profile = "black"
-line_length = 79
-lines_after_imports = 2
-src_paths = [
-    "src",
-    "tests",
-]
-
 [tool.mypy]
 ignore_missing_imports = true
 plugins = ["typed_settings.mypy"]
@@ -190,3 +170,18 @@ disallow_untyped_defs = true
 [tool.pytest.ini_options]
 addopts = "--doctest-glob='*.md' --doctest-glob='*.rst' --doctest-modules --ignore=docs/_build"
 # addopts = "-p no:doctest"
+
+[tool.ruff]
+select = ["F", "E", "W", "C90", "I", "S", "B", "UP"]
+ignore = [
+    "S101",  # assert needed in tests, useful in src for documenting invariants
+]
+line-length = 79
+src = ["src", "tests"]
+target-version = "py37"
+
+[tool.ruff.isort]
+lines-after-imports = 2
+
+[tool.ruff.pydocstyle]
+convention = "google"

@@ -130,15 +130,14 @@ def coverage_report(session: nox.Session) -> None:
 
 @nox.session(python=False, tags=["lint"])
 def fix(session: nox.Session) -> None:
-    session.run("autoflake", *LINT_PATHS)
-    session.run("isort", *LINT_PATHS)
+    session.run("ruff", "--fix-only", *LINT_PATHS)
     session.run("black", *LINT_PATHS)
 
 
 @nox.session(tags=["lint"])
 def lint(session: nox.Session) -> None:
     session.install(".[lint]")
-    session.run("flake8", *LINT_PATHS)
+    session.run("ruff", *LINT_PATHS)
 
 
 @nox.session(tags=["lint"])

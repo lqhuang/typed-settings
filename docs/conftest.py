@@ -125,7 +125,7 @@ class ExampleItem(pytest.Item):
                 cwd=self.path.parent,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.STDOUT,
-                universal_newlines=True,
+                text=True,
                 check=True,
             ).stdout
             # Normalize whitespace:
