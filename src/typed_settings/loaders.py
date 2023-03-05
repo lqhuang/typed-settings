@@ -450,9 +450,9 @@ class OnePasswordLoader:
         self.item = item
         self.vault = vault
 
-        from . import onepassword
+        from . import _onepassword
 
-        self._op = onepassword
+        self._op = _onepassword
 
     def __call__(
         self, settings_cls: type, options: OptionList

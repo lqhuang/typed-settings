@@ -144,8 +144,8 @@ exclude_lines = [
     "if TYPE_CHECKING",
 ]
 fail_under = 100
-omit = [
-    "src/typed_settings/onepassword.py",
+omit = [  # This is also (dynamically) set/overridden in noxfile.py!
+    "src/typed_settings/_onepassword.py",
     "tests/test_onepassword.py",
 ]
 show_missing = true

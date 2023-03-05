@@ -2,7 +2,7 @@ from typing import Any, Dict, Optional
 
 import pytest
 
-from typed_settings import onepassword
+from typed_settings import _onepassword
 from typed_settings.attrs import option, settings
 from typed_settings.dict_utils import deep_options
 from typed_settings.types import OptionList
@@ -45,5 +45,5 @@ def mock_op(monkeypatch: pytest.MonkeyPatch) -> None:
             return "eggs"
         raise ValueError("op error")  # pragma: no cover
 
-    monkeypatch.setattr(onepassword, "get_item", get_item)
-    monkeypatch.setattr(onepassword, "get_resource", get_resource)
+    monkeypatch.setattr(_onepassword, "get_item", get_item)
+    monkeypatch.setattr(_onepassword, "get_resource", get_resource)

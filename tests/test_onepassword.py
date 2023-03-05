@@ -5,7 +5,7 @@ from typing import Any, Optional, Tuple
 import pytest
 from packaging.version import Version
 
-from typed_settings import onepassword as op
+from typed_settings import _onepassword as op
 
 
 try:

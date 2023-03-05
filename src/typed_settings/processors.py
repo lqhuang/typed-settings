@@ -179,9 +179,9 @@ def handle_op(value: str, scheme: str) -> str:
 
     .. versionadded:: 23.0.0
     """
-    from . import onepassword
+    from . import _onepassword
 
-    return onepassword.get_resource(f"op://{value}")
+    return _onepassword.get_resource(f"op://{value}")
 
 
 class FormatProcessor:

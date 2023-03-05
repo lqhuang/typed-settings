@@ -39,7 +39,7 @@ DEPS_MATRIX = {
 IN_CI = "CI" in os.environ
 if IN_CI:
     OMMIT_IN_REPORT = [
-        "src/typed_settings/onepassword.py",
+        "src/typed_settings/_onepassword.py",
         "tests/test_onepassword.py",
     ]
 else:
