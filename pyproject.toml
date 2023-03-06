@@ -61,6 +61,7 @@ all = [  # All features
 docs = [
     "typed-settings[all]",
     "furo",
+    "myst-parser",
     "sphinx",
     "sphinx-copybutton",
 ]
