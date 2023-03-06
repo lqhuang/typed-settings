@@ -24,6 +24,8 @@
 
 - ♻️ Make `dict_utils` part of the public API.
 
+- ♻️ Make optional imports in `typed_settings` more IDE friendly (see [!14]).
+
 - 📝 Added a copy button to the examples in the docs.
   Prompt characters and out for doctest examples or bash are not
   copied, only the actual code / command.
@@ -48,6 +50,7 @@
 
 - ✨ Optionally show env var name in the help string for Click options (see [#33]).
 
+[!14]: https://gitlab.com/sscherfke/typed-settings/-/merge_requests/14
 [!16]: https://gitlab.com/sscherfke/typed-settings/-/merge_requests/16
 [#2]: https://gitlab.com/sscherfke/typed-settings/-/issues/2
 [#19]: https://gitlab.com/sscherfke/typed-settings/-/issues/19
