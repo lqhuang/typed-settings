@@ -1,6 +1,6 @@
 # Changelog
 
-## 23.0.0 (unreleased)
+## 23.0.0 (2023-03-07)
 
 ### Deprecated
 
@@ -20,6 +20,8 @@
 - 📦 Switch to [CalVer] with scheme `YY.MINOR.MICRO` (same as pip, attrs
   and cattrs).
 
+- 📦 Switch to [ruff](https://github.com/charliermarsh/ruff) as linter.
+
 - ♻️ Make `dict_utils` part of the public API.
 
 - 📝 Added a copy button to the examples in the docs.
@@ -30,20 +32,26 @@
 
 - 📝 Start using [Sybil] for doctests and examples.
 
+- 📝 Fixed spelling and grammatical mistakes.
+
 ### Added
 
 - ✨ Added settings (post) processors.  They allow modifying loaded
   settings before they are passed to your app.  This allows, e.g., using
   settings templates/interpolation or loading secrets from external
-  resources via helper scripts. (See [#19])
+  resources via helper scripts. (See [#2], [#19])
 
 - ✨ Added a 1Password loader.
 
 - ✨ Added an `op://` resource handler for the new URL processor (see
   [#19]).
 
+- ✨ Optionally show env var name in the help string for Click options (see [#33]).
+
 [!16]: https://gitlab.com/sscherfke/typed-settings/-/merge_requests/16
+[#2]: https://gitlab.com/sscherfke/typed-settings/-/issues/2
 [#19]: https://gitlab.com/sscherfke/typed-settings/-/issues/19
+[#33]: https://gitlab.com/sscherfke/typed-settings/-/issues/33
 [calver]: https://calver.org
 [myst-parser]: https://myst-parser.readthedocs.io
 [sybil]: https://sybil.readthedocs.io

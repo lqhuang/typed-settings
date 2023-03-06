@@ -12,6 +12,29 @@ from .loaders import EnvLoader, FileLoader, TomlFormat
 from .types import Secret, SecretStr
 
 
+try:
+    from .click_utils import click_options, pass_settings
+except ImportError:  # pragma: no cover
+
+    def __getattr__(name: str) -> Any:
+        """
+        Try to import optional features and return them.
+
+        Raise an :exc:`ImportError` if their dependencies are missing.
+        """
+        if name == "click_options":
+            from .click_utils import click_options
+
+            return click_options
+
+        if name == "pass_settings":
+            from .click_utils import pass_settings
+
+            return pass_settings
+
+        raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+
+
 __all__ = [
     # Core
     "default_loaders",
@@ -41,19 +64,6 @@ __all__ = [
     "click_options",
     "pass_settings",
 ]
-
-
-def __getattr__(name: str) -> Any:
-    if name == "click_options":
-        from .click_utils import click_options
-
-        return click_options
-    if name == "pass_settings":
-        from .click_utils import pass_settings
-
-        return pass_settings
-
-    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
 
 
 def __dir__() -> List[str]:
