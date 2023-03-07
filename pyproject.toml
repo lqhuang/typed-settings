@@ -83,7 +83,7 @@ test = [
 dev = [  # Everything needed for development
     "typed-settings[docs,lint,test]",
     "nox",
-    "safety",
+    "pip-audit",
 ]
 
 [project.urls]

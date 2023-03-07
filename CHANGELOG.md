@@ -2,7 +2,14 @@
 
 ## 23.1.0 (unreleased)
 
+### Changed
+
 - 💥 **BREAKING:** Dropped support for Python 3.7.
+
+- 📦 Switched from [safety] to [pip-audit].
+
+[pip-audit]: https://pypi.org/project/pip-audit
+[safety]: https://pypi.org/project/safety
 
 
 ## 23.0.0 (2023-03-07)

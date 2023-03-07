@@ -34,10 +34,10 @@ mypy:
   script:
     - nox --forcecolor -s mypy
 
-safety:
+sec-check:
   stage: test
   script:
-    - nox --forcecolor -s safety
+    - nox --forcecolor -s sec-check
 
 test:
   stage: test

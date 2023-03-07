@@ -147,7 +147,7 @@ def mypy(session: nox.Session) -> None:
         session.run("mypy", "--show-error-codes", *paths)
 
 
-@nox.session(tags=["lint"])
-def safety(session: nox.Session) -> None:
+@nox.session(name="sec-check", tags=["lint"])
+def sec_check(session: nox.Session) -> None:
     session.install(".[dev]")  # Install *everything*
-    session.run("safety", "check")
+    session.run("pip-audit")
