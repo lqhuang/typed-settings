@@ -45,11 +45,11 @@ dependencies = [
 
 [project.optional-dependencies]
 click = [
-    "click>=7,<9",
+    "click>=7",
 ]
 option-groups = [
     "click-option-group",
-    "click>=7,<9",
+    "click>=7",
 ]
 jinja = [
     "jinja2",
