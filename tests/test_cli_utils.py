@@ -5,13 +5,22 @@ from collections.abc import (
     MutableSet,
     Sequence,
 )
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import (
+    Any,
+    Dict,
+    List,
+    Optional,
+    Tuple,
+    Union,
+    get_args,
+    get_origin,
+)
 
 import attrs
 import pytest
 
 from typed_settings import cli_utils, default_converter
-from typed_settings._compat import PY_39, PY_310, get_args, get_origin
+from typed_settings._compat import PY_39, PY_310
 
 
 def handle_int(

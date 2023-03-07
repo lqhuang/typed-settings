@@ -7,17 +7,21 @@ import logging
 import os
 from fnmatch import fnmatch
 from pathlib import Path
-from typing import Any, Callable, Dict, Iterable, List, Optional, Union, cast
-
-from ._compat import PY_38, PY_311
-
-
-if PY_38:
-    from typing import Protocol
-else:
-    from typing import _Protocol as Protocol  # type: ignore
+from typing import (
+    Any,
+    Callable,
+    Dict,
+    Iterable,
+    List,
+    Optional,
+    Protocol,
+    Union,
+    cast,
+)
 
 import attrs
+
+from ._compat import PY_311
 
 
 if PY_311:

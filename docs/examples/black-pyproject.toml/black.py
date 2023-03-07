@@ -10,9 +10,9 @@ class PyVersion(Enum):
     Python versions that we support.
     """
 
-    py37 = "3.7"
-    py38 = "3.8"
     py39 = "3.9"
+    py310 = "3.10"
+    py311 = "3.11"
 
 
 @ts.settings
@@ -25,7 +25,7 @@ class Settings:
 
     line_length: int = 88
     skip_string_normalization: bool = False
-    target_version: PyVersion = PyVersion.py39  # Better: Auto-detect
+    target_version: PyVersion = PyVersion.py311  # Better: Auto-detect
 
 
 @click.command()

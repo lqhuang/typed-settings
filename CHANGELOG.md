@@ -1,5 +1,10 @@
 # Changelog
 
+## 23.1.0 (unreleased)
+
+- 💥 **BREAKING:** Dropped support for Python 3.7.
+
+
 ## 23.0.0 (2023-03-07)
 
 ### Deprecated

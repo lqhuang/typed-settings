@@ -13,6 +13,7 @@ from typing import (
     List,
     Mapping,
     Optional,
+    Protocol,
     Sequence,
     Tuple,
     Type,
@@ -26,7 +27,6 @@ import attrs
 import click
 from attr._make import _Nothing as NothingType
 
-from ._compat import PY_38
 from ._core import _load_settings, default_loaders
 from .attrs import CLICK_KEY, METADATA_KEY, _SecretRepr
 from .cli_utils import (
@@ -50,12 +50,6 @@ from .types import (
     SettingsDict,
     T,
 )
-
-
-if PY_38:
-    from typing import Protocol
-else:
-    from typing import _Protocol as Protocol  # type: ignore
 
 
 # if TYPE_CHECKING:

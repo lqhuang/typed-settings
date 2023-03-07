@@ -4,9 +4,8 @@ protocol specification that they must implement.
 """
 import logging
 import subprocess  # noqa: S404
-from typing import Any, Dict
+from typing import Any, Dict, Protocol
 
-from ._compat import Protocol
 from .dict_utils import iter_settings, set_path
 from .types import OptionList, SettingsClass, SettingsDict
 

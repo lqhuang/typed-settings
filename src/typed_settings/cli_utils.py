@@ -9,6 +9,7 @@ from collections.abc import (
     MutableSet,
     Sequence,
 )
+from typing import Protocol, get_args, get_origin
 
 from ._compat import PY_310
 
@@ -24,7 +25,6 @@ import attrs
 import cattrs
 from attr._make import _Nothing as NothingType
 
-from ._compat import Protocol, get_args, get_origin
 from .converters import BaseConverter
 from .dict_utils import get_path
 from .types import SettingsDict

@@ -1,9 +1,4 @@
-try:
-    from importlib.metadata import version as get_version
-except ImportError:
-    # py37 - Just create a mock for testing:
-    def get_version(_):  # type: ignore[misc]
-        return "0.0.0"
+from importlib.metadata import version as get_version
 
 
 project = "Typed Settings"
