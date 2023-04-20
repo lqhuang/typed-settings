@@ -121,7 +121,7 @@ class ExampleItem(pytest.Item):
             expected = "\n".join(output_lines)
             output = subprocess.run(
                 cmd,
-                shell=True,
+                shell=True,  # noqa: S602
                 cwd=self.path.parent,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.STDOUT,

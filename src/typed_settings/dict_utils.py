@@ -2,11 +2,11 @@
 Utility functions for working settings dicts and serilizing nested settings.
 """
 from itertools import groupby
-from typing import Any, Generator, List, Tuple
+from typing import Any, Generator, List, Tuple, Type
 
 import attrs
 
-from .types import OptionInfo, OptionList, SettingsClass, SettingsDict
+from .types import ST, OptionInfo, OptionList, SettingsDict
 
 
 __all__ = [
@@ -19,7 +19,7 @@ __all__ = [
 ]
 
 
-def deep_options(cls: SettingsClass) -> OptionList:
+def deep_options(cls: Type[ST]) -> OptionList:
     """
     Recursively iterates *cls* and nested attrs classes and returns a flat
     list of *(path, Attribute, type)* tuples.
@@ -36,7 +36,7 @@ def deep_options(cls: SettingsClass) -> OptionList:
         NameError: if the type annotations can not be resolved.  This is, e.g.,
           the case when recursive classes are being used.
     """
-    cls = attrs.resolve_types(cls)
+    cls = attrs.resolve_types(cls)  # type: ignore[type-var]
     result = []
 
     def iter_attribs(r_cls: type, prefix: str) -> None:

@@ -16,7 +16,7 @@ from typing import (
 import attr  # The old namespaces is needed in "combine()"
 import attrs
 
-from ..types import SECRET_REPR, AttrsInstance
+from ..types import SECRET_REPR, ST, AttrsInstance
 from .hooks import auto_convert
 
 
@@ -365,7 +365,7 @@ def _get_metadata(
     return metadata
 
 
-def evolve(inst: "AttrsInstance", **changes: Any) -> "AttrsInstance":
+def evolve(inst: ST, **changes: Any) -> ST:
     """
     Create a new instance, based on *inst* with *changes* applied.
 
@@ -405,8 +405,7 @@ def evolve(inst: "AttrsInstance", **changes: Any) -> "AttrsInstance":
             changes[init_name] = old_value
         elif attrs.has(old_value) and isinstance(changes[init_name], Mapping):
             # Evolve nested attrs classes
-            assert isinstance(old_value, AttrsInstance)  # noqa: S101
-            changes[init_name] = evolve(old_value, **changes[init_name])  # type: ignore[arg-type]  # noqa
+            changes[init_name] = evolve(old_value, **changes[init_name])  # type: ignore[type-var]  # noqa
 
     return cls(**changes)
 

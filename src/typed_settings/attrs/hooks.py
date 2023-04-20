@@ -4,12 +4,12 @@ Addtional attrs hooks
 from datetime import datetime
 from enum import Enum
 from functools import partial
-from typing import TYPE_CHECKING, Any, List
+from typing import TYPE_CHECKING, Any, List, Type
 
 import attrs
 
 from ..converters import BaseConverter, default_converter
-from ..types import SettingsClass
+from ..types import ST
 
 
 if TYPE_CHECKING:
@@ -73,13 +73,13 @@ def make_auto_converter(converter: BaseConverter) -> "_FieldTransformer":
     """
 
     def auto_convert(
-        cls: SettingsClass, attribs: List["Attribute[Any]"]
+        cls: Type[ST], attribs: List["Attribute[Any]"]
     ) -> List["Attribute[Any]"]:
         """
         A field transformer that tries to convert all attribs of a class to
         their annotated type.
         """
-        attrs.resolve_types(cls, attribs=attribs)
+        attrs.resolve_types(cls, attribs=attribs)  # type: ignore[type-var]
         results = []
         for attrib in attribs:
             # Do not override explicitly defined converters!

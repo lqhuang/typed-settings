@@ -183,7 +183,7 @@ def click_options(
     .. versionchanged:: 23.0.0
        Added the *processors* argument
     """
-    cls = attrs.resolve_types(settings_cls)
+    cls = attrs.resolve_types(settings_cls)  # type: ignore[type-var]
     options = [opt for opt in deep_options(cls) if opt.field.init is not False]
     grouped_options = group_options(cls, options)
 

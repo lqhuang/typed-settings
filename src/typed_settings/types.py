@@ -24,9 +24,20 @@ SECRET_REPR: Final[str] = "*******"
 
 # A protocol to be able to statically accept an attrs class.
 # Copied from attrs b/c they only have this in their *.pyi file.
-@runtime_checkable
-class AttrsInstance(Protocol):
-    __attrs_attrs__: ClassVar[Any]
+# MYPY is a special const in mypy which works the same way as `TYPE_CHECKING`.
+MYPY = False
+if MYPY:  # pragma: no cover
+
+    @runtime_checkable
+    class AttrsInstance(Protocol):
+        __attrs_attrs__: ClassVar[Any]
+
+else:
+    # For type checkers without plug-in support use an empty protocol that
+    # will (hopefully) be combined into a union.
+    @runtime_checkable
+    class AttrsInstance(Protocol):
+        pass
 
 
 T = TypeVar("T")

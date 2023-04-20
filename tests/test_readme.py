@@ -108,7 +108,7 @@ def test_readme(example: Example, tmp_path: Path) -> None:
     for cmd, expected in example.items():  # pragma: no-cover
         result = subprocess.run(
             cmd,
-            shell=True,
+            shell=True,  # noqa: S602
             cwd=str(tmp_path),
             capture_output=True,
             text=True,

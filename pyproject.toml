@@ -172,7 +172,16 @@ addopts = "--doctest-glob='*.md' --doctest-glob='*.rst' --doctest-modules --igno
 # addopts = "-p no:doctest"
 
 [tool.ruff]
-select = ["F", "E", "W", "C90", "I", "S", "B", "UP"]
+select = [  # see: https://beta.ruff.rs/docs/rules/
+    "F",  # pyflakes
+    "E",  # pycodestyle error
+    "W",  # pycodestyle warning
+    "C90",  # mccabe
+    "I",  # isort
+    "S",  # bandit
+    "B",  # bugbear
+    "UP",  # pyupgrade
+]
 ignore = [
     "S101",  # assert needed in tests, useful in src for documenting invariants
 ]

@@ -22,8 +22,8 @@ def run(*args: str) -> str:
     """
     cmd = ("op",) + args
     try:
-        result = subprocess.run(  # noqa: S603
-            cmd, capture_output=True, text=True, check=True
+        result = subprocess.run(
+            cmd, capture_output=True, text=True, check=True  # noqa: S603
         )
     except FileNotFoundError:
         raise ValueError(
