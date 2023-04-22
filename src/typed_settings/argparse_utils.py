@@ -66,9 +66,7 @@ CliFn = Callable[[ST], Optional[int]]
 DecoratedCliFn = Callable[[], Optional[int]]
 
 
-def handle_datetime(
-    type: type, default: Default, is_optional: bool
-) -> StrDict:
+def handle_datetime(type: type, default: Default, is_optional: bool) -> StrDict:
     """
     Handle isoformatted datetimes.
     """
@@ -83,9 +81,7 @@ def handle_datetime(
     return kwargs
 
 
-def handle_enum(
-    type: Type[Enum], default: Default, is_optional: bool
-) -> StrDict:
+def handle_enum(type: Type[Enum], default: Default, is_optional: bool) -> StrDict:
     """
     Use *choices* as option type and use the enum value's name as default.
     """
@@ -99,9 +95,7 @@ def handle_enum(
     return kwargs
 
 
-def handle_path(
-    type: Type[Path], default: Default, is_optional: bool
-) -> StrDict:
+def handle_path(type: Type[Path], default: Default, is_optional: bool) -> StrDict:
     """
     Handle :class:`pathlib.Path` and also use proper metavar.
     """
@@ -171,8 +165,7 @@ class ArgparseHandler:
         is_optional: bool,
     ) -> StrDict:
         metavar = tuple(
-            "TEXT" if issubclass(t, str) else str(t.__name__).upper()
-            for t in types
+            "TEXT" if issubclass(t, str) else str(t.__name__).upper() for t in types
         )
         kwargs = {
             "metavar": metavar,
@@ -207,9 +200,7 @@ class ArgparseHandler:
         if not isinstance(default, Mapping):
             default = {}
         kwargs["default"] = default
-        kwargs["default_repr"] = ", ".join(
-            f"{k}={v}" for k, v in default.items()
-        )
+        kwargs["default_repr"] = ", ".join(f"{k}={v}" for k, v in default.items())
 
         return kwargs
 
@@ -460,16 +451,10 @@ def _mk_parser(
     ]
     parser = argparse.ArgumentParser(**parser_kwargs)
     for g_cls, g_opts in grouped_options:
-        group = parser.add_argument_group(
-            g_cls.__name__, f"{g_cls.__name__} options"
-        )
+        group = parser.add_argument_group(g_cls.__name__, f"{g_cls.__name__} options")
         for oinfo in g_opts:
-            default = get_default(
-                oinfo.field, oinfo.path, settings_dict, converter
-            )
-            flags, cfg = _mk_argument(
-                oinfo.path, oinfo.field, default, type_args_maker
-            )
+            default = get_default(oinfo.field, oinfo.path, settings_dict, converter)
+            flags, cfg = _mk_argument(oinfo.path, oinfo.field, default, type_args_maker)
             group.add_argument(*flags, **cfg)
     return parser
 
@@ -480,9 +465,7 @@ def _mk_argument(
     default: Any,
     type_args_maker: TypeArgsMaker,
 ) -> Tuple[Tuple[str, ...], Dict[str, Any]]:
-    user_config = dict(
-        field.metadata.get(METADATA_KEY, {}).get(ARGPARSE_KEY, {})
-    )
+    user_config = dict(field.metadata.get(METADATA_KEY, {}).get(ARGPARSE_KEY, {}))
 
     # The option type specifies the default option kwargs
     kwargs = type_args_maker.get_kwargs(field.type, default)
@@ -584,12 +567,8 @@ class BooleanOptionalAction(argparse.Action):
         values: Union[str, Sequence[Any], None],
         option_string: Optional[str] = None,
     ) -> None:
-        if (
-            option_string and option_string in self.option_strings
-        ):  # pragma: no cover
-            setattr(
-                namespace, self.dest, not option_string.startswith("--no-")
-            )
+        if option_string and option_string in self.option_strings:  # pragma: no cover
+            setattr(namespace, self.dest, not option_string.startswith("--no-"))
 
     def format_usage(self) -> str:
         return " | ".join(self.option_strings)

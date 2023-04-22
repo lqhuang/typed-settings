@@ -58,9 +58,7 @@ def get_item(item: str, vault: Optional[str] = None) -> Dict[str, Any]:
         cmd.append(f"--vault={vault}")
     data = json.loads(run(*cmd))
     return {
-        field["label"]: field["value"]
-        for field in data["fields"]
-        if "value" in field
+        field["label"]: field["value"] for field in data["fields"] if "value" in field
     }
 
 

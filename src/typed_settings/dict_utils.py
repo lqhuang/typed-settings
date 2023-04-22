@@ -44,9 +44,7 @@ def deep_options(cls: Type[ST]) -> OptionList:
             if field.type is not None and attrs.has(field.type):
                 iter_attribs(field.type, f"{prefix}{field.name}.")
             else:
-                result.append(
-                    OptionInfo(f"{prefix}{field.name}", field, r_cls)
-                )
+                result.append(OptionInfo(f"{prefix}{field.name}", field, r_cls))
 
     iter_attribs(cls, "")
     return result
@@ -99,9 +97,7 @@ def group_options(
     return grouped_options
 
 
-def iter_settings(
-    dct: SettingsDict, options: OptionList
-) -> Generator[Any, None, None]:
+def iter_settings(dct: SettingsDict, options: OptionList) -> Generator[Any, None, None]:
     """
     Iterate over the (possibly nested) options dict *dct* and yield
     *(path, value)* tuples.
@@ -161,9 +157,7 @@ def set_path(dct: SettingsDict, path: str, val: Any) -> None:
     dct[key] = val
 
 
-def merge_dicts(
-    fields: OptionList, base: SettingsDict, updates: SettingsDict
-) -> None:
+def merge_dicts(fields: OptionList, base: SettingsDict, updates: SettingsDict) -> None:
     """
     Merge all paths/keys that are in *fields* from *updates* into *base*.
 

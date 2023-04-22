@@ -151,9 +151,7 @@ class TestDefaultsLoading:
         result = cli_utils.get_default(field, "a", {}, default_converter())
         assert result == "eggs"
 
-    def test_no_default(
-        self, invoke: Invoke, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
+    def test_no_default(self, invoke: Invoke, monkeypatch: pytest.MonkeyPatch) -> None:
         """
         cli_options without a default are mandatory/required.
         """
@@ -163,9 +161,7 @@ class TestDefaultsLoading:
             a: str
             b: str
 
-        monkeypatch.setenv(
-            "TEST_A", "spam"
-        )  # This makes only "S.b" mandatory!
+        monkeypatch.setenv("TEST_A", "spam")  # This makes only "S.b" mandatory!
 
         @click.command()
         @click_options(Settings, default_loaders("test"))
@@ -573,9 +569,7 @@ class TestPassSettings:
         @click.command()
         @click_options(self.Settings, "test")
         @pass_settings
-        def cli(
-            s1: TestPassSettings.Settings, s2: TestPassSettings.Settings
-        ) -> None:
+        def cli(s1: TestPassSettings.Settings, s2: TestPassSettings.Settings) -> None:
             assert s1 is s2
 
         invoke(cli, "--opt=spam")
@@ -793,9 +787,7 @@ class TestDecoratorFactory:
 
         return Settings
 
-    def test_click_option_factory(
-        self, settings_cls: type, invoke: Invoke
-    ) -> None:
+    def test_click_option_factory(self, settings_cls: type, invoke: Invoke) -> None:
         """
         The ClickOptionFactory is the default.
         """
@@ -818,9 +810,7 @@ class TestDecoratorFactory:
         r2 = invoke(cli2, "--help").output.splitlines()[1:]
         assert r1 == r2
 
-    def test_option_group_factory(
-        self, settings_cls: type, invoke: Invoke
-    ) -> None:
+    def test_option_group_factory(self, settings_cls: type, invoke: Invoke) -> None:
         """
         Option groups can be created via the OptionGroupFactory
         """

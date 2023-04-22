@@ -196,9 +196,7 @@ def click_options(
         if _loaders:
             env_loader = _loaders[-1]
 
-    settings_dict = _load_settings(
-        cls, options, loaders, processors=processors
-    )
+    settings_dict = _load_settings(cls, options, loaders, processors=processors)
 
     converter = converter or default_converter()
     type_args_maker = type_args_maker or TypeArgsMaker(ClickHandler())
@@ -262,9 +260,7 @@ def _get_wrapper(
         option_decorator = decorator_factory.get_option_decorator()
         for g_cls, g_opts in reversed(grouped_options):
             for oinfo in reversed(g_opts):
-                default = get_default(
-                    oinfo.field, oinfo.path, settings_dict, converter
-                )
+                default = get_default(oinfo.field, oinfo.path, settings_dict, converter)
                 envvar = env_loader.get_envvar(oinfo) if env_loader else None
                 option = _mk_option(
                     option_decorator,
@@ -285,9 +281,7 @@ def _get_wrapper(
 
 
 @overload
-def pass_settings(
-    f: None = None, *, argname: Optional[str] = ...
-) -> Callable[[F], F]:
+def pass_settings(f: None = None, *, argname: Optional[str] = ...) -> Callable[[F], F]:
     ...
 
 
@@ -459,9 +453,7 @@ class OptionGroupFactory:
         return cast(Decorator[F], self.optgroup.group(name))
 
 
-def handle_datetime(
-    type: type, default: Default, is_optional: bool
-) -> StrDict:
+def handle_datetime(type: type, default: Default, is_optional: bool) -> StrDict:
     """
     Use :class:`click.DateTime` as option type and convert the default value
     to an ISO string.
@@ -478,9 +470,7 @@ def handle_datetime(
     return kwargs
 
 
-def handle_enum(
-    type: Type[Enum], default: Default, is_optional: bool
-) -> StrDict:
+def handle_enum(type: Type[Enum], default: Default, is_optional: bool) -> StrDict:
     """
     Use :class:`click.Choice` as option type and use the enum value's name as
     default.

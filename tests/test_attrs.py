@@ -303,9 +303,7 @@ class TestCombine:
             {"n1": Nested1(), "n2": Nested2()},
         )
         assert Composed.__name__ == "Composed"
-        assert [
-            (f.name, f.type, f.default) for f in attrs.fields(Composed)
-        ] == [
+        assert [(f.name, f.type, f.default) for f in attrs.fields(Composed)] == [
             ("a", str, ""),
             ("n1", Nested1, Nested1()),
             ("n2", Nested2, Nested2()),
@@ -326,9 +324,7 @@ class TestCombine:
         class BaseSettings:
             a: str = ""
 
-        with pytest.raises(
-            ValueError, match="Duplicate attribute for nested class: a"
-        ):
+        with pytest.raises(ValueError, match="Duplicate attribute for nested class: a"):
             combine(
                 "Composed",
                 BaseSettings,

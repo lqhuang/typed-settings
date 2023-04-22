@@ -274,9 +274,7 @@ class FileLoader:
         candidates = [(False, str(f)) for f in files]
         if env_var:
             LOGGER.debug(f"Env var for config files: {env_var}")
-            candidates += [
-                (True, fname) for fname in os.getenv(env_var, "").split(":")
-            ]
+            candidates += [(True, fname) for fname in os.getenv(env_var, "").split(":")]
         else:
             LOGGER.debug("Env var for config files not set")
 
@@ -293,9 +291,7 @@ class FileLoader:
                     LOGGER.error(f"Mandatory config file not found: {fname}")
                     raise
                 if from_envvar:
-                    LOGGER.warning(
-                        f"Config file from {env_var} not found: {fname}"
-                    )
+                    LOGGER.warning(f"Config file from {env_var} not found: {fname}")
                 else:
                     LOGGER.info(f"Config file not found: {fname}")
             else:
@@ -379,9 +375,7 @@ class PythonFormat:
         module_name = path.stem
         spec = importlib.util.spec_from_file_location(module_name, path)
         if spec is None or spec.loader is None:
-            raise ConfigFileNotFoundError(
-                "No such file or directory: '{path}'"
-            )
+            raise ConfigFileNotFoundError("No such file or directory: '{path}'")
         module = importlib.util.module_from_spec(spec)
         try:
             spec.loader.exec_module(module)
@@ -458,9 +452,7 @@ class OnePasswordLoader:
 
         self._op = _onepassword
 
-    def __call__(
-        self, settings_cls: type, options: OptionList
-    ) -> SettingsDict:
+    def __call__(self, settings_cls: type, options: OptionList) -> SettingsDict:
         """
         Load settings for the given options.
 
@@ -519,8 +511,6 @@ def clean_settings(
 
     if invalid_paths:
         joined_paths = ", ".join(sorted(invalid_paths))
-        raise InvalidOptionsError(
-            f"Invalid options found in {source}: {joined_paths}"
-        )
+        raise InvalidOptionsError(f"Invalid options found in {source}: {joined_paths}")
 
     return cleaned

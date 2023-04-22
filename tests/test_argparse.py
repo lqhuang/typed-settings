@@ -72,9 +72,7 @@ def test_cli_explicit_config(invoke: Invoke) -> None:
     invoke(cli, "--o=3")
 
 
-def test_cli_desc_from_func(
-    invoke: Invoke, capsys: pytest.CaptureFixture
-) -> None:
+def test_cli_desc_from_func(invoke: Invoke, capsys: pytest.CaptureFixture) -> None:
     @argparse_utils.cli(Settings, "test")
     def cli(settings: Settings) -> None:
         """
@@ -89,9 +87,7 @@ def test_cli_desc_from_func(
     assert err == ""
 
 
-def test_cli_desc_from_kwarg(
-    invoke: Invoke, capsys: pytest.CaptureFixture
-) -> None:
+def test_cli_desc_from_kwarg(invoke: Invoke, capsys: pytest.CaptureFixture) -> None:
     @argparse_utils.cli(Settings, "test", description="Le description")
     def cli(settings: Settings) -> None:
         """

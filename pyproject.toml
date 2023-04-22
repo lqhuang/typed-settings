@@ -129,7 +129,7 @@ clean-docs = [
 ]
 
 [tool.black]
-line-length = 79
+line-length = 88
 
 [tool.coverage.paths]
 source = [
@@ -185,7 +185,7 @@ select = [  # see: https://beta.ruff.rs/docs/rules/
 ignore = [
     "S101",  # assert needed in tests, useful in src for documenting invariants
 ]
-line-length = 79
+line-length = 88
 src = ["src", "tests"]
 target-version = "py38"
 

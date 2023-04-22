@@ -86,9 +86,7 @@ def test_handle_script() -> None:
         ("echo a; echo b 1>&2; exit 1", 1, "a\n", "b\n"),
     ],
 )
-def test_handle_script_error(
-    cmd: str, code: int, stdout: str, stderr: str
-) -> None:
+def test_handle_script_error(cmd: str, code: int, stdout: str, stderr: str) -> None:
     """
     Raise ValueError if the command cannot be found or fails.  Include stdout
     and stderr in exception.
@@ -404,9 +402,7 @@ class TestJinjaProcessor:
             with pytest.raises(expected):
                 processors.JinjaProcessor()(data, Settings, OPTIONS)
 
-    def test_jinja_not_installed(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
+    def test_jinja_not_installed(self, monkeypatch: pytest.MonkeyPatch) -> None:
         # Remove if already imported
         monkeypatch.delitem(sys.modules, "jinja2", raising=False)
         # Prevent import:

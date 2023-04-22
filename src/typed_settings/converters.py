@@ -142,9 +142,7 @@ def _generate_hook_factory(structure_func, fn):  # type: ignore[no-untyped-def]
     return gen_func
 
 
-def from_dict(
-    settings: SettingsDict, cls: Type[T], converter: BaseConverter
-) -> T:
+def from_dict(settings: SettingsDict, cls: Type[T], converter: BaseConverter) -> T:
     """
     Convert a settings dict to an attrs class instance using a cattrs
     converter.
@@ -187,8 +185,7 @@ def to_dt(value: Union[datetime, str], _type: type = datetime) -> datetime:
     """
     if not isinstance(value, (datetime, str)):
         raise TypeError(
-            f"Invalid type {type(value).__name__!r}; expected 'datetime' or "
-            f"'str'."
+            f"Invalid type {type(value).__name__!r}; expected 'datetime' or " f"'str'."
         )
     if isinstance(value, str):
         if value[-1] == "Z":

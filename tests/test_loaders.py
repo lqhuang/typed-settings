@@ -108,9 +108,7 @@ class TestCleanSettings:
         }
         with pytest.raises(InvalidOptionsError) as exc_info:
             clean_settings(s, deep_options(Settings), "t")
-        assert str(exc_info.value) == (
-            "Invalid options found in t: host.eggs, spam"
-        )
+        assert str(exc_info.value) == ("Invalid options found in t: host.eggs, spam")
 
     def test_clean_settings_unresolved_type(self) -> None:
         """
@@ -190,9 +188,7 @@ class TestPythonFormat:
             ),
         ],
     )
-    def test_load_python(
-        self, fmt: FileFormat, data: str, tmp_path: Path
-    ) -> None:
+    def test_load_python(self, fmt: FileFormat, data: str, tmp_path: Path) -> None:
         """
         We can load settings from a Python file.
         """
@@ -212,9 +208,7 @@ class TestPythonFormat:
         """
         config_file = tmp_path.joinpath("settings.py")
         config_file.write_text("class spam:\n    a = 'spam'\n")
-        result = PythonFormat(section)(
-            config_file, Settings, deep_options(Settings)
-        )
+        result = PythonFormat(section)(config_file, Settings, deep_options(Settings))
         assert result == {}
 
     def test_file_not_found(self) -> None:
@@ -261,9 +255,7 @@ class TestTomlFormat:
             ),
         ],
     )
-    def test_load_toml(
-        self, fmt: FileFormat, data: str, tmp_path: Path
-    ) -> None:
+    def test_load_toml(self, fmt: FileFormat, data: str, tmp_path: Path) -> None:
         """
         We can load settings from a TOML file.
         """
@@ -309,9 +301,7 @@ class TestTomlFormat:
             a = "spam"
         """
         )
-        result = TomlFormat(section)(
-            config_file, Settings, deep_options(Settings)
-        )
+        result = TomlFormat(section)(config_file, Settings, deep_options(Settings))
         assert result == {}
 
     def test_file_not_found(self) -> None:
@@ -480,9 +470,7 @@ class TestFileLoader:
         An error is raised if a file has an unknown extension.
         """
         loader = FileLoader({"*.toml": TomlFormat("t")}, [])
-        pytest.raises(
-            UnknownFormatError, loader._load_file, Path("f.py"), [], type
-        )
+        pytest.raises(UnknownFormatError, loader._load_file, Path("f.py"), [], type)
 
     def test_load(self, tmp_path: Path) -> None:
         """

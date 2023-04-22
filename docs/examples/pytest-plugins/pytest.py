@@ -43,10 +43,7 @@ class Base:
     )
     stepwise: bool = ts.option(
         default=False,
-        help=(
-            "Exit on test failure and continue from last failing test next "
-            "time"
-        ),
+        help=("Exit on test failure and continue from last failing test next " "time"),
         click={"param_decls": ("--stepwise", "--sw"), "is_flag": True},
     )
 

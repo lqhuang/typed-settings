@@ -50,9 +50,7 @@ class TypeHandlerFunc(Protocol):
     for a specific type.
     """
 
-    def __call__(
-        self, type: type, default: Default, is_optional: bool
-    ) -> StrDict:
+    def __call__(self, type: type, default: Default, is_optional: bool) -> StrDict:
         """
         Return keyword arguments for creating an option for *type*.
 
@@ -292,9 +290,7 @@ class TypeArgsMaker:
 
         else:
             if origin in self.list_types:
-                return self._handle_collection(
-                    otype, args, default, is_optional
-                )
+                return self._handle_collection(otype, args, default, is_optional)
             elif origin in self.tuple_types:
                 return self._handle_tuple(otype, args, default, is_optional)
             elif origin in self.mapping_types:
@@ -344,9 +340,7 @@ class TypeArgsMaker:
         else:
             default = None
 
-        kwargs = self.type_handler.handle_tuple(
-            self, args, default, is_optional
-        )
+        kwargs = self.type_handler.handle_tuple(self, args, default, is_optional)
         return kwargs
 
     def _handle_collection(
@@ -366,9 +360,7 @@ class TypeArgsMaker:
         else:
             default = None
 
-        kwargs = self.type_handler.handle_collection(
-            self, args, default, is_optional
-        )
+        kwargs = self.type_handler.handle_collection(self, args, default, is_optional)
         return kwargs
 
     def _handle_mapping(
@@ -381,9 +373,7 @@ class TypeArgsMaker:
         """
         Get kwargs for mapping types (e.g, dicts).
         """
-        kwargs = self.type_handler.handle_mapping(
-            self, args, default, is_optional
-        )
+        kwargs = self.type_handler.handle_mapping(self, args, default, is_optional)
         return kwargs
 
 
@@ -472,9 +462,7 @@ def check_if_optional(
         *is_optional:*
             indicates whether *otype* was an optional or not.
     """
-    is_optional = (
-        origin in (Union, UnionType) and len(args) == 2 and NoneType in args
-    )
+    is_optional = origin in (Union, UnionType) and len(args) == 2 and NoneType in args
     if is_optional:
         if default is attrs.NOTHING:
             default = None

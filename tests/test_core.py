@@ -51,9 +51,7 @@ class TestLoadSettings:
         monkeypatch.setenv("EXAMPLE_HOST_PORT", "42")
 
     @pytest.fixture
-    def loaders(
-        self, config_files: List[Path], env_vars: None
-    ) -> List[Loader]:
+    def loaders(self, config_files: List[Path], env_vars: None) -> List[Loader]:
         return [
             FileLoader(
                 formats={"*.toml": TomlFormat("example")},
@@ -215,9 +213,7 @@ class TestLoadSettings:
         result = _core.load(Settings, appname="a-b")
         assert result == Settings(option=False)
 
-    def test_explicit_env_prefix(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
+    def test_explicit_env_prefix(self, monkeypatch: pytest.MonkeyPatch) -> None:
         monkeypatch.setenv("P_SPAM", "spam")
 
         @settings(frozen=True)

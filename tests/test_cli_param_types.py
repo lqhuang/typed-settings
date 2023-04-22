@@ -82,9 +82,7 @@ def make_cli(settings_cls: Type[ST]) -> Cli:
 
 def make_argparser(settings_cls: Type[ST]) -> ArgParser:
     def parse_args(*args: str) -> ST:
-        parser = argparse_utils.make_parser(
-            settings_cls, default_loaders("test")
-        )
+        parser = argparse_utils.make_parser(settings_cls, default_loaders("test"))
         namespace = parser.parse_args(args)
         return argparse_utils.namespace2settings(settings_cls, namespace)
 
@@ -253,9 +251,7 @@ class TestIntFloatStrParam(ParamBase):
     expected_defaults = Settings(e=None)
 
     cli_options = ["--a=eggs", "--b=pwd", "--c=3", "--d=3.1"]
-    expected_settings = Settings(
-        a="eggs", b=SecretStr("pwd"), c=3, d=3.1, e=None
-    )
+    expected_settings = Settings(a="eggs", b=SecretStr("pwd"), c=3, d=3.1, e=None)
 
 
 class TestDateTimeParam(ParamBase):

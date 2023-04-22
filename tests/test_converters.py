@@ -276,6 +276,4 @@ def test_strlist_hook_either_arg() -> None:
     """
     converter = default_converter()
     with pytest.raises(ValueError, match="You may either pass"):
-        register_strlist_hook(
-            converter, sep=":", fn=lambda v: [v]
-        )  # pragma: no cover
+        register_strlist_hook(converter, sep=":", fn=lambda v: [v])  # pragma: no cover

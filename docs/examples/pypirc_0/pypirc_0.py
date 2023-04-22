@@ -20,8 +20,7 @@ class Settings:
 
 settings = ts.load(Settings, "distutils", ["pypirc.toml"])
 repos = {
-    name: ts.load(RepoServer, name, ["pypirc.toml"])
-    for name in settings.index_servers
+    name: ts.load(RepoServer, name, ["pypirc.toml"]) for name in settings.index_servers
 }
 REPO_NAME = sys.argv[1]
 print(repos[REPO_NAME])

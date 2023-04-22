@@ -79,15 +79,10 @@ def pytest_ignore_collect(collection_path: Path, config: "Config") -> bool:
     )
 
 
-def pytest_collect_file(
-    file_path: Path, parent: "Session"
-) -> Optional["ExampleFile"]:
+def pytest_collect_file(file_path: Path, parent: "Session") -> Optional["ExampleFile"]:
     """Checks if the file is a rst file and creates an
     :class:`ExampleFile` instance."""
-    if (
-        is_relative_to(file_path, EXAMPLES_DIR)
-        and file_path.name == "test.console"
-    ):
+    if is_relative_to(file_path, EXAMPLES_DIR) and file_path.name == "test.console":
         return ExampleFile.from_parent(parent, path=file_path)
     return None
 
@@ -162,9 +157,7 @@ class ReprFailExample(TerminalRepr):
     }
     """Colorization codes for the diff markup."""
 
-    def __init__(
-        self, item: ExampleItem, cmd: str, diff_text: List[str]
-    ) -> None:
+    def __init__(self, item: ExampleItem, cmd: str, diff_text: List[str]) -> None:
         self.item = item
         self.cmd = cmd
         self.diff_text = diff_text

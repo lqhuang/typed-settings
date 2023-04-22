@@ -173,9 +173,7 @@ class TestTypeArgsMaker:
         """
         TAM raises an error if a tuple default has the wrong length.
         """
-        with pytest.raises(
-            TypeError, match="Default value must be of len 2: 3"
-        ):
+        with pytest.raises(TypeError, match="Default value must be of len 2: 3"):
             tam.get_kwargs(Tuple[int, str], (1, "x", True))
 
     @pytest.mark.skipif(not PY_39, reason="Needs Python 3.8")

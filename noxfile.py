@@ -61,9 +61,7 @@ def build(session: nox.Session) -> None:
     ["min_deps_version", "latest_deps_version"],
 )
 @nox.parametrize("pkg_format", ["tar.gz", "whl"], ["src", "whl"])
-def test(
-    session: nox.Session, deps_min_version: bool, pkg_format: str
-) -> None:
+def test(session: nox.Session, deps_min_version: bool, pkg_format: str) -> None:
     pkgs = glob.glob(f"dist/*.{pkg_format}")
     if len(pkgs) == 0:
         session.log('Package not found, running "build" ...')
@@ -85,9 +83,7 @@ def test(
             session.warn(f"Skipping this session for Python {session.python}")
             return
 
-        pyproject = tomllib.loads(
-            PROJECT_DIR.joinpath("pyproject.toml").read_text()
-        )
+        pyproject = tomllib.loads(PROJECT_DIR.joinpath("pyproject.toml").read_text())
         deps = pyproject["project"]["dependencies"]
         for dep in deps:
             req = Requirement(dep)
@@ -106,9 +102,7 @@ def test(
     if tuple(map(int, session.python.split("."))) < (3, 10):  # type: ignore
         # Skip doctests on older Python versions
         # The output of arparse's "--help" has changed in 3.10
-        session.run(
-            "coverage", "run", "-m", "pytest", "tests", "-k", "not test_readme"
-        )
+        session.run("coverage", "run", "-m", "pytest", "tests", "-k", "not test_readme")
     else:
         session.run("coverage", "run", "-m", "pytest", "docs", "tests")
     session.run("coverage", "run", "-m", "pytest", "src")
@@ -130,8 +124,8 @@ def coverage_report(session: nox.Session) -> None:
 
 @nox.session(python=False, tags=["lint"])
 def fix(session: nox.Session) -> None:
-    session.run("ruff", "--fix-only", *LINT_PATHS)
     session.run("black", *LINT_PATHS)
+    session.run("ruff", "--fix-only", *LINT_PATHS)
 
 
 @nox.session(tags=["lint"])
