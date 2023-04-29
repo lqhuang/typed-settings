@@ -5,14 +5,20 @@ import logging
 from pathlib import Path
 from typing import Iterable, List, Optional, Sequence, Type, Union
 
-import attrs
-
+from . import dict_utils
 from .attrs import METADATA_KEY
-from .converters import BaseConverter, default_converter, from_dict
-from .dict_utils import deep_options, merge_dicts, set_path
-from .loaders import EnvLoader, FileLoader, Loader, TomlFormat
+from .converters import BaseConverter, convert, default_converter
+from .loaders import EnvLoader, FileLoader, Loader, TomlFormat, _DefaultsLoader
 from .processors import Processor
-from .types import AUTO, ST, OptionList, SettingsClass, SettingsDict, _Auto
+from .types import (
+    AUTO,
+    ST,
+    LoadedSettings,
+    MergedSettings,
+    OptionList,
+    SettingsClass,
+    _Auto,
+)
 
 
 LOGGER = logging.getLogger(METADATA_KEY)
@@ -173,14 +179,15 @@ def load(
         config_files_var=config_files_var,
         env_prefix=env_prefix,
     )
+    options = dict_utils.deep_options(cls)
     settings = _load_settings(
         cls=cls,
-        options=deep_options(cls),
+        options=options,
         loaders=loaders,
     )
 
     converter = default_converter()
-    return from_dict(settings, cls, converter)
+    return convert(settings, cls, options, converter)
 
 
 def load_settings(
@@ -216,13 +223,14 @@ def load_settings(
     """
     if converter is None:
         converter = default_converter()
+    options = dict_utils.deep_options(cls)
     settings = _load_settings(
         cls=cls,
-        options=deep_options(cls),
+        options=options,
         loaders=loaders,
         processors=processors,
     )
-    return from_dict(settings, cls, converter)
+    return convert(settings, cls, options, converter)
 
 
 def _load_settings(
@@ -230,30 +238,27 @@ def _load_settings(
     options: OptionList,
     loaders: Sequence[Loader],
     processors: Sequence[Processor] = (),
-) -> SettingsDict:
+) -> MergedSettings:
     """
     Loads settings for *options* and returns them as dict.
 
     This function makes it easier to extend settings since it returns a dict
     that can easily be updated.
     """
-    settings: SettingsDict = {}
+    loaders = [_DefaultsLoader()] + list(loaders)
+    loaded_settings: List[LoadedSettings] = []
+    for loader in loaders:
+        result = loader(cls, options)
+        if isinstance(result, LoadedSettings):
+            loaded_settings.append(result)
+        else:
+            loaded_settings.extend(result)
 
-    # Populate dict with default settings.  This avoids problems with nested
-    # settings classes for which no settings are loaded.
-    for opt in options:
-        if opt.field.default is attrs.NOTHING:
-            continue
-        if isinstance(opt.field.default, attrs.Factory):  # type: ignore
-            continue
-        set_path(settings, opt.path, opt.field.default)
+    merged_settings = dict_utils.merge_settings(options, loaded_settings)
 
-    loaded_settings = [loader(cls, options) for loader in loaders]
-
-    for ls in loaded_settings:
-        merge_dicts(options, settings, ls)
-
+    settings_dict = dict_utils.flat2nested(merged_settings)
     for processor in processors:
-        settings = processor(settings, cls, options)
+        settings_dict = processor(settings_dict, cls, options)
+    merged_settings = dict_utils.update_settings(merged_settings, settings_dict)
 
-    return settings
+    return merged_settings

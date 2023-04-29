@@ -1,17 +1,20 @@
 """
 Converters and helpers for :mod:`cattrs`.
 """
+import os
+from contextlib import contextmanager
 from datetime import datetime
 from enum import Enum
 from pathlib import Path
-from typing import Any, Callable, Optional, Type, Union
+from typing import Any, Callable, Generator, List, Optional, Set, Type, Union
 
-from attrs import has
+import attrs
 from cattrs import BaseConverter, Converter
 from cattrs._compat import is_frozenset, is_mutable_set, is_sequence, is_tuple
 
-from .exceptions import InvalidValueError
-from .types import ET, SettingsDict, T
+from . import dict_utils
+from .exceptions import InvalidSettingsError
+from .types import ET, LoaderMeta, MergedSettings, OptionList, SettingsDict, T
 
 
 __all__ = [
@@ -20,7 +23,7 @@ __all__ = [
     "default_converter",
     "register_attrs_hook_factory",
     "register_strlist_hook",
-    "from_dict",
+    "from_slist",
     "to_dt",
     "to_bool",
     "to_enum",
@@ -74,7 +77,7 @@ def register_attrs_hook_factory(converter: BaseConverter) -> None:
 
         return structure_attrs
 
-    converter.register_structure_hook_factory(has, allow_attrs_instances)
+    converter.register_structure_hook_factory(attrs.has, allow_attrs_instances)
 
 
 def register_strlist_hook(
@@ -142,26 +145,92 @@ def _generate_hook_factory(structure_func, fn):  # type: ignore[no-untyped-def]
     return gen_func
 
 
-def from_dict(settings: SettingsDict, cls: Type[T], converter: BaseConverter) -> T:
+@contextmanager
+def set_context(meta: LoaderMeta) -> Generator[None, None, None]:
     """
-    Convert a settings dict to an attrs class instance using a cattrs
-    converter.
+    Set the context for converting option values from a given loader.
+
+    Currently only chagnes the cwd to :attr:`.LoaderMeta.cwd`.
 
     Args:
-        settings: Dictionary with settings
-        cls: Attrs class to which the settings are converted to
-        converter: Cattrs convert to use for the conversion
+        meta: A loaders meta data
+
+    Return:
+        A context manager (that yields ``None``)
+    """
+    old_cwd = os.getcwd()
+    os.chdir(meta.cwd)
+    try:
+        yield
+    finally:
+        os.chdir(old_cwd)
+
+
+def convert(
+    merged_settings: MergedSettings,
+    cls: Type[T],
+    option_infos: OptionList,
+    converter: BaseConverter,
+) -> T:
+    """
+    Create an instance of *cls* from the settings in *merged_settings* using the given
+    *converter*.
+
+    Args:
+        merged_settings: The list of settings values to convert.
+        cls: The class to convert to.
+        option_infos: The list of all available settings for *cls*.
+        converter: The converter to use.
 
     Return:
         An instance of *cls*.
 
     Raise:
-        InvalidValueError: If a value cannot be converted to the correct type.
+        InvalidSettingsError: If an instance of *cls* cannot be created for the given
+            settings.
     """
+    settings_dict: SettingsDict = {}
+    errors: List[str] = []
+    loaded_settings_paths: Set[str] = set()
+    for option_info, meta, value in merged_settings.values():
+        field = option_info.field
+        if field.type:
+            with set_context(meta):
+                try:
+                    if field.converter:
+                        converted_value = field.converter(value)
+                    else:
+                        converted_value = converter.structure(value, field.type)
+                except Exception as e:
+                    errors.append(
+                        f"Could not convert value {value!r} for option "
+                        f"{field.path!r} from loader {meta.name}: {e!r}"
+                    )
+        else:
+            converted_value = value
+        dict_utils.set_path(settings_dict, option_info.path, converted_value)
+        loaded_settings_paths.add(option_info.path)
+
+    for option_info in option_infos:
+        if option_info.path in loaded_settings_paths:
+            continue
+        if option_info.field.default is not attrs.NOTHING:
+            continue
+        errors.append(f"No value set for required option {option_info.path!r}")
+
     try:
-        return converter.structure_attrs_fromdict(settings, cls)
-    except (AttributeError, KeyError, ValueError, TypeError) as e:
-        raise InvalidValueError(str(e)) from e
+        settings = converter.structure(settings_dict, cls)
+    except Exception as e:
+        errors.append(f"Could not convert loaded settings: {e!r}")
+
+    if errors:
+        errs = "".join(f"\n- {e}" for e in errors)
+        raise InvalidSettingsError(
+            f"{len(errors)} errors occured while converting the loaded option values "
+            f"to an instance of {cls.__name__!r}:{errs}"
+        )
+
+    return settings
 
 
 def to_dt(value: Union[datetime, str], _type: type = datetime) -> datetime:

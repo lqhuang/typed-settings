@@ -6,7 +6,14 @@ from typing import Any, Generator, List, Tuple, Type
 
 import attrs
 
-from .types import ST, OptionInfo, OptionList, SettingsDict
+from .types import (
+    ST,
+    LoadedSettings,
+    MergedSettings,
+    OptionInfo,
+    OptionList,
+    SettingsDict,
+)
 
 
 __all__ = [
@@ -157,22 +164,62 @@ def set_path(dct: SettingsDict, path: str, val: Any) -> None:
     dct[key] = val
 
 
-def merge_dicts(fields: OptionList, base: SettingsDict, updates: SettingsDict) -> None:
-    """
-    Merge all paths/keys that are in *fields* from *updates* into *base*.
+# def merge_dicts(fields: OptionList, base: SettingsDict, updates: SettingsDict) -> None:
+#     """
+#     Merge all paths/keys that are in *fields* from *updates* into *base*.
+#
+#     The goal is to only merge settings but not settings values that are
+#     dictionaries.
+#
+#     Args:
+#         options: The list of option fields.
+#         base: Base dictionary that gets modified.
+#         update: Dictionary from which the updates are read.
+#     """
+#     for field in fields:
+#         try:
+#             value = get_path(updates, field.path)
+#         except KeyError:
+#             pass
+#         else:
+#             set_path(base, field.path, value)
 
-    The goal is to only merge settings but not settings values that are
-    dictionaries.
 
-    Args:
-        options: The list of option fields.
-        base: Base dictionary that gets modified.
-        update: Dictionary from which the updates are read.
-    """
+def merge_settings(
+    fields: OptionList, settings: list[LoadedSettings]
+) -> MergedSettings:
+    rsettings = settings[::-1]
+    merged_settings: MergedSettings = {}
     for field in fields:
+        for loaded_settings in rsettings:
+            try:
+                value = get_path(loaded_settings.settings, field.path)
+            except KeyError:
+                pass
+            else:
+                merged_settings[field.path] = (field, loaded_settings.meta, value)
+                break
+    return merged_settings
+
+
+def update_settings(
+    merged_settings: MergedSettings, settings: SettingsDict
+) -> MergedSettings:
+    updated: MergedSettings = {}
+    for path, (field, meta, value) in merged_settings.items():
         try:
-            value = get_path(updates, field.path)
+            value = get_path(settings, path)
         except KeyError:
             pass
-        else:
-            set_path(base, field.path, value)
+        updated[path] = (field, meta, value)
+    return updated
+
+
+def flat2nested(merged_settings: MergedSettings) -> SettingsDict:
+    """
+    Convert the flat *merged_settings* to a nested settings dict.
+    """
+    settings: SettingsDict = {}
+    for path, (_field, _meta, value) in merged_settings.items():
+        set_path(settings, path, value)
+    return settings

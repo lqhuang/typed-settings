@@ -39,11 +39,17 @@ from .cli_utils import (
     TypeHandlerFunc,
     get_default,
 )
-from .converters import BaseConverter, default_converter, from_dict
-from .dict_utils import deep_options, set_path
+from .converters import BaseConverter, convert, default_converter
+from .dict_utils import deep_options
 from .loaders import Loader
 from .processors import Processor
-from .types import SECRET_REPR, SECRETS_TYPES, ST, SettingsDict
+from .types import (
+    SECRET_REPR,
+    SECRETS_TYPES,
+    ST,
+    LoaderMeta,
+    MergedSettings,
+)
 
 
 __all__ = [
@@ -516,11 +522,15 @@ def _ns2settings(
     class and return it.
     """
     options = deep_options(settings_cls)
-    settings_dict: SettingsDict = {}
+    meta = LoaderMeta("Command line args")
+    merged_settings: MergedSettings = {}
     for option_info in options:
-        value = getattr(namespace, option_info.path.replace(".", "_"))
-        set_path(settings_dict, option_info.path, value)
-    settings = from_dict(settings_dict, settings_cls, converter)
+        path = option_info.path
+        attr = path.replace(".", "_")
+        if hasattr(namespace, attr):
+            value = getattr(namespace, attr)
+            merged_settings[path] = (option_info, meta, value)
+    settings = convert(merged_settings, settings_cls, options, converter)
     return settings
 
 

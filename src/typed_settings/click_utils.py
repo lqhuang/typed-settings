@@ -36,18 +36,19 @@ from .cli_utils import (
     TypeHandlerFunc,
     get_default,
 )
-from .converters import BaseConverter, default_converter, from_dict
-from .dict_utils import deep_options, group_options, merge_dicts, set_path
+from .converters import BaseConverter, default_converter
+from .dict_utils import deep_options, flat2nested, group_options
 from .loaders import EnvLoader, Loader
 from .processors import Processor
 from .types import (
     SECRET_REPR,
     SECRETS_TYPES,
     ST,
+    LoaderMeta,
+    MergedSettings,
     OptionInfo,
     SecretStr,
     SettingsClass,
-    SettingsDict,
     T,
 )
 
@@ -196,7 +197,7 @@ def click_options(
         if _loaders:
             env_loader = _loaders[-1]
 
-    settings_dict = _load_settings(cls, options, loaders, processors=processors)
+    merged_settings = _load_settings(cls, options, loaders, processors=processors)
 
     converter = converter or default_converter()
     type_args_maker = type_args_maker or TypeArgsMaker(ClickHandler())
@@ -204,7 +205,7 @@ def click_options(
 
     wrapper = _get_wrapper(
         cls,
-        settings_dict,
+        merged_settings,
         options,
         grouped_options,
         converter,
@@ -218,7 +219,7 @@ def click_options(
 
 def _get_wrapper(
     cls: Type[ST],
-    settings_dict: SettingsDict,
+    merged_settings: MergedSettings,
     options: List[OptionInfo],
     grouped_options: List[Tuple[type, List[OptionInfo]]],
     converter: BaseConverter,
@@ -240,8 +241,13 @@ def _get_wrapper(
             ctx = click.get_current_context()
             if ctx.obj is None:
                 ctx.obj = {}
-            merge_dicts(options, settings_dict, ctx.obj.get(CTX_KEY, {}))
-            settings = from_dict(settings_dict, cls, converter)
+            meta = LoaderMeta("Command line args")
+            cli_options = ctx.obj.get(CTX_KEY, {})
+            for option in options:
+                path = option.path
+                if path in cli_options:
+                    merged_settings[path] = (option, meta, cli_options[path])
+            settings = flat2nested(merged_settings, cls, options, converter)
             if argname:
                 ctx_key = argname
                 kwargs = {argname: settings, **kwargs}  # type: ignore
@@ -260,7 +266,9 @@ def _get_wrapper(
         option_decorator = decorator_factory.get_option_decorator()
         for g_cls, g_opts in reversed(grouped_options):
             for oinfo in reversed(g_opts):
-                default = get_default(oinfo.field, oinfo.path, settings_dict, converter)
+                default = get_default(
+                    oinfo.field, oinfo.path, merged_settings, converter
+                )
                 envvar = env_loader.get_envvar(oinfo) if env_loader else None
                 option = _mk_option(
                     option_decorator,
@@ -668,7 +676,7 @@ def _make_callback(
         if ctx.obj is None:
             ctx.obj = {}
         settings = ctx.obj.setdefault(CTX_KEY, {})
-        set_path(settings, path, value)
+        settings[path] = value
         return value
 
     return cb

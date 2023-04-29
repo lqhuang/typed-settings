@@ -1,7 +1,7 @@
 import json
 import logging
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any, Dict, List, cast
 
 import pytest
 
@@ -14,7 +14,7 @@ from typed_settings.converters import (
 )
 from typed_settings.dict_utils import deep_options
 from typed_settings.loaders import EnvLoader, FileLoader, Loader, TomlFormat
-from typed_settings.types import OptionList, SettingsClass, SettingsDict
+from typed_settings.types import LoaderMeta, OptionList, SettingsClass, SettingsDict
 
 
 @settings(frozen=True)
@@ -60,24 +60,36 @@ class TestLoadSettings:
             EnvLoader(prefix="EXAMPLE_"),
         ]
 
-    def test__load_settings(self, loaders: List[Loader]) -> None:
+    def test__load_settings(self, loaders: List[Loader], tmp_path: Path) -> None:
         """
         "_load_settings()" is the internal core loader and takes a list of
         options instead of a normal settings class.  It returns a dict and
         not a settings instance.
         """
+        options = deep_options(Settings)
         settings = _core._load_settings(
             cls=Settings,
-            options=deep_options(Settings),
+            options=options,
             loaders=loaders,
         )
+        print(options)
         assert settings == {
-            "url": "https://example.com",
-            "default": 3,  # This is from the cls
-            "host": {
-                "name": "example.com",
-                "port": "42",  # Value not yet converted
-            },
+            "host.name": (
+                options[0],
+                LoaderMeta(
+                    f"FileLoader[{tmp_path.joinpath('settings.toml')}]", cwd=tmp_path
+                ),
+                "example.com",
+            ),
+            "host.port": (options[1], LoaderMeta("EnvLoader"), "42"),
+            "url": (
+                options[2],
+                LoaderMeta(
+                    f"FileLoader[{tmp_path.joinpath('settings.toml')}]", cwd=tmp_path
+                ),
+                "https://example.com",
+            ),
+            "default": (options[3], LoaderMeta("_DefaultsLoader"), 3),
         }
 
     def test_load_settings(self, loaders: List[Loader]) -> None:
@@ -293,7 +305,9 @@ class TestLoadSettings:
         monkeypatch.setenv("TEST_OPT", "42")
 
         converter = BaseConverter()
-        converter.register_structure_hook(Test, lambda v, t: Test(int(v)))
+        converter.register_structure_hook(
+            Test, lambda v, t: v if isinstance(v, Test) else Test(int(v))
+        )
 
         result = _core.load_settings(
             Settings, [EnvLoader("TEST_")], converter=converter
@@ -395,6 +409,35 @@ class TestLoadSettings:
                 name="example.com",
                 port=2,
             ),
+        )
+
+    def test_resolve_paths(
+        self, loaders: List[Loader], tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        @settings
+        class S:
+            a: Path
+            b: Path = option(converter=lambda v: Path(v).resolve())
+            c: Path = option(converter=lambda v: Path(v).resolve())
+            d: Path = option(converter=lambda v: Path(v).resolve())
+
+        d1 = tmp_path.joinpath("d1")
+        d1.mkdir()
+        c1 = d1.joinpath("s.toml")
+        c1.write_text('[example]\na = "f0"\nb = "f1"\n')
+        d2 = tmp_path.joinpath("d2")
+        d2.mkdir()
+        c2 = d2.joinpath("s.toml")
+        c2.write_text('[example]\nc = "f2"\n')
+        monkeypatch.setenv("EXAMPLE_D", "f3")
+        cast(FileLoader, loaders[0]).files = [c1, c2]
+
+        result = _core.load_settings(cls=S, loaders=loaders)
+        assert result == S(
+            a=Path("f0"),
+            b=d1.joinpath("f1"),
+            c=d2.joinpath("f2"),
+            d=Path.cwd().joinpath("f3"),
         )
 
 

@@ -3,14 +3,17 @@ Internal data structures.
 """
 from collections.abc import Collection
 from enum import Enum
+from pathlib import Path
 from typing import (
     Any,
     Dict,
     Final,
     Generic,
     List,
+    Tuple,
     Type,
     TypeVar,
+    Union,
 )
 
 import attrs
@@ -24,7 +27,25 @@ ET = TypeVar("ET", bound=Enum)  # Enum type
 ST = TypeVar("ST", bound=attrs.AttrsInstance)  # SettingsInstance
 SettingsClass = Type[attrs.AttrsInstance]
 SettingsInstance = attrs.AttrsInstance
-SettingsDict = Dict[str, Any]
+SettingsDict = Dict[str, Union[Any, "SettingsDict"]]
+
+
+def _type2name(value: Union[str, Any]) -> str:
+    if isinstance(value, str):
+        return value
+    return type(value).__name__
+
+
+@attrs.frozen
+class LoaderMeta:
+    name: str = attrs.field(converter=_type2name)
+    cwd: Path = attrs.field(factory=Path.cwd)
+
+
+@attrs.frozen
+class LoadedSettings:
+    settings: SettingsDict
+    meta: LoaderMeta
 
 
 class _Auto:
@@ -77,6 +98,15 @@ class OptionInfo:
 
 
 OptionList = List[OptionInfo]
+"""
+A flat list of all available options, including those from nested settings.
+"""
+
+MergedSettings = Dict[str, Tuple[OptionInfo, LoaderMeta, Any]]
+"""
+A list of loaded settings values with the meta data of the loader that loaded the
+value.
+"""
 
 
 class SecretStr(str):

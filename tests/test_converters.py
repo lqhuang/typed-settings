@@ -12,8 +12,8 @@ import pytest
 from typed_settings._compat import PY_39
 from typed_settings.attrs import option, secret, settings
 from typed_settings.converters import (
+    convert,
     default_converter,
-    from_dict,
     register_strlist_hook,
     to_bool,
     to_dt,
@@ -217,7 +217,7 @@ def test_supported_types(typ: type, value: Any, expected: Any) -> None:
     class Settings:
         opt: typ  # type: ignore[valid-type]
 
-    inst = from_dict({"opt": value}, Settings, default_converter())
+    inst = convert({"opt": value}, Settings, default_converter())
     assert inst.opt == expected
 
 
@@ -233,7 +233,7 @@ def test_unsupported_values(val: dict) -> None:
         opt: int
 
     with pytest.raises(InvalidValueError):
-        from_dict(val, Settings, default_converter())
+        convert(val, Settings, default_converter())
 
 
 STRLIST_TEST_DATA = [
@@ -266,7 +266,7 @@ def test_strlist_hook(input: str, kw: dict, typ: type, expected: Any) -> None:
 
     converter = default_converter()
     register_strlist_hook(converter, **kw)
-    inst = from_dict({"a": input}, Settings, converter)
+    inst = convert({"a": input}, Settings, converter)
     assert inst == Settings(expected)
 
 

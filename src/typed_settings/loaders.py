@@ -29,14 +29,21 @@ if PY_311:
 else:
     import tomli as tomllib  # type: ignore[no-redef]
 
-from .dict_utils import merge_dicts, set_path
+from .dict_utils import set_path
 from .exceptions import (
     ConfigFileLoadError,
     ConfigFileNotFoundError,
     InvalidOptionsError,
     UnknownFormatError,
 )
-from .types import OptionInfo, OptionList, SettingsClass, SettingsDict
+from .types import (
+    LoadedSettings,
+    LoaderMeta,
+    OptionInfo,
+    OptionList,
+    SettingsClass,
+    SettingsDict,
+)
 
 
 LOGGER = logging.getLogger("typed_settings")
@@ -55,7 +62,7 @@ class Loader(Protocol):
 
     def __call__(
         self, settings_cls: SettingsClass, options: OptionList
-    ) -> SettingsDict:
+    ) -> Union[LoadedSettings, Iterable[LoadedSettings]]:
         """
         Load settings for the given options.
 
@@ -103,6 +110,28 @@ class FileFormat(Protocol):
         ...
 
 
+class _DefaultsLoader:
+    """
+    Return the default settings for a given settings class.
+    """
+
+    def __call__(
+        self, settings_cls: SettingsClass, options: OptionList
+    ) -> LoadedSettings:
+        settings: SettingsDict = {}
+
+        # Populate dict with default settings.  This avoids problems with nested
+        # settings classes for which no settings are loaded.
+        for opt in options:
+            if opt.field.default is attrs.NOTHING:
+                continue
+            if isinstance(opt.field.default, attrs.Factory):  # type: ignore
+                continue
+            set_path(settings, opt.path, opt.field.default)
+
+        return LoadedSettings(settings, LoaderMeta(self))
+
+
 class InstanceLoader:
     """
     Load settings from an instance of the settings class.
@@ -113,12 +142,12 @@ class InstanceLoader:
     .. versionadded:: 1.0.0
     """
 
-    def __init__(self, instance: object):
+    def __init__(self, instance: object) -> None:
         self.instance = instance
 
     def __call__(
         self, settings_cls: SettingsClass, options: OptionList
-    ) -> SettingsDict:
+    ) -> LoadedSettings:
         """
         Load settings for the given options.
 
@@ -134,7 +163,7 @@ class InstanceLoader:
                 f'"self.instance" is not an instance of {settings_cls}: '
                 f"{type(self.instance)}"
             )
-        return attrs.asdict(self.instance)
+        return LoadedSettings(attrs.asdict(self.instance), LoaderMeta(self))
 
 
 class EnvLoader:
@@ -145,12 +174,12 @@ class EnvLoader:
         prefix: Prefix for environment variables, e.g., ``MYAPP_``.
     """
 
-    def __init__(self, prefix: str):
+    def __init__(self, prefix: str) -> None:
         self.prefix = prefix
 
     def __call__(
         self, settings_cls: SettingsClass, options: OptionList
-    ) -> SettingsDict:
+    ) -> LoadedSettings:
         """
         Load settings for the given options.
 
@@ -161,10 +190,11 @@ class EnvLoader:
         Return:
             A dict with the loaded settings.
         """
+        Path.cwd()
         LOGGER.debug(f"Looking for env vars with prefix: {self.prefix}")
 
         env = os.environ
-        values: Dict[str, Any] = {}
+        values: SettingsDict = {}
         for o in options:
             varname = self.get_envvar(o)
             if varname in env:
@@ -173,7 +203,7 @@ class EnvLoader:
             else:
                 LOGGER.debug(f"Env var not found: {varname}")
 
-        return values
+        return LoadedSettings(values, LoaderMeta(self))
 
     def get_envvar(self, option: OptionInfo) -> str:
         """
@@ -219,7 +249,7 @@ class FileLoader:
 
     def __call__(
         self, settings_cls: SettingsClass, options: OptionList
-    ) -> SettingsDict:
+    ) -> List[LoadedSettings]:
         """
         Load settings for the given options.
 
@@ -238,11 +268,12 @@ class FileLoader:
             InvalidOptionsError: If invalid settings have been found.
         """
         paths = self._get_config_filenames(self.files, self.env_var)
-        merged_settings: SettingsDict = {}
+        loaded_settings: List[LoadedSettings] = []
         for path in paths:
             settings = self._load_file(path, settings_cls, options)
-            merge_dicts(options, merged_settings, settings)
-        return merged_settings
+            meta = LoaderMeta(f"{type(self).__name__}[{path}]", cwd=path.parent)
+            loaded_settings.append(LoadedSettings(settings, meta))
+        return loaded_settings
 
     def _load_file(
         self,
@@ -296,7 +327,7 @@ class FileLoader:
                     LOGGER.info(f"Config file not found: {fname}")
             else:
                 LOGGER.debug(f"Loading settings from: {path}")
-                paths.append(Path(fname))
+                paths.append(path)
 
         return paths
 
@@ -314,7 +345,7 @@ class PythonFormat:
         cls_name: str,
         key_transformer: Callable[[str], str] = lambda k: k,
         flat: bool = False,
-    ):
+    ) -> None:
         self.cls_name = cls_name
         self.key_transformer = key_transformer
         self.flat = flat
@@ -392,7 +423,7 @@ class TomlFormat:
         section: The config file section to load settings from.
     """
 
-    def __init__(self, section: str):
+    def __init__(self, section: str) -> None:
         self.section = section
 
     def __call__(
@@ -444,7 +475,7 @@ class OnePasswordLoader:
             vaults.
     """
 
-    def __init__(self, item: str, vault: Optional[str] = None):
+    def __init__(self, item: str, vault: Optional[str] = None) -> None:
         self.item = item
         self.vault = vault
 
@@ -452,7 +483,7 @@ class OnePasswordLoader:
 
         self._op = _onepassword
 
-    def __call__(self, settings_cls: type, options: OptionList) -> SettingsDict:
+    def __call__(self, settings_cls: type, options: OptionList) -> LoadedSettings:
         """
         Load settings for the given options.
 
@@ -466,7 +497,7 @@ class OnePasswordLoader:
         option_names = [o.path for o in options]
         settings = self._op.get_item(self.item, self.vault)
         settings = {k: v for k, v in settings.items() if k in option_names}
-        return settings
+        return LoadedSettings(settings, LoaderMeta(self))
 
 
 def clean_settings(
