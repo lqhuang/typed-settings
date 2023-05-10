@@ -2,26 +2,94 @@
 Core functionality for loading settings.
 """
 import logging
+import os
+from contextlib import contextmanager
 from pathlib import Path
-from typing import Iterable, List, Optional, Sequence, Type, Union
+from types import MappingProxyType
+from typing import (
+    Generator,
+    Generic,
+    Iterable,
+    List,
+    Optional,
+    Sequence,
+    Set,
+    Type,
+    Union,
+)
 
-from . import dict_utils
+import attrs
+
+from . import _core, dict_utils
 from .attrs import METADATA_KEY
-from .converters import BaseConverter, convert, default_converter
+from .converters import BaseConverter, default_converter
+from .exceptions import InvalidSettingsError
 from .loaders import EnvLoader, FileLoader, Loader, TomlFormat, _DefaultsLoader
 from .processors import Processor
 from .types import (
     AUTO,
     ST,
     LoadedSettings,
+    LoaderMeta,
     MergedSettings,
+    OptionDict,
     OptionList,
-    SettingsClass,
+    SettingsDict,
     _Auto,
 )
 
 
+__all__ = [
+    "LOGGER",
+    "SettingsState",
+    "default_loaders",
+    "load",
+    "load_settings",
+    "convert",
+]
+
+
 LOGGER = logging.getLogger(METADATA_KEY)
+
+
+class SettingsState(Generic[ST]):
+    def __init__(
+        self,
+        settings_cls: Type[ST],
+        loaders: Sequence[Loader],
+        processors: Sequence[Processor],
+        converter: BaseConverter,
+    ) -> None:
+        self._cls = settings_cls
+        self._options = tuple(dict_utils.deep_options(settings_cls))
+        self._optiosn_by_name = MappingProxyType({o.path: o for o in self._options})
+        self._loaders = loaders
+        self._processors = processors
+        self._converter = converter
+
+    @property
+    def settings_class(self) -> Type[ST]:
+        return self._cls
+
+    @property
+    def options(self) -> OptionList:
+        return self._options
+
+    @property
+    def options_by_path(self) -> OptionDict:
+        return self._optiosn_by_name
+
+    @property
+    def loaders(self) -> List[Loader]:
+        return list(self._loaders)
+
+    @property
+    def processors(self) -> List[Processor]:
+        return list(self._processors)
+
+    @property
+    def converter(self) -> BaseConverter:
+        return self._converter
 
 
 def default_loaders(
@@ -179,15 +247,10 @@ def load(
         config_files_var=config_files_var,
         env_prefix=env_prefix,
     )
-    options = dict_utils.deep_options(cls)
-    settings = _load_settings(
-        cls=cls,
-        options=options,
-        loaders=loaders,
-    )
-
     converter = default_converter()
-    return convert(settings, cls, options, converter)
+    state = SettingsState(cls, loaders, [], converter)
+    settings = _load_settings(state)
+    return convert(settings, state)
 
 
 def load_settings(
@@ -223,42 +286,118 @@ def load_settings(
     """
     if converter is None:
         converter = default_converter()
-    options = dict_utils.deep_options(cls)
-    settings = _load_settings(
-        cls=cls,
-        options=options,
-        loaders=loaders,
-        processors=processors,
-    )
-    return convert(settings, cls, options, converter)
+    state = SettingsState(cls, loaders, processors, converter)
+    settings = _load_settings(state)
+    return convert(settings, state)
 
 
-def _load_settings(
-    cls: SettingsClass,
-    options: OptionList,
-    loaders: Sequence[Loader],
-    processors: Sequence[Processor] = (),
-) -> MergedSettings:
+def _load_settings(state: SettingsState) -> MergedSettings:
     """
     Loads settings for *options* and returns them as dict.
 
     This function makes it easier to extend settings since it returns a dict
     that can easily be updated.
     """
-    loaders = [_DefaultsLoader()] + list(loaders)
+    loaders = [_DefaultsLoader()] + list(state.loaders)
     loaded_settings: List[LoadedSettings] = []
     for loader in loaders:
-        result = loader(cls, options)
+        result = loader(state.settings_class, state.options)
         if isinstance(result, LoadedSettings):
             loaded_settings.append(result)
         else:
             loaded_settings.extend(result)
 
-    merged_settings = dict_utils.merge_settings(options, loaded_settings)
+    merged_settings = dict_utils.merge_settings(state.options, loaded_settings)
 
+    # Get a "dict view" to merged settings and update the merged_settings afterwards
+    # without changing the LoaderMeta for each setting
     settings_dict = dict_utils.flat2nested(merged_settings)
-    for processor in processors:
-        settings_dict = processor(settings_dict, cls, options)
+    for processor in state.processors:
+        settings_dict = processor(settings_dict, state.settings_class, state.options)
     merged_settings = dict_utils.update_settings(merged_settings, settings_dict)
 
     return merged_settings
+
+
+def convert(merged_settings: MergedSettings, state: _core.SettingsState[ST]) -> ST:
+    """
+    Create an instance of *cls* from the settings in *merged_settings* using the given
+    *converter*.
+
+    Args:
+        merged_settings: The list of settings values to convert.
+        cls: The class to convert to.
+        option_infos: The list of all available settings for *cls*.
+        converter: The converter to use.
+
+    Return:
+        An instance of *cls*.
+
+    Raise:
+        InvalidSettingsError: If an instance of *cls* cannot be created for the given
+            settings.
+    """
+    settings_dict: SettingsDict = {}
+    errors: List[str] = []
+    loaded_settings_paths: Set[str] = set()
+    oi_by_path = state.options_by_path
+    for path, (value, meta) in merged_settings.items():
+        field = oi_by_path[path].field
+        if field.type:
+            with _set_context(meta):
+                try:
+                    if field.converter:
+                        converted_value = field.converter(value)
+                    else:
+                        converted_value = state.converter.structure(value, field.type)
+                except Exception as e:
+                    errors.append(
+                        f"Could not convert value {value!r} for option "
+                        f"{path!r} from loader {meta.name}: {e!r}"
+                    )
+        else:
+            converted_value = value
+        dict_utils.set_path(settings_dict, path, converted_value)
+        loaded_settings_paths.add(path)
+
+    for option_info in state.options:
+        if option_info.path in loaded_settings_paths:
+            continue
+        if option_info.field.default is not attrs.NOTHING:
+            continue
+        errors.append(f"No value set for required option {option_info.path!r}")
+
+    try:
+        settings = state.converter.structure(settings_dict, state.settings_class)
+    except Exception as e:
+        errors.append(f"Could not convert loaded settings: {e!r}")
+
+    if errors:
+        errs = "".join(f"\n- {e}" for e in errors)
+        raise InvalidSettingsError(
+            f"{len(errors)} errors occured while converting the loaded option values "
+            f"to an instance of {state.settings_class.__name__!r}:{errs}"
+        )
+
+    return settings
+
+
+@contextmanager
+def _set_context(meta: LoaderMeta) -> Generator[None, None, None]:
+    """
+    Set the context for converting option values from a given loader.
+
+    Currently only chagnes the cwd to :attr:`.LoaderMeta.cwd`.
+
+    Args:
+        meta: A loaders meta data
+
+    Return:
+        A context manager (that yields ``None``)
+    """
+    old_cwd = os.getcwd()
+    os.chdir(meta.cwd)
+    try:
+        yield
+    finally:
+        os.chdir(old_cwd)

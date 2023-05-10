@@ -6,6 +6,13 @@ import subprocess  # noqa: S404
 from typing import Any, Dict, Optional
 
 
+__all__ = [
+    "run",
+    "get_item",
+    "get_resource",
+]
+
+
 def run(*args: str) -> str:
     """
     Run ``op`` with the given arguments and return its stdout.

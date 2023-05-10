@@ -2,13 +2,14 @@
 Utility functions for working settings dicts and serilizing nested settings.
 """
 from itertools import groupby
-from typing import Any, Generator, List, Tuple, Type
+from typing import Any, Generator, List, Sequence, Tuple, Type
 
 import attrs
 
 from .types import (
     ST,
     LoadedSettings,
+    LoadedValue,
     MergedSettings,
     OptionInfo,
     OptionList,
@@ -22,7 +23,9 @@ __all__ = [
     "iter_settings",
     "get_path",
     "set_path",
-    "merge_dicts",
+    "merge_settings",
+    "update_settings",
+    "flat2nested",
 ]
 
 
@@ -48,18 +51,18 @@ def deep_options(cls: Type[ST]) -> OptionList:
 
     def iter_attribs(r_cls: type, prefix: str) -> None:
         for field in attrs.fields(r_cls):
+            if field.init is False:
+                continue
             if field.type is not None and attrs.has(field.type):
                 iter_attribs(field.type, f"{prefix}{field.name}.")
             else:
                 result.append(OptionInfo(f"{prefix}{field.name}", field, r_cls))
 
     iter_attribs(cls, "")
-    return result
+    return tuple(result)
 
 
-def group_options(
-    cls: type, options: OptionList
-) -> List[Tuple[type, List[OptionInfo]]]:
+def group_options(cls: type, options: OptionList) -> List[Tuple[type, OptionList]]:
     """
     Group (nested) options by parent class.
 
@@ -67,7 +70,7 @@ def group_options(
     group for *cls* with all its options.
 
     If *cls* only contains nested subclasses, return one group per class
-    contain all of that classes (posibly nested) options.
+    containing all of that classes (posibly nested) options.
 
     If *cls* has multiple attributtes with the same nested settings class,
     create one group per attribute.
@@ -100,7 +103,7 @@ def group_options(
         return prefix, group_classes[base]
 
     grouper = groupby(options, key=keyfn)
-    grouped_options = [(g_cls[1], list(g_opts)) for g_cls, g_opts in grouper]
+    grouped_options = [(g_cls[1], tuple(g_opts)) for g_cls, g_opts in grouper]
     return grouped_options
 
 
@@ -164,40 +167,47 @@ def set_path(dct: SettingsDict, path: str, val: Any) -> None:
     dct[key] = val
 
 
-# def merge_dicts(fields: OptionList, base: SettingsDict, updates: SettingsDict) -> None:
-#     """
-#     Merge all paths/keys that are in *fields* from *updates* into *base*.
-#
-#     The goal is to only merge settings but not settings values that are
-#     dictionaries.
-#
-#     Args:
-#         options: The list of option fields.
-#         base: Base dictionary that gets modified.
-#         update: Dictionary from which the updates are read.
-#     """
-#     for field in fields:
-#         try:
-#             value = get_path(updates, field.path)
-#         except KeyError:
-#             pass
-#         else:
-#             set_path(base, field.path, value)
-
-
 def merge_settings(
-    fields: OptionList, settings: list[LoadedSettings]
+    options: OptionList, settings: Sequence[LoadedSettings]
 ) -> MergedSettings:
+    """
+    Merge a sequence of settings dicts to a flat dict that maps option paths to the
+    corresponding option values.
+
+    Args:
+        options: The list of all available options.
+        settings: A sequence of loaded settings.
+
+    Return:
+        A dict that maps option paths to :class:`.LoadedValue` instances.
+
+    The simplified input settings look like this::
+
+        [
+            ("loader a", {"spam": 1, "eggs": True}),
+            ("loader b", {"spam": 2, "nested": {"x": "test"}}),
+        ]
+
+    The simpliefied output looks like this::
+
+        {
+            "spam": ("loader b", 2),
+            "eggs": ("loader a", True),
+            "nested.x": ("loader b", "test"),
+        }
+    """
     rsettings = settings[::-1]
     merged_settings: MergedSettings = {}
-    for field in fields:
+    for option_info in options:
         for loaded_settings in rsettings:
             try:
-                value = get_path(loaded_settings.settings, field.path)
+                value = get_path(loaded_settings.settings, option_info.path)
             except KeyError:
                 pass
             else:
-                merged_settings[field.path] = (field, loaded_settings.meta, value)
+                merged_settings[option_info.path] = LoadedValue(
+                    value, loaded_settings.meta
+                )
                 break
     return merged_settings
 
@@ -205,13 +215,25 @@ def merge_settings(
 def update_settings(
     merged_settings: MergedSettings, settings: SettingsDict
 ) -> MergedSettings:
+    """
+    Return a copy of *merged_settings* updated with the values from *settings*.
+
+    The loader meta data is not changed.
+
+    Args:
+        merged_settings: The merged settnigs dict to be updated.
+        settings: The settings dict with additional values.
+
+    Return:
+        A copy of the input merged settings updated with the values from *settings*.
+    """
     updated: MergedSettings = {}
-    for path, (field, meta, value) in merged_settings.items():
+    for path, (value, meta) in merged_settings.items():
         try:
             value = get_path(settings, path)
         except KeyError:
             pass
-        updated[path] = (field, meta, value)
+        updated[path] = LoadedValue(value, meta)
     return updated
 
 
@@ -220,6 +242,6 @@ def flat2nested(merged_settings: MergedSettings) -> SettingsDict:
     Convert the flat *merged_settings* to a nested settings dict.
     """
     settings: SettingsDict = {}
-    for path, (_field, _meta, value) in merged_settings.items():
-        set_path(settings, path, value)
+    for path, loaded_value in merged_settings.items():
+        set_path(settings, path, loaded_value.value)
     return settings

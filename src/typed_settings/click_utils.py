@@ -27,7 +27,7 @@ import attrs
 import click
 from attr._make import _Nothing as NothingType
 
-from ._core import _load_settings, default_loaders
+from . import _core, dict_utils
 from .attrs import CLICK_KEY, METADATA_KEY, _SecretRepr
 from .cli_utils import (
     Default,
@@ -37,16 +37,16 @@ from .cli_utils import (
     get_default,
 )
 from .converters import BaseConverter, default_converter
-from .dict_utils import deep_options, flat2nested, group_options
 from .loaders import EnvLoader, Loader
 from .processors import Processor
 from .types import (
     SECRET_REPR,
     SECRETS_TYPES,
     ST,
+    LoadedValue,
     LoaderMeta,
     MergedSettings,
-    OptionInfo,
+    OptionList,
     SecretStr,
     SettingsClass,
     T,
@@ -184,12 +184,8 @@ def click_options(
     .. versionchanged:: 23.0.0
        Added the *processors* argument
     """
-    cls = attrs.resolve_types(settings_cls)  # type: ignore[type-var]
-    options = [opt for opt in deep_options(cls) if opt.field.init is not False]
-    grouped_options = group_options(cls, options)
-
     if isinstance(loaders, str):
-        loaders = default_loaders(loaders)
+        loaders = _core.default_loaders(loaders)
 
     env_loader: Optional[EnvLoader] = None
     if show_envvars_in_help:
@@ -197,18 +193,17 @@ def click_options(
         if _loaders:
             env_loader = _loaders[-1]
 
-    merged_settings = _load_settings(cls, options, loaders, processors=processors)
-
     converter = converter or default_converter()
+    state = _core.SettingsState(settings_cls, loaders, processors, converter)
+    grouped_options = dict_utils.group_options(state.settings_class, state.options)
+    merged_settings = _core._load_settings(state)
     type_args_maker = type_args_maker or TypeArgsMaker(ClickHandler())
     decorator_factory = decorator_factory or ClickOptionFactory()
 
     wrapper = _get_wrapper(
-        cls,
+        state,
         merged_settings,
-        options,
         grouped_options,
-        converter,
         type_args_maker,
         argname,
         decorator_factory,
@@ -218,11 +213,9 @@ def click_options(
 
 
 def _get_wrapper(
-    cls: Type[ST],
+    state: _core.SettingsState[ST],
     merged_settings: MergedSettings,
-    options: List[OptionInfo],
-    grouped_options: List[Tuple[type, List[OptionInfo]]],
-    converter: BaseConverter,
+    grouped_options: List[Tuple[type, OptionList]],
     type_args_maker: TypeArgsMaker,
     argname: Optional[str],
     decorator_factory: "DecoratorFactory",
@@ -243,11 +236,14 @@ def _get_wrapper(
                 ctx.obj = {}
             meta = LoaderMeta("Command line args")
             cli_options = ctx.obj.get(CTX_KEY, {})
-            for option in options:
+            for option in state.options:
                 path = option.path
-                if path in cli_options:
-                    merged_settings[path] = (option, meta, cli_options[path])
-            settings = flat2nested(merged_settings, cls, options, converter)
+                if path in cli_options:  # pragma: no cover
+                    # "path" *should* always be in "cli_options", b/c we *currently*
+                    # generate CLI options for all options.  But let's stay safe here
+                    # in case the behavior changes in the future.
+                    merged_settings[path] = LoadedValue(cli_options[path], meta)
+            settings = _core.convert(merged_settings, state)
             if argname:
                 ctx_key = argname
                 kwargs = {argname: settings, **kwargs}  # type: ignore
@@ -267,7 +263,7 @@ def _get_wrapper(
         for g_cls, g_opts in reversed(grouped_options):
             for oinfo in reversed(g_opts):
                 default = get_default(
-                    oinfo.field, oinfo.path, merged_settings, converter
+                    oinfo.field, oinfo.path, merged_settings, state.converter
                 )
                 envvar = env_loader.get_envvar(oinfo) if env_loader else None
                 option = _mk_option(

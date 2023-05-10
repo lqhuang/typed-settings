@@ -6,10 +6,22 @@
 
 - 💥 **BREAKING:** Dropped support for Python 3.7.
 
+- 💥 **BREAKING:** Refactor internal handling of loaded option values.
+
+  This will affect you if you have created a custom loader or processor,
+  or if you rely on internal functionality.
+
+  Every loader now stores some meta data with the settings it loaded.
+  This meta data can, for example, be used to resolve relative paths ion
+  option values relative to the config file from which they were loaded.
+
+  See [#30]
+
 - 📦 Switched from [safety] to [pip-audit].
 
 [pip-audit]: https://pypi.org/project/pip-audit
 [safety]: https://pypi.org/project/safety
+[#30]: https://gitlab.com/sscherfke/typed-settings/-/issues/30
 
 
 ## 23.0.1 (2023-05-23)

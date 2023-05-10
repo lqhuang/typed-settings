@@ -12,7 +12,6 @@ import pytest
 from typed_settings._compat import PY_39
 from typed_settings.attrs import option, secret, settings
 from typed_settings.converters import (
-    convert,
     default_converter,
     register_strlist_hook,
     to_bool,
@@ -20,7 +19,6 @@ from typed_settings.converters import (
     to_enum,
     to_path,
 )
-from typed_settings.exceptions import InvalidValueError
 
 
 class LeEnum(Enum):
@@ -208,7 +206,7 @@ class TestToPath:
 )
 def test_supported_types(typ: type, value: Any, expected: Any) -> None:
     """
-    All oficially supported types can be converted by attrs.
+    All oficially supported types can be converted.
 
     Please create an issue if something is missing here.
     """
@@ -217,7 +215,8 @@ def test_supported_types(typ: type, value: Any, expected: Any) -> None:
     class Settings:
         opt: typ  # type: ignore[valid-type]
 
-    inst = convert({"opt": value}, Settings, default_converter())
+    converter = default_converter()
+    inst = converter.structure_attrs_fromdict({"opt": value}, Settings)
     assert inst.opt == expected
 
 
@@ -232,8 +231,9 @@ def test_unsupported_values(val: dict) -> None:
     class Settings:
         opt: int
 
-    with pytest.raises(InvalidValueError):
-        convert(val, Settings, default_converter())
+    converter = default_converter()
+    with pytest.raises(TypeError):
+        converter.structure_attrs_fromdict(val, Settings)
 
 
 STRLIST_TEST_DATA = [
@@ -266,7 +266,7 @@ def test_strlist_hook(input: str, kw: dict, typ: type, expected: Any) -> None:
 
     converter = default_converter()
     register_strlist_hook(converter, **kw)
-    inst = convert({"a": input}, Settings, converter)
+    inst = converter.structure_attrs_fromdict({"a": input}, Settings)
     assert inst == Settings(expected)
 
 

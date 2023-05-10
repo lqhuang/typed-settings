@@ -723,9 +723,11 @@ When the settings are actually loaded and our :code:`InstanceLoader` is invoked,
 .. code-block:: python
 
     >>> import attrs
+    >>> import typed_settings.types as tst
     >>>
     >>> class InstanceLoader:
     ...     def __init__(self, instance):
+    ...         self.meta = tst.LoaderMeta(self)
     ...         self.instance = instance
     ...
     ...     def __call__(self, settings_cls, options):
@@ -734,7 +736,7 @@ When the settings are actually loaded and our :code:`InstanceLoader` is invoked,
     ...                 f'"self.instance" is not an instance of {settings_cls}: '
     ...                 f"{type(self.instance)}"
     ...             )
-    ...         return attrs.asdict(self.instance)
+    ...         return tst.LoadedSettings(attrs.asdict(self.instance), self.meta)
 
 
 Using the new loader works the same way as we've seen before:
@@ -759,7 +761,8 @@ Using the new loader works the same way as we've seen before:
         ...             f'"instance" is not an instance of {settings_cls}: '
         ...             f"{type(instance)}"
         ...         )
-        ...     return attrs.asdict(instance)
+        ...     meta = tst.LoaderMeta("InstanceLoader")
+        ...     return tst.LoadedSettings(attrs.asdict(instance), meta)
         ...
         >>> inst_loader = partial(load_from_instance, Settings("a", "b"))
         >>> ts.load_settings(Settings, loaders=[inst_loader])

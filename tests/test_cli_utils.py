@@ -19,7 +19,7 @@ from typing import (
 import attrs
 import pytest
 
-from typed_settings import cli_utils, default_converter
+from typed_settings import cli_utils, default_converter, types
 from typed_settings._compat import PY_39, PY_310
 
 
@@ -278,11 +278,23 @@ class TestTypeArgsMaker:
 @pytest.mark.parametrize(
     "default, path, type, settings, expected",
     [
-        (attrs.NOTHING, "a", int, {"a": 3}, 3),
+        (
+            attrs.NOTHING,
+            "a",
+            int,
+            {"a": types.LoadedValue(3, types.LoaderMeta("Dummy"))},
+            3,
+        ),
         (attrs.NOTHING, "a", int, {}, attrs.NOTHING),
         (2, "a", int, {}, 2),
         (attrs.Factory(list), "a", List[int], {}, []),
-        (attrs.NOTHING, "a", None, {"a": "3"}, "3"),
+        (
+            attrs.NOTHING,
+            "a",
+            None,
+            {"a": types.LoadedValue("3", types.LoaderMeta("Dummy"))},
+            "3",
+        ),
     ],
 )
 def test_get_default(
@@ -339,7 +351,12 @@ def test_get_default_cattrs_error() -> None:
         type=List[int],
     )
     with pytest.raises(ValueError, match="Invalid default for type"):
-        cli_utils.get_default(field, "a", {"a": ["spam"]}, converter)
+        cli_utils.get_default(
+            field,
+            "a",
+            {"a": types.LoadedValue(["spam"], types.LoaderMeta("Dummy"))},
+            converter,
+        )
 
 
 OPTIONAL_TEST_DATA = [

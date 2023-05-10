@@ -30,7 +30,7 @@ if TYPE_CHECKING:
 
 import attrs
 
-from ._core import _load_settings, default_loaders
+from . import _core
 from .attrs import ARGPARSE_KEY, METADATA_KEY, _SecretRepr
 from .cli_utils import (
     Default,
@@ -39,14 +39,14 @@ from .cli_utils import (
     TypeHandlerFunc,
     get_default,
 )
-from .converters import BaseConverter, convert, default_converter
-from .dict_utils import deep_options
+from .converters import BaseConverter, default_converter
 from .loaders import Loader
 from .processors import Processor
 from .types import (
     SECRET_REPR,
     SECRETS_TYPES,
     ST,
+    LoadedValue,
     LoaderMeta,
     MergedSettings,
 )
@@ -277,18 +277,12 @@ def cli(
        Added the *processors* argument
     """
     if isinstance(loaders, str):
-        loaders = default_loaders(loaders)
+        loaders = _core.default_loaders(loaders)
     converter = converter or default_converter()
+    state = _core.SettingsState(settings_cls, loaders, processors, converter)
     type_args_maker = type_args_maker or TypeArgsMaker(ArgparseHandler())
 
-    decorator = _get_decorator(
-        settings_cls,
-        loaders,
-        processors,
-        converter,
-        type_args_maker,
-        **parser_kwargs,
-    )
+    decorator = _get_decorator(state, type_args_maker, **parser_kwargs)
     return decorator
 
 
@@ -347,18 +341,12 @@ def make_parser(
        Added the *processors* argument
     """
     if isinstance(loaders, str):
-        loaders = default_loaders(loaders)
+        loaders = _core.default_loaders(loaders)
     converter = converter or default_converter()
+    state = _core.SettingsState(settings_cls, loaders, processors, converter)
     type_args_maker = type_args_maker or TypeArgsMaker(ArgparseHandler())
 
-    return _mk_parser(
-        settings_cls,
-        loaders,
-        processors,
-        converter,
-        type_args_maker,
-        **parser_kwargs,
-    )
+    return _mk_parser(state, type_args_maker, **parser_kwargs)
 
 
 def namespace2settings(
@@ -389,14 +377,12 @@ def namespace2settings(
     Return: An instance of *settings_cls*.
     """
     converter = converter or default_converter()
-    return _ns2settings(namespace, settings_cls, converter)
+    state = _core.SettingsState(settings_cls, [], [], converter)
+    return _ns2settings(namespace, state)
 
 
 def _get_decorator(
-    settings_cls: Type[ST],
-    loaders: Sequence[Loader],
-    processors: Sequence[Processor],
-    converter: BaseConverter,
+    state: _core.SettingsState[ST],
     type_args_maker: TypeArgsMaker,
     **parser_kwargs: Any,
 ) -> Callable[[CliFn], DecoratedCliFn]:
@@ -420,17 +406,10 @@ def _get_decorator(
         def cli_wrapper() -> Optional[int]:
             if "description" not in parser_kwargs and func.__doc__:
                 parser_kwargs["description"] = func.__doc__.strip()
-            parser = _mk_parser(
-                settings_cls,
-                loaders,
-                processors,
-                converter,
-                type_args_maker,
-                **parser_kwargs,
-            )
+            parser = _mk_parser(state, type_args_maker, **parser_kwargs)
 
             args = parser.parse_args()
-            settings = _ns2settings(args, settings_cls, converter)
+            settings = _ns2settings(args, state)
             return func(settings)
 
         return cli_wrapper
@@ -439,27 +418,25 @@ def _get_decorator(
 
 
 def _mk_parser(
-    settings_cls: Type[ST],
-    loaders: Sequence[Loader],
-    processors: Sequence[Processor],
-    converter: BaseConverter,
+    state: _core.SettingsState[ST],
     type_args_maker: TypeArgsMaker,
     **parser_kwargs: Any,
 ) -> argparse.ArgumentParser:
     """
     Create an :class:`argparse.ArgumentParser` for all options.
     """
-    options = deep_options(settings_cls)
-    settings_dict = _load_settings(settings_cls, options, loaders, processors)
+    merged_settings = _core._load_settings(state)
     grouped_options = [
         (g_cls, list(g_opts))
-        for g_cls, g_opts in itertools.groupby(options, key=lambda o: o.cls)
+        for g_cls, g_opts in itertools.groupby(state.options, key=lambda o: o.cls)
     ]
     parser = argparse.ArgumentParser(**parser_kwargs)
     for g_cls, g_opts in grouped_options:
         group = parser.add_argument_group(g_cls.__name__, f"{g_cls.__name__} options")
         for oinfo in g_opts:
-            default = get_default(oinfo.field, oinfo.path, settings_dict, converter)
+            default = get_default(
+                oinfo.field, oinfo.path, merged_settings, state.converter
+            )
             flags, cfg = _mk_argument(oinfo.path, oinfo.field, default, type_args_maker)
             group.add_argument(*flags, **cfg)
     return parser
@@ -512,25 +489,23 @@ def _mk_argument(
     return (param_decls, kwargs)
 
 
-def _ns2settings(
-    namespace: argparse.Namespace,
-    settings_cls: Type[ST],
-    converter: BaseConverter,
-) -> ST:
+def _ns2settings(namespace: argparse.Namespace, state: _core.SettingsState[ST]) -> ST:
     """
     Convert the :class:`argparse.Namespace` to an instance of the settings
     class and return it.
     """
-    options = deep_options(settings_cls)
     meta = LoaderMeta("Command line args")
     merged_settings: MergedSettings = {}
-    for option_info in options:
+    for option_info in state.options:
         path = option_info.path
         attr = path.replace(".", "_")
-        if hasattr(namespace, attr):
+        if hasattr(namespace, attr):  # pragma: no cover
+            # "path" *should* always be in "cli_options", b/c we *currently*
+            # generate CLI options for all options.  But let's stay safe here
+            # in case the behavior changes in the future.
             value = getattr(namespace, attr)
-            merged_settings[path] = (option_info, meta, value)
-    settings = convert(merged_settings, settings_cls, options, converter)
+            merged_settings[path] = LoadedValue(value, meta)
+    settings = _core.convert(merged_settings, state)
     return settings
 
 
