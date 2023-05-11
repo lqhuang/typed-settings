@@ -79,7 +79,7 @@ def make_auto_converter(converter: BaseConverter) -> "_FieldTransformer":
         A field transformer that tries to convert all attribs of a class to
         their annotated type.
         """
-        attrs.resolve_types(cls, attribs=attribs)
+        attrs.resolve_types(cls, attribs=attribs)  # type: ignore[type-var]
         results = []
         for attrib in attribs:
             # Do not override explicitly defined converters!

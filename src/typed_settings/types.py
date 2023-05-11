@@ -3,28 +3,28 @@ Internal data structures.
 """
 from collections.abc import Collection
 from enum import Enum
-from typing import Any, ClassVar, Dict, Generic, List, Type, TypeVar
+from typing import (
+    Any,
+    Dict,
+    Generic,
+    List,
+    Type,
+    TypeVar,
+)
 
 import attrs
 
-from ._compat import Final, Protocol, runtime_checkable
+from ._compat import Final
 
 
 SECRET_REPR: Final[str] = "*******"
 
 
-# A protocol to be able to statically accept an attrs class.
-# Copied from attrs b/c they only have this in their *.pyi file.
-@runtime_checkable
-class AttrsInstance(Protocol):
-    __attrs_attrs__: ClassVar[Any]
-
-
 T = TypeVar("T")
 ET = TypeVar("ET", bound=Enum)  # Enum type
-ST = TypeVar("ST", bound=AttrsInstance)  # SettingsInstance
-SettingsClass = Type[AttrsInstance]
-SettingsInstance = AttrsInstance
+ST = TypeVar("ST", bound=attrs.AttrsInstance)  # SettingsInstance
+SettingsClass = Type[attrs.AttrsInstance]
+SettingsInstance = attrs.AttrsInstance
 SettingsDict = Dict[str, Any]
 
 

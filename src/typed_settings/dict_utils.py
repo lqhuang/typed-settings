@@ -36,7 +36,7 @@ def deep_options(cls: SettingsClass) -> OptionList:
         NameError: if the type annotations can not be resolved.  This is, e.g.,
           the case when recursive classes are being used.
     """
-    cls = attrs.resolve_types(cls)
+    cls = attrs.resolve_types(cls)  # type: ignore[type-var]
     result = []
 
     def iter_attribs(r_cls: type, prefix: str) -> None:

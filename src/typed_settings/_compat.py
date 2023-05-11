@@ -20,7 +20,7 @@ else:
         runtime_checkable,
     )
 
-    def get_origin(tp: Any) -> Optional[Any]:
+    def get_origin(tp: Any) -> Optional[Any]:  # type: ignore[no-redef]
         # Backported from py38
         if isinstance(tp, _GenericAlias):
             return tp.__origin__
@@ -28,7 +28,7 @@ else:
             return Generic
         return None
 
-    def get_args(tp: Any) -> Tuple[Any, ...]:
+    def get_args(tp: Any) -> Tuple[Any, ...]:  # type: ignore[no-redef]
         # Backported from py38
         if isinstance(tp, _GenericAlias) and not tp._special:
             res = tp.__args__

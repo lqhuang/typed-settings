@@ -16,8 +16,7 @@ from typing import (
 import attr  # The old namespaces is needed in "combine()"
 import attrs
 
-from .._compat import PY_38
-from ..types import SECRET_REPR, AttrsInstance
+from ..types import SECRET_REPR
 from .hooks import auto_convert
 
 
@@ -44,8 +43,6 @@ __all__ = [
 METADATA_KEY = "typed_settings"
 CLICK_KEY = "click"
 ARGPARSE_KEY = "argparse"
-
-AttrsClass = Type[AttrsInstance]
 
 
 class _SecretRepr:
@@ -366,7 +363,7 @@ def _get_metadata(
     return metadata
 
 
-def evolve(inst: "AttrsInstance", **changes: Any) -> "AttrsInstance":
+def evolve(inst: attrs.AttrsInstance, **changes: Any) -> attrs.AttrsInstance:
     """
     Create a new instance, based on *inst* with *changes* applied.
 
@@ -406,16 +403,16 @@ def evolve(inst: "AttrsInstance", **changes: Any) -> "AttrsInstance":
             changes[init_name] = old_value
         elif attrs.has(old_value) and isinstance(changes[init_name], Mapping):
             # Evolve nested attrs classes
-            if PY_38:
-                assert isinstance(old_value, AttrsInstance)  # noqa: S101
             changes[init_name] = evolve(old_value, **changes[init_name])  # type: ignore[arg-type]  # noqa
 
     return cls(**changes)
 
 
 def combine(
-    name: str, base_cls: "AttrsClass", nested: Dict[str, "AttrsInstance"]
-) -> "AttrsClass":
+    name: str,
+    base_cls: Type[attrs.AttrsInstance],
+    nested: Dict[str, attrs.AttrsInstance],
+) -> Type[attrs.AttrsInstance]:
     """
     Create a new class called *name* based on *base_class* with additional
     attributes for *nested* classes.
