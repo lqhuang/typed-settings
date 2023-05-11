@@ -136,7 +136,7 @@ def lint(session: nox.Session) -> None:
 
 @nox.session(tags=["lint"])
 def mypy(session: nox.Session) -> None:
-    session.install(".[lint]")
+    session.install(".[dev]")
     for paths in MYPY_PATHS:
         session.run("mypy", "--show-error-codes", *paths)
 

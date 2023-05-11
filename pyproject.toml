@@ -38,7 +38,7 @@ classifiers = [
     "Topic :: Software Development :: Libraries :: Python Modules",
 ]
 dependencies = [
-    "attrs>=22.1",
+    "attrs>=23.1",
     "cattrs>=22.2",
     "tomli>=2; python_version<'3.11'",
 ]

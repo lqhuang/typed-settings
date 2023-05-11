@@ -16,7 +16,7 @@ from typing import (
 import attr  # The old namespaces is needed in "combine()"
 import attrs
 
-from ..types import SECRET_REPR, ST, AttrsInstance
+from ..types import SECRET_REPR, ST
 from .hooks import auto_convert
 
 
@@ -43,8 +43,6 @@ __all__ = [
 METADATA_KEY = "typed_settings"
 CLICK_KEY = "click"
 ARGPARSE_KEY = "argparse"
-
-AttrsClass = Type[AttrsInstance]
 
 
 class _SecretRepr:
@@ -411,8 +409,10 @@ def evolve(inst: ST, **changes: Any) -> ST:
 
 
 def combine(
-    name: str, base_cls: "AttrsClass", nested: Dict[str, "AttrsInstance"]
-) -> "AttrsClass":
+    name: str,
+    base_cls: Type[attrs.AttrsInstance],
+    nested: Dict[str, attrs.AttrsInstance],
+) -> Type[attrs.AttrsInstance]:
     """
     Create a new class called *name* based on *base_class* with additional
     attributes for *nested* classes.

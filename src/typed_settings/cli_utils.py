@@ -124,7 +124,7 @@ class TypeHandler(Protocol):
     def handle_tuple(
         self,
         type_args_maker: "TypeArgsMaker",
-        args: Tuple[Any, ...],
+        types: Tuple[Any, ...],
         default: Optional[Tuple],
         is_optional: bool,
     ) -> StrDict:
@@ -134,7 +134,7 @@ class TypeHandler(Protocol):
         Args:
             type_args_maker: The :class:`TypeArgsMaker` that called this
                 function.
-            args: The types of all tuple items.
+            types: The types of all tuple items.
             default: Either a tuple of default values or ``None``.
             is_optional: Whether or not the option type was marked as option
                 or not.
@@ -148,7 +148,7 @@ class TypeHandler(Protocol):
     def handle_collection(
         self,
         type_args_maker: "TypeArgsMaker",
-        args: Tuple[Any, ...],
+        types: Tuple[Any, ...],
         default: Optional[List[Any]],
         is_optional: bool,
     ) -> StrDict:
@@ -159,7 +159,7 @@ class TypeHandler(Protocol):
         Args:
             type_args_maker: The :class:`TypeArgsMaker` that called this
                 function.
-            args: The types of the list items.
+            types: The types of the list items.
             default: Either a collection of default values or ``None``.
             is_optional: Whether or not the option type was marked as option
                 or not.
@@ -173,7 +173,7 @@ class TypeHandler(Protocol):
     def handle_mapping(
         self,
         type_args_maker: "TypeArgsMaker",
-        args: Tuple[Any, ...],
+        types: Tuple[Any, ...],
         default: Default,
         is_optional: bool,
     ) -> StrDict:
@@ -183,7 +183,7 @@ class TypeHandler(Protocol):
         Args:
             type_args_maker: The :class:`TypeArgsMaker` that called this
                 function.
-            args: The types of keys and values.
+            types: The types of keys and values.
             default: Either a mapping of default values, ``None`` or
                 :data:`attrs.NOTHING`.
             is_optional: Whether or not the option type was marked as option
@@ -327,20 +327,21 @@ class TypeArgsMaker:
 
         # "struct" variant of tuple
 
+        default_val: Optional[Tuple]
         if isinstance(default, tuple):
             if not len(default) == len(args):
                 raise TypeError(
                     f"Default value must be of len {len(args)}: {len(default)}"
                 )
             kwargs = {"strict": True} if PY_310 else {}
-            default = tuple(
+            default_val = tuple(
                 self.get_kwargs(a, d)["default"]
                 for a, d in zip(args, default, **kwargs)  # noqa: B905
             )
         else:
-            default = None
+            default_val = None
 
-        kwargs = self.type_handler.handle_tuple(self, args, default, is_optional)
+        kwargs = self.type_handler.handle_tuple(self, args, default_val, is_optional)
         return kwargs
 
     def _handle_collection(
