@@ -1,5 +1,15 @@
 # Changelog
 
+## 23.0.1 (2023-05-23)
+
+### Changed
+
+- Fixed typing issues with Pylance/Pyright and attrs decorators
+  (see [#40])
+
+[#40]: https://gitlab.com/sscherfke/typed-settings/-/issues/40
+
+
 ## 23.0.0 (2023-03-07)
 
 ### Deprecated
