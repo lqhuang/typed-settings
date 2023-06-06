@@ -389,6 +389,50 @@ Click
 See :doc:`guides/cli` for details.
 
 
+(Relative) Paths
+================
+
+Since version 23.1.0, Typed Settings automatically resolves all loaded paths relative to the source they are loaded from.
+
+Paths loaded from config files are resolved relative to the parent directory of the respective file.
+Paths loaded by other loaders (e.g., from environment variables or command line args) are resolved relative to the user's current working directory *(CWD)*.
+
+But why is this useful?
+
+Imagine the following scenario:
+
+- You use the :file:`pyproject.toml` to configure include/exclude lists for files.
+- These lists can also be overwritten via command line arguments.
+- The user invokes your application from a sub directory (e.g., :file:`tests/`).
+- The settings passed to your application contain the path :file:`spam.txt` in the exclude list.
+
+If that :file:`spam.txt` originated from :file:`pyproject.toml`,
+it should probably be relative to the project root.
+If it was passed via the command line,
+it should probably be relative to the :file:`tests/` directory, though.
+
+Your app has no chance to differentiate between those two situations.
+That's why typed settings resolves paths by default.
+
+.. admonition:: How does it work?
+   :class: hint
+
+   Every loader stores some meta data in a context object.
+   This includes the "current working directory" from the loader's point of view.
+
+   Typed settings keeps this context for each loaded option value.
+   When option values are converted to the target type,
+   the corresponding loader context is restored.
+   That means, Python's *CWD* is temporarily set to the loaders *CWD* so that relative paths are resolved as expected.
+
+.. admonition:: How to disable this behavior?
+   :class: tip
+
+   If you don't want paths to be resolved,
+   manually create a converter via :func:`~typed_settings.converters.default_converter()`  with ``resolve_paths=False`` and
+   pass that converter to :func:`~typed_settings.load_settings()`.
+
+
 Frozen Settings and Updating Them
 =================================
 

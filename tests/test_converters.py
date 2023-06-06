@@ -18,6 +18,7 @@ from typed_settings.converters import (
     to_dt,
     to_enum,
     to_path,
+    to_resolved_path,
 )
 
 
@@ -157,6 +158,20 @@ class TestToPath:
     )
     def test_to_path(self, value: Any, expected: Path) -> None:
         assert to_path(value, Path) == expected
+
+
+class TestToResolvedPath:
+    """Tests for `to_resolved_path`."""
+
+    @pytest.mark.parametrize(
+        "value, expected",
+        [
+            ("spam", Path.cwd().joinpath("spam")),
+            (Path("eggs"), Path.cwd().joinpath("eggs")),
+        ],
+    )
+    def test_to_resolved_path(self, value: Any, expected: Path) -> None:
+        assert to_resolved_path(value, Path) == expected
 
 
 @pytest.mark.parametrize(

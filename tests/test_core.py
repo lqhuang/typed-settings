@@ -15,7 +15,7 @@ from typed_settings.converters import (
     default_converter,
     register_strlist_hook,
 )
-from typed_settings.loaders import EnvLoader, FileLoader, Loader, TomlFormat
+from typed_settings.loaders import DictLoader, EnvLoader, FileLoader, Loader, TomlFormat
 from typed_settings.types import (
     LoadedSettings,
     LoadedValue,
@@ -304,17 +304,27 @@ class TestLoadSettings:
         class Settings:
             opt: Test
 
-        monkeypatch.setenv("TEST_OPT", "42")
-
         converter = BaseConverter()
         converter.register_structure_hook(
             Test, lambda v, t: v if isinstance(v, Test) else Test(int(v))
         )
 
         result = _core.load_settings(
-            Settings, [EnvLoader("TEST_")], converter=converter
+            Settings, [DictLoader({"opt": "42"})], converter=converter
         )
         assert result == Settings(Test(42))
+
+    def test_custom_option_converter(self) -> None:
+        """
+        Converters defined for individual options are being used.
+        """
+
+        @settings
+        class Settings:
+            opt: str = option(converter=lambda v: f"converted:{v}")
+
+        result = _core.load_settings(Settings, [DictLoader({"opt": "a"})])
+        assert result == Settings("converted:a")
 
     @pytest.mark.parametrize(
         "vals, kwargs",
@@ -353,9 +363,8 @@ class TestLoadSettings:
         monkeypatch.setenv("EXAMPLE_Y", vals[1])
 
         result = _core.load_settings(Settings, loaders, converter=c)
-        assert result == Settings(
-            x=[3, 4, 42], y=[Path("spam"), Path("eggs")], z=[1, 2]
-        )
+        cwd = Path.cwd().joinpath
+        assert result == Settings(x=[3, 4, 42], y=[cwd("spam"), cwd("eggs")], z=[1, 2])
 
     def test_load_empty_cls(self) -> None:
         """
@@ -426,9 +435,9 @@ class TestLoadSettings:
         @settings
         class S:
             a: Path
-            b: Path = option(converter=lambda v: Path(v).resolve())
-            c: Path = option(converter=lambda v: Path(v).resolve())
-            d: Path = option(converter=lambda v: Path(v).resolve())
+            b: Path
+            c: Path
+            d: Path
 
         d1 = tmp_path.joinpath("d1")
         d1.mkdir()
@@ -443,7 +452,7 @@ class TestLoadSettings:
 
         result = _core.load_settings(cls=S, loaders=loaders)
         assert result == S(
-            a=Path("f0"),
+            a=d1.joinpath("f0"),
             b=d1.joinpath("f1"),
             c=d2.joinpath("f2"),
             d=Path.cwd().joinpath("f3"),

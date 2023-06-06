@@ -48,10 +48,11 @@ from .types import (
 
 __all__ = [
     "Loader",
-    "FileFormat",
+    "DictLoader",
     "InstanceLoader",
     "EnvLoader",
     "FileLoader",
+    "FileFormat",
     "PythonFormat",
     "TomlFormat",
     "OnePasswordLoader",
@@ -143,6 +144,37 @@ class _DefaultsLoader:
             set_path(settings, opt.path, opt.field.default)
 
         return LoadedSettings(settings, LoaderMeta(self))
+
+
+class DictLoader:
+    """
+    Load settings from a dict of values.
+
+    This is mainly for testing purposes.
+
+    Args:
+        settings: A (nested) dict of settings
+
+    .. versionadded:: 23.1.0
+    """
+
+    def __init__(self, settings: dict) -> None:
+        self.settings = settings
+
+    def __call__(
+        self, settings_cls: SettingsClass, options: OptionList
+    ) -> LoadedSettings:
+        """
+        Load settings for the given options.
+
+        Args:
+            options: The list of available settings.
+            settings_cls: The base settings class for all options.
+
+        Return:
+            A dict with the loaded settings.
+        """
+        return LoadedSettings(self.settings, LoaderMeta(self))
 
 
 class InstanceLoader:

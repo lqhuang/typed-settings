@@ -15,13 +15,23 @@
   This meta data can, for example, be used to resolve relative paths ion
   option values relative to the config file from which they were loaded.
 
-  See [#30]
+  You can re-enable the old behavior by explicitly using the converter
+  returned by `default_converter(resolve_paths=False)`.
+
+  See [#30], [!16]
+
+- 💥 **BREAKING:** Relative paths are now always resolved relative to
+  the source they are loaded from.  This is either the parent directory
+  of a config file or the current working directory ([#30]).
+
+- ✨ Added a dictionary loader.  This is useful for testing purposes.
 
 - 📦 Switched from [safety] to [pip-audit].
 
+[!16]: https://gitlab.com/sscherfke/typed-settings/-/merge_requests/16
+[#30]: https://gitlab.com/sscherfke/typed-settings/-/issues/30
 [pip-audit]: https://pypi.org/project/pip-audit
 [safety]: https://pypi.org/project/safety
-[#30]: https://gitlab.com/sscherfke/typed-settings/-/issues/30
 
 
 ## 23.0.1 (2023-05-23)
