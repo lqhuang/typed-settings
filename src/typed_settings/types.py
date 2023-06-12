@@ -148,13 +148,14 @@ class LoaderMeta:
     will then be used).
     """
 
-    cwd: Path = attrs.field(factory=Path.cwd)
+    base_dir: Path = attrs.field(factory=Path.cwd)
     """
-    The current working directory of the loader.
+    The loader's base directory.
 
-    This can, e.g., be the actual cwd or the parent directory of a config file.  It
-    allows to resolve relative paths in option values based on the corresponding
-    loader's cwd.
+    It is used to resolve relative paths in loaded option values in the proper context.
+
+    For most loaders, this should be the *cwd* (which is also the default).  For file
+    loaders, the parent directory of a loaded file might be a better alternative.
     """
 
 

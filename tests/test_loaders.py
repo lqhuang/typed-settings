@@ -501,11 +501,11 @@ class TestFileLoader:
         assert s == [
             LoadedSettings(
                 {"le_spam": "spam", "le_eggs": "spam"},
-                LoaderMeta(f"FileLoader[{cf1}]", cwd=cf1.parent),
+                LoaderMeta(f"FileLoader[{cf1}]", base_dir=cf1.parent),
             ),
             LoadedSettings(
                 {"le_eggs": "eggs"},
-                LoaderMeta(f"FileLoader[{cf2}]", cwd=cf2.parent),
+                LoaderMeta(f"FileLoader[{cf2}]", base_dir=cf2.parent),
             ),
         ]
 

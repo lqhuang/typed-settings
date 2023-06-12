@@ -217,6 +217,7 @@ def cli(
     *,
     processors: Sequence[Processor] = (),
     converter: Optional[BaseConverter] = None,
+    base_dir: Path = Path(),
     type_args_maker: Optional[TypeArgsMaker] = None,
     **parser_kwargs: Any,
 ) -> Callable[[CliFn[ST]], DecoratedCliFn]:
@@ -239,6 +240,8 @@ def cli(
             option values to the required type.
 
             By default, :data:`typed_settings.default_converter()` is used.
+
+        base_dir: Base directory for resolving relative paths in default option values.
 
         type_args_maker: The type args maker that is used to generate keyword
             arguments for :func:`click.option()`.  By default, use
@@ -275,11 +278,13 @@ def cli(
        Made *converter* and *type_args_maker* a keyword-only argument
     .. versionchanged:: 23.0.0
        Added the *processors* argument
+    .. versionchanged:: 23.1.0
+       Added the *base_dir* argument
     """
     if isinstance(loaders, str):
         loaders = _core.default_loaders(loaders)
     converter = converter or default_converter()
-    state = _core.SettingsState(settings_cls, loaders, processors, converter)
+    state = _core.SettingsState(settings_cls, loaders, processors, converter, base_dir)
     type_args_maker = type_args_maker or TypeArgsMaker(ArgparseHandler())
 
     decorator = _get_decorator(state, type_args_maker, **parser_kwargs)
@@ -292,6 +297,7 @@ def make_parser(
     *,
     processors: Sequence[Processor] = (),
     converter: Optional[BaseConverter] = None,
+    base_dir: Path = Path(),
     type_args_maker: Optional[TypeArgsMaker] = None,
     **parser_kwargs: Any,
 ) -> argparse.ArgumentParser:
@@ -316,6 +322,8 @@ def make_parser(
 
             By default, :data:`typed_settings.default_converter()` is used.
 
+        base_dir: Base directory for resolving relative paths in default option values.
+
         type_args_maker: The type args maker that is used to generate keyword
             arguments for :func:`click.option()`.  By default, use
             :class:`.TypeArgsMaker` with :class:`ArgparseHandler`.
@@ -339,11 +347,13 @@ def make_parser(
        Made *converter* and *type_args_maker* a keyword-only argument
     .. versionchanged:: 23.0.0
        Added the *processors* argument
+    .. versionchanged:: 23.1.0
+       Added the *base_dir* argument
     """
     if isinstance(loaders, str):
         loaders = _core.default_loaders(loaders)
     converter = converter or default_converter()
-    state = _core.SettingsState(settings_cls, loaders, processors, converter)
+    state = _core.SettingsState(settings_cls, loaders, processors, converter, base_dir)
     type_args_maker = type_args_maker or TypeArgsMaker(ArgparseHandler())
 
     return _mk_parser(state, type_args_maker, **parser_kwargs)
@@ -353,6 +363,7 @@ def namespace2settings(
     settings_cls: Type[ST],
     namespace: argparse.Namespace,
     converter: Optional[BaseConverter] = None,
+    base_dir: Path = Path(),
 ) -> ST:
     """
     Create a settings instance from an argparse namespace.
@@ -365,6 +376,7 @@ def namespace2settings(
         converter: An optional :class:`~cattrs.Converter` used for converting
             option values to the required type.  By default,
             :data:`typed_settings.default_converter()` is used.
+        base_dir: Base directory for resolving relative paths in default option values.
 
     Raise:
         ValueError: If settings default or passed CLI options have invalid
@@ -375,9 +387,12 @@ def namespace2settings(
         cattrs.BaseValidationError: If cattrs structural validation fails.
 
     Return: An instance of *settings_cls*.
+
+    .. versionchanged:: 23.1.0
+       Added the *base_dir* argument
     """
     converter = converter or default_converter()
-    state = _core.SettingsState(settings_cls, [], [], converter)
+    state = _core.SettingsState(settings_cls, [], [], converter, base_dir)
     return _ns2settings(namespace, state)
 
 

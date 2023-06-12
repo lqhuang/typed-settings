@@ -75,23 +75,26 @@ class TestLoadSettings:
         options instead of a normal settings class.  It returns a dict and
         not a settings instance.
         """
-        state = _core.SettingsState(Settings, loaders, [], default_converter())
+        cwd = Path.cwd()
+        state = _core.SettingsState(Settings, loaders, [], default_converter(), cwd)
         settings = _core._load_settings(state)
         assert settings == {
             "host.name": LoadedValue(
                 "example.com",
                 LoaderMeta(
-                    f"FileLoader[{tmp_path.joinpath('settings.toml')}]", cwd=tmp_path
+                    f"FileLoader[{tmp_path.joinpath('settings.toml')}]",
+                    base_dir=tmp_path,
                 ),
             ),
-            "host.port": LoadedValue("42", LoaderMeta("EnvLoader")),
+            "host.port": LoadedValue("42", LoaderMeta("EnvLoader", base_dir=cwd)),
             "url": LoadedValue(
                 "https://example.com",
                 LoaderMeta(
-                    f"FileLoader[{tmp_path.joinpath('settings.toml')}]", cwd=tmp_path
+                    f"FileLoader[{tmp_path.joinpath('settings.toml')}]",
+                    base_dir=tmp_path,
                 ),
             ),
-            "default": LoadedValue(3, LoaderMeta("_DefaultsLoader")),
+            "default": LoadedValue(3, LoaderMeta("_DefaultsLoader", base_dir=cwd)),
         }
 
     def test_load_settings(self, loaders: List[Loader]) -> None:
@@ -510,7 +513,7 @@ class TestLoadSettings:
         ],
     )
     def test_convert_errors(self, settings: dict, err: str) -> None:
-        state = _core.SettingsState(Settings, [], [], default_converter())
+        state = _core.SettingsState(Settings, [], [], default_converter(), Path())
         meta = LoaderMeta("test")
         merged = dict_utils.merge_settings(
             state.options, [LoadedSettings(settings, meta)]
@@ -520,6 +523,36 @@ class TestLoadSettings:
         # Could convert loaded settings to instance
         with pytest.raises(exceptions.InvalidSettingsError, match=re.escape(err)):
             _core.convert(merged, state)
+
+    def test_load_resolve_default_paths(self, tmp_path: Path) -> None:
+        """
+        Relative paths in default values can be resolved relative to a user specified
+        base dir.
+        """
+
+        @settings(frozen=True)
+        class S:
+            p: Path = Path("tests")
+
+        result = _core.load(S, "test")
+        assert result == S(Path.cwd().joinpath("tests"))
+        result = _core.load(S, "test", base_dir=tmp_path)
+        assert result == S(tmp_path.joinpath("tests"))
+
+    def test_load_settings_resolve_default_paths(self, tmp_path: Path) -> None:
+        """
+        Relative paths in default values can be resolved relative to a user specified
+        base dir.
+        """
+
+        @settings(frozen=True)
+        class S:
+            p: Path = Path("tests")
+
+        result = _core.load_settings(S, [])
+        assert result == S(Path.cwd().joinpath("tests"))
+        result = _core.load_settings(S, [], base_dir=tmp_path)
+        assert result == S(tmp_path.joinpath("tests"))
 
 
 class TestLogging:

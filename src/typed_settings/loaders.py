@@ -127,7 +127,17 @@ class FileFormat(Protocol):
 class _DefaultsLoader:
     """
     Return the default settings for a given settings class.
+
+    Args:
+        base_dir: Resolve relative paths in default settings relative to this directory.
+            By default, use the user's current working directory.
+
+            For tools like linters or test runners, you may want to use the root
+            directory of the app that the tool operates in.
     """
+
+    def __init__(self, base_dir: Path = Path()) -> None:
+        self.base_dir = base_dir
 
     def __call__(
         self, settings_cls: SettingsClass, options: OptionList
@@ -143,7 +153,7 @@ class _DefaultsLoader:
                 continue
             set_path(settings, opt.path, opt.field.default)
 
-        return LoadedSettings(settings, LoaderMeta(self))
+        return LoadedSettings(settings, LoaderMeta(self, base_dir=self.base_dir))
 
 
 class DictLoader:
@@ -235,7 +245,6 @@ class EnvLoader:
         Return:
             A dict with the loaded settings.
         """
-        Path.cwd()
         LOGGER.debug(f"Looking for env vars with prefix: {self.prefix}")
 
         env = os.environ
@@ -316,7 +325,7 @@ class FileLoader:
         loaded_settings: List[LoadedSettings] = []
         for path in paths:
             settings = self._load_file(path, settings_cls, options)
-            meta = LoaderMeta(f"{type(self).__name__}[{path}]", cwd=path.parent)
+            meta = LoaderMeta(f"{type(self).__name__}[{path}]", base_dir=path.parent)
             loaded_settings.append(LoadedSettings(settings, meta))
         return loaded_settings
 

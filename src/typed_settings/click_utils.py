@@ -4,6 +4,7 @@ Utilities for generating Click options.
 from datetime import datetime
 from enum import Enum
 from functools import partial, update_wrapper
+from pathlib import Path
 from typing import (
     Any,
     Callable,
@@ -98,6 +99,7 @@ def click_options(
     *,
     processors: Sequence[Processor] = (),
     converter: Optional[BaseConverter] = None,
+    base_dir: Path = Path(),
     type_args_maker: Optional[TypeArgsMaker] = None,
     argname: Optional[str] = None,
     decorator_factory: "Optional[DecoratorFactory]" = None,
@@ -115,10 +117,14 @@ def click_options(
             :func:`~typed_settings.default_loaders()` to get the default
             loaders.
 
+        processors: A list of settings :class:`.Processor`'s.
+
         converter: An optional :class:`~cattrs.Converter` used for converting
             option values to the required type.
 
             By default, :data:`typed_settings.default_converter()` is used.
+
+        base_dir: Base directory for resolving relative paths in default option values.
 
         type_args_maker: The type args maker that is used to generate keyword
             arguments for :func:`click.option()`.  By default, use
@@ -183,6 +189,8 @@ def click_options(
        a keyword-only argument
     .. versionchanged:: 23.0.0
        Added the *processors* argument
+    .. versionchanged:: 23.1.0
+       Added the *base_dir* argument
     """
     if isinstance(loaders, str):
         loaders = _core.default_loaders(loaders)
@@ -194,7 +202,7 @@ def click_options(
             env_loader = _loaders[-1]
 
     converter = converter or default_converter()
-    state = _core.SettingsState(settings_cls, loaders, processors, converter)
+    state = _core.SettingsState(settings_cls, loaders, processors, converter, base_dir)
     grouped_options = dict_utils.group_options(state.settings_class, state.options)
     merged_settings = _core._load_settings(state)
     type_args_maker = type_args_maker or TypeArgsMaker(ClickHandler())

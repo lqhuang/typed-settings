@@ -12,7 +12,7 @@
   or if you rely on internal functionality.
 
   Every loader now stores some meta data with the settings it loaded.
-  This meta data can, for example, be used to resolve relative paths ion
+  This meta data can, for example, be used to resolve relative paths in
   option values relative to the config file from which they were loaded.
 
   You can re-enable the old behavior by explicitly using the converter

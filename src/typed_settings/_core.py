@@ -59,6 +59,7 @@ class SettingsState(Generic[ST]):
         loaders: Sequence[Loader],
         processors: Sequence[Processor],
         converter: BaseConverter,
+        base_dir: Path,
     ) -> None:
         self._cls = settings_cls
         self._options = tuple(dict_utils.deep_options(settings_cls))
@@ -66,6 +67,7 @@ class SettingsState(Generic[ST]):
         self._loaders = loaders
         self._processors = processors
         self._converter = converter
+        self._base_dir = base_dir
 
     @property
     def settings_class(self) -> Type[ST]:
@@ -90,6 +92,10 @@ class SettingsState(Generic[ST]):
     @property
     def converter(self) -> BaseConverter:
         return self._converter
+
+    @property
+    def cwd(self) -> Path:
+        return self._base_dir
 
 
 def default_loaders(
@@ -175,6 +181,7 @@ def load(
     config_file_section: Union[str, _Auto] = AUTO,
     config_files_var: Union[None, str, _Auto] = AUTO,
     env_prefix: Union[None, str, _Auto] = AUTO,
+    base_dir: Path = Path(),
 ) -> ST:
     """
     Load settings for *appname* and return an instance of *cls*
@@ -228,6 +235,8 @@ def load(
 
           Set to ``None`` to disable loading env vars.
 
+        base_dir: Base directory for resolving relative paths in default option values.
+
     Return:
         An instance of *cls* populated with settings from settings files and
         environment variables.
@@ -239,6 +248,9 @@ def load(
         ConfigFileLoadError: If *path* cannot be read/loaded/decoded.
         InvalidOptionsError: If invalid settings have been found.
         InvalidValueError: If a value cannot be converted to the correct type.
+
+    .. versionchanged:: 23.1.0
+       Added the *base_dir* argument
     """
     loaders = default_loaders(
         appname=appname,
@@ -248,7 +260,7 @@ def load(
         env_prefix=env_prefix,
     )
     converter = default_converter()
-    state = SettingsState(cls, loaders, [], converter)
+    state = SettingsState(cls, loaders, [], converter, base_dir)
     settings = _load_settings(state)
     return convert(settings, state)
 
@@ -259,6 +271,7 @@ def load_settings(
     *,
     processors: Sequence[Processor] = (),
     converter: Optional[BaseConverter] = None,
+    base_dir: Path = Path(),
 ) -> ST:
     """
     Load settings defined by the class *cls* and return an instance of it.
@@ -271,6 +284,7 @@ def load_settings(
             for converting option values to the required type.
 
             By default, :func:`.default_converter()` is used.
+        base_dir: Base directory for resolving relative paths in default option values.
 
     Return:
         An instance of *cls* populated with settings from the defined loaders.
@@ -283,10 +297,12 @@ def load_settings(
        Made *converter* a keyword-only argument
     .. versionchanged:: 23.0.0
        Added the *processors* argument
+    .. versionchanged:: 23.1.0
+       Added the *base_dir* argument
     """
     if converter is None:
         converter = default_converter()
-    state = SettingsState(cls, loaders, processors, converter)
+    state = SettingsState(cls, loaders, processors, converter, base_dir=base_dir)
     settings = _load_settings(state)
     return convert(settings, state)
 
@@ -298,7 +314,7 @@ def _load_settings(state: SettingsState) -> MergedSettings:
     This function makes it easier to extend settings since it returns a dict
     that can easily be updated.
     """
-    loaders = [_DefaultsLoader()] + list(state.loaders)
+    loaders = [_DefaultsLoader(state.cwd)] + list(state.loaders)
     loaded_settings: List[LoadedSettings] = []
     for loader in loaders:
         result = loader(state.settings_class, state.options)
@@ -396,7 +412,7 @@ def _set_context(meta: LoaderMeta) -> Generator[None, None, None]:
         A context manager (that yields ``None``)
     """
     old_cwd = os.getcwd()
-    os.chdir(meta.cwd)
+    os.chdir(meta.base_dir)
     try:
         yield
     finally:
