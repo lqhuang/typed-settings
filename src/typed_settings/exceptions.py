@@ -38,3 +38,10 @@ class InvalidValueError(TsError):
     """
     Raised the value of an option cannot be converted to the correct type.
     """
+
+
+class InvalidSettingsError(TsError):
+    """
+    Raised when the loaded settings cannot be converted to an instances of the
+    settings class.
+    """

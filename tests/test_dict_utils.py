@@ -4,7 +4,7 @@ import attrs
 import pytest
 
 from typed_settings import dict_utils as du
-from typed_settings.types import OptionInfo
+from typed_settings import option, settings, types
 
 
 def mkattr(name: str, typ: type) -> attrs.Attribute:
@@ -43,12 +43,12 @@ class TestDeepOptions:
             z: str
 
         options = du.deep_options(Parent)
-        assert options == [
-            OptionInfo("x", mkattr("x", str), Parent),
-            OptionInfo("y.x", mkattr("x", float), Child),
-            OptionInfo("y.y.x", mkattr("x", int), GrandChild),
-            OptionInfo("z", mkattr("z", str), Parent),
-        ]
+        assert options == (
+            types.OptionInfo("x", mkattr("x", str), Parent),
+            types.OptionInfo("y.x", mkattr("x", float), Child),
+            types.OptionInfo("y.y.x", mkattr("x", int), GrandChild),
+            types.OptionInfo("z", mkattr("z", str), Parent),
+        )
 
     def test_unresolved_types(self) -> None:
         """Raise a NameError when types cannot be resolved."""
@@ -93,6 +93,31 @@ class TestDeepOptions:
 
         with pytest.raises(NameError, match="name 'Child' is not defined"):
             du.deep_options(Parent)
+
+    def test_no_init_no_option(self) -> None:
+        """
+        No option is generated for an attribute if "init=False".
+        """
+
+        @settings
+        class Nested1:
+            a: int = 0
+            nb1: int = option(init=False)
+
+        @settings
+        class Nested2:
+            a: int = 0
+            nb2: int = option(init=False)
+
+        @settings
+        class Settings:
+            a: int = 0
+            na: int = option(init=False)
+            n1: Nested1 = Nested1()
+            n2: Nested2 = Nested2()
+
+        options = [o.path for o in du.deep_options(Settings)]
+        assert options == ["a", "n1.a", "n2.a"]
 
 
 class TestGroupOptions:
@@ -234,10 +259,10 @@ def test_iter_settings():
     or non-existing settings.
     """
     option_list = [
-        du.OptionInfo("a", mkattr("a", int), None),
-        du.OptionInfo("b.x", mkattr("x", int), None),
-        du.OptionInfo("b.y", mkattr("y", int), None),
-        du.OptionInfo("c", mkattr("c", int), None),
+        types.OptionInfo("a", mkattr("a", int), None),
+        types.OptionInfo("b.x", mkattr("x", int), None),
+        types.OptionInfo("b.y", mkattr("y", int), None),
+        types.OptionInfo("c", mkattr("c", int), None),
     ]
     settings = {
         "a": 0,
@@ -298,35 +323,86 @@ def test_set_path() -> None:
     }
 
 
-def test_dict_merge() -> None:
+def test_merge_settings() -> None:
     """
-    When dicts are merged, merging only applies to keys for options, not
-    list or dict values.
+    When settings are merged, merging only applies to keys for options, not list or
+    dict values.
     """
-    options = [
-        OptionInfo("1a", None, None),  # type: ignore
-        OptionInfo("1b.2a", None, None),  # type: ignore
-        OptionInfo("1b.2b.3a", None, None),  # type: ignore
-        OptionInfo("1b.2b.3b", None, None),  # type: ignore
-        OptionInfo("1c", None, None),  # type: ignore
-        OptionInfo("1d", None, None),  # type: ignore
-        OptionInfo("1e", None, None),  # type: ignore
-    ]
-    d1 = {
-        "1a": 3,
-        "1b": {"2a": "spam", "2b": {"3a": "foo"}},
-        "1c": [{"2a": 3.14}, {"2b": 34.3}],  # Do not merge lists
-        "1d": 4,
-        "1e": {"default": "default"},  # Do not merge dicts
+    options = (
+        types.OptionInfo("1a", None, None),  # type: ignore
+        types.OptionInfo("1b.2a", None, None),  # type: ignore
+        types.OptionInfo("1b.2b.3a", None, None),  # type: ignore
+        types.OptionInfo("1b.2b.3b", None, None),  # type: ignore
+        types.OptionInfo("1c", None, None),  # type: ignore
+        types.OptionInfo("1d", None, None),  # type: ignore
+        types.OptionInfo("1e", None, None),  # type: ignore
+    )
+    d1 = types.LoadedSettings(
+        {
+            "1a": 3,
+            "1b": {"2a": "spam", "2b": {"3a": "foo"}},
+            "1c": [{"2a": 3.14}, {"2b": 34.3}],  # Do not merge lists
+            "1d": 4,
+            "1e": {"default": "default"},  # Do not merge dicts
+        },
+        types.LoaderMeta("l1"),
+    )
+    d2 = types.LoadedSettings(
+        {
+            "1b": {"2a": "eggs", "2b": {"3b": "bar"}},
+            "1c": [{"2a": 23}, {"2b": 34.3}],
+            "1d": 5,
+            "1e": {"update": "value"},
+        },
+        types.LoaderMeta("l2"),
+    )
+    result = du.merge_settings(options, [d1, d2])
+    assert result == {
+        "1a": types.LoadedValue(3, types.LoaderMeta("l1")),
+        "1b.2a": types.LoadedValue("eggs", types.LoaderMeta("l2")),
+        "1b.2b.3a": types.LoadedValue("foo", types.LoaderMeta("l1")),
+        "1b.2b.3b": types.LoadedValue("bar", types.LoaderMeta("l2")),
+        "1c": types.LoadedValue([{"2a": 23}, {"2b": 34.3}], types.LoaderMeta("l2")),
+        "1d": types.LoadedValue(5, types.LoaderMeta("l2")),
+        "1e": types.LoadedValue({"update": "value"}, types.LoaderMeta("l2")),
     }
-    d2 = {
-        "1b": {"2a": "eggs", "2b": {"3b": "bar"}},
-        "1c": [{"2a": 23}, {"2b": 34.3}],
-        "1d": 5,
-        "1e": {"update": "value"},
+
+
+def test_update_settings() -> None:
+    """
+    When updating settings, the input remains unmodified and an updated dopy is
+    returned.
+    """
+    merged = {
+        "1a": types.LoadedValue(1, types.LoaderMeta("l1")),
+        "1b": types.LoadedValue(1, types.LoaderMeta("l1")),
+        "1c": types.LoadedValue(1, types.LoaderMeta("l1")),
     }
-    du.merge_dicts(options, d1, d2)
-    assert d1 == {
+    result = du.update_settings(merged, {"1b": 2})
+    assert merged == {
+        "1a": types.LoadedValue(1, types.LoaderMeta("l1")),
+        "1b": types.LoadedValue(1, types.LoaderMeta("l1")),
+        "1c": types.LoadedValue(1, types.LoaderMeta("l1")),
+    }
+    assert result == {
+        "1a": types.LoadedValue(1, types.LoaderMeta("l1")),
+        "1b": types.LoadedValue(2, types.LoaderMeta("l1")),
+        "1c": types.LoadedValue(1, types.LoaderMeta("l1")),
+    }
+
+
+def test_flat2nested() -> None:
+    merged = {
+        "1a": types.LoadedValue(3, types.LoaderMeta("l1")),
+        "1b.2a": types.LoadedValue("eggs", types.LoaderMeta("l2")),
+        "1b.2b.3a": types.LoadedValue("foo", types.LoaderMeta("l1")),
+        "1b.2b.3b": types.LoadedValue("bar", types.LoaderMeta("l2")),
+        "1c": types.LoadedValue([{"2a": 23}, {"2b": 34.3}], types.LoaderMeta("l2")),
+        "1d": types.LoadedValue(5, types.LoaderMeta("l2")),
+        "1e": types.LoadedValue({"update": "value"}, types.LoaderMeta("l2")),
+    }
+    result = du.flat2nested(merged)
+    assert result == {
         "1a": 3,
         "1b": {"2a": "eggs", "2b": {"3a": "foo", "3b": "bar"}},
         "1c": [{"2a": 23}, {"2b": 34.3}],

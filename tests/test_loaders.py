@@ -25,7 +25,7 @@ from typed_settings.loaders import (
     clean_settings,
     tomllib,
 )
-from typed_settings.types import OptionList
+from typed_settings.types import LoadedSettings, LoaderMeta, OptionList, SettingsDict
 
 
 @settings(frozen=True)
@@ -123,7 +123,7 @@ class TestCleanSettings:
         class Settings:
             host: "Host"
 
-        s = {"host": {"port": 23, "eggs": 42}}
+        s: SettingsDict = {"host": {"port": 23, "eggs": 42}}
         with pytest.raises(InvalidOptionsError) as exc_info:
             clean_settings(s, deep_options(Settings), "t")
         assert str(exc_info.value) == "Invalid options found in t: host.eggs"
@@ -138,7 +138,7 @@ class TestCleanSettings:
         class Settings:
             option: Dict[str, Any]
 
-        s = {"option": {"a": 1, "b": 2}}
+        s: SettingsDict = {"option": {"a": 1, "b": 2}}
         clean_settings(s, deep_options(Settings), "t")
 
 
@@ -498,7 +498,16 @@ class TestFileLoader:
 
         loader = FileLoader({"*.toml": TomlFormat("le-section")}, [cf1, cf2])
         s = loader(Settings, deep_options(Settings))
-        assert s == {"le_spam": "spam", "le_eggs": "eggs"}
+        assert s == [
+            LoadedSettings(
+                {"le_spam": "spam", "le_eggs": "spam"},
+                LoaderMeta(f"FileLoader[{cf1}]", base_dir=cf1.parent),
+            ),
+            LoadedSettings(
+                {"le_eggs": "eggs"},
+                LoaderMeta(f"FileLoader[{cf2}]", base_dir=cf2.parent),
+            ),
+        ]
 
     @pytest.mark.parametrize(
         "is_mandatory, is_path, in_env, exists",
@@ -534,7 +543,7 @@ class TestFileLoader:
         if is_mandatory and not exists:
             pytest.raises(FileNotFoundError, loader, settings_cls, [])
         else:
-            loader(settings_cls, [])
+            loader(settings_cls, ())
 
 
 class TestEnvLoader:
@@ -552,12 +561,10 @@ class TestEnvLoader:
         monkeypatch.setenv("T_HOST_PORT", "25")
         loader = EnvLoader(prefix="T_")
         results = loader(settings_cls, options)
-        assert results == {
-            "url": "foo",
-            "host": {
-                "port": "25",
-            },
-        }
+        assert results == LoadedSettings(
+            {"url": "foo", "host": {"port": "25"}},
+            LoaderMeta("EnvLoader"),
+        )
 
     def test_no_env_prefix(
         self, settings_cls: type, options: OptionList, monkeypatch: MonkeyPatch
@@ -569,7 +576,7 @@ class TestEnvLoader:
 
         loader = EnvLoader(prefix="")
         results = loader(settings_cls, options)
-        assert results == {"url": "spam"}
+        assert results == LoadedSettings({"url": "spam"}, LoaderMeta("EnvLoader"))
 
 
 class TestInstanceLoader:
@@ -588,14 +595,14 @@ class TestInstanceLoader:
         inst = settings_cls(Host("spam", 42), "eggs", 23)
         loader = InstanceLoader(inst)
         results = loader(settings_cls, options)
-        assert results == {
-            "default": 23,
-            "url": "eggs",
-            "host": {
-                "name": "spam",
-                "port": 42,
+        assert results == LoadedSettings(
+            {
+                "default": 23,
+                "url": "eggs",
+                "host": {"name": "spam", "port": 42},
             },
-        }
+            LoaderMeta("InstanceLoader"),
+        )
 
     def test_invalid_type(
         self, settings_cls: type, options: OptionList, monkeypatch: MonkeyPatch
@@ -625,4 +632,6 @@ class TestOnePasswordLoader:
 
         loader = OnePasswordLoader(item="Test", vault="Test")
         s = loader(Settings, deep_options(Settings))
-        assert s == {"username": "spam", "password": "eggs"}
+        assert s == LoadedSettings(
+            {"username": "spam", "password": "eggs"}, LoaderMeta("OnePasswordLoader")
+        )

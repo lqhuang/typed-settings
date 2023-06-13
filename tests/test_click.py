@@ -9,10 +9,8 @@ import click.testing
 import pytest
 
 from typed_settings import (
-    cli_utils,
     click_options,
     click_utils,
-    default_converter,
     default_loaders,
     option,
     pass_settings,
@@ -20,7 +18,7 @@ from typed_settings import (
     settings,
 )
 from typed_settings.attrs import CLICK_KEY, METADATA_KEY
-from typed_settings.types import SecretStr, SettingsClass
+from typed_settings.types import SecretStr
 
 
 T = TypeVar("T")
@@ -109,47 +107,6 @@ class TestDefaultsLoading:
     """
     Tests for loading default values
     """
-
-    @pytest.mark.parametrize(
-        "default, path, type, settings, expected",
-        [
-            (attrs.NOTHING, "a", int, {"a": 3}, 3),
-            (attrs.NOTHING, "a", int, {}, attrs.NOTHING),
-            (2, "a", int, {}, 2),
-            (attrs.Factory(list), "a", List[int], {}, []),
-        ],
-    )
-    def test_get_default(
-        self,
-        default: object,
-        path: str,
-        type: type,
-        settings: dict,
-        expected: object,
-    ) -> None:
-        converter = default_converter()
-        field = attrs.Attribute(  # type: ignore[call-arg,var-annotated]
-            "test", default, None, None, None, None, None, None, type=type
-        )
-        result = cli_utils.get_default(field, path, settings, converter)
-        assert result == expected
-
-    def test_get_default_factory(self) -> None:
-        """
-        If the factory "takes self", ``None`` is passed since we do not yet
-        have an instance.
-        """
-
-        def factory(self: None) -> str:
-            assert self is None
-            return "eggs"
-
-        default = attrs.Factory(factory, takes_self=True)
-        field = attrs.Attribute(  # type: ignore[call-arg,var-annotated]
-            "test", default, None, None, None, None, None, None
-        )
-        result = cli_utils.get_default(field, "a", {}, default_converter())
-        assert result == "eggs"
 
     def test_no_default(self, invoke: Invoke, monkeypatch: pytest.MonkeyPatch) -> None:
         """
@@ -766,27 +723,6 @@ class TestDecoratorFactory:
 
         return Settings
 
-    @pytest.fixture
-    def settings_init_false_csl(self) -> SettingsClass:
-        @settings
-        class Nested1:
-            a: int = 0
-            nb1: int = option(init=False)
-
-        @settings
-        class Nested2:
-            a: int = 0
-            nb2: int = option(init=False)
-
-        @settings
-        class Settings:
-            a: int = 0
-            na: int = option(init=False)
-            n1: Nested1 = Nested1()
-            n2: Nested2 = Nested2()
-
-        return Settings
-
     def test_click_option_factory(self, settings_cls: type, invoke: Invoke) -> None:
         """
         The ClickOptionFactory is the default.
@@ -848,36 +784,6 @@ class TestDecoratorFactory:
         monkeypatch.setattr(sys, "path", [])
         with pytest.raises(ModuleNotFoundError):
             click_utils.OptionGroupFactory()
-
-    def test_no_init_no_option(
-        self, settings_init_false_csl: type, invoke: Invoke
-    ) -> None:
-        """
-        No option is generated for an attribute if "init=False".
-        """
-
-        @click.command()
-        @click_options(
-            settings_init_false_csl,
-            "t",
-            decorator_factory=click_utils.OptionGroupFactory(),
-        )
-        def cli(settings: Any) -> None:
-            ...
-
-        result = invoke(cli, "--help").output.splitlines()
-        assert result == [
-            "Usage: cli [OPTIONS]",
-            "",
-            "Options:",
-            "  Settings options: ",
-            "    --a INTEGER       [default: 0]",
-            "  Nested1 options: ",
-            "    --n1-a INTEGER    [default: 0]",
-            "  Nested2 options: ",
-            "    --n2-a INTEGER    [default: 0]",
-            "  --help              Show this message and exit.",
-        ]
 
 
 @pytest.mark.parametrize(

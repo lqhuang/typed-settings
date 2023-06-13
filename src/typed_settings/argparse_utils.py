@@ -30,7 +30,7 @@ if TYPE_CHECKING:
 
 import attrs
 
-from ._core import _load_settings, default_loaders
+from . import _core
 from .attrs import ARGPARSE_KEY, METADATA_KEY, _SecretRepr
 from .cli_utils import (
     Default,
@@ -39,11 +39,17 @@ from .cli_utils import (
     TypeHandlerFunc,
     get_default,
 )
-from .converters import BaseConverter, default_converter, from_dict
-from .dict_utils import deep_options, set_path
+from .converters import BaseConverter, default_converter
 from .loaders import Loader
 from .processors import Processor
-from .types import SECRET_REPR, SECRETS_TYPES, ST, SettingsDict
+from .types import (
+    SECRET_REPR,
+    SECRETS_TYPES,
+    ST,
+    LoadedValue,
+    LoaderMeta,
+    MergedSettings,
+)
 
 
 __all__ = [
@@ -211,6 +217,7 @@ def cli(
     *,
     processors: Sequence[Processor] = (),
     converter: Optional[BaseConverter] = None,
+    base_dir: Path = Path(),
     type_args_maker: Optional[TypeArgsMaker] = None,
     **parser_kwargs: Any,
 ) -> Callable[[CliFn[ST]], DecoratedCliFn]:
@@ -233,6 +240,8 @@ def cli(
             option values to the required type.
 
             By default, :data:`typed_settings.default_converter()` is used.
+
+        base_dir: Base directory for resolving relative paths in default option values.
 
         type_args_maker: The type args maker that is used to generate keyword
             arguments for :func:`click.option()`.  By default, use
@@ -269,20 +278,16 @@ def cli(
        Made *converter* and *type_args_maker* a keyword-only argument
     .. versionchanged:: 23.0.0
        Added the *processors* argument
+    .. versionchanged:: 23.1.0
+       Added the *base_dir* argument
     """
     if isinstance(loaders, str):
-        loaders = default_loaders(loaders)
+        loaders = _core.default_loaders(loaders)
     converter = converter or default_converter()
+    state = _core.SettingsState(settings_cls, loaders, processors, converter, base_dir)
     type_args_maker = type_args_maker or TypeArgsMaker(ArgparseHandler())
 
-    decorator = _get_decorator(
-        settings_cls,
-        loaders,
-        processors,
-        converter,
-        type_args_maker,
-        **parser_kwargs,
-    )
+    decorator = _get_decorator(state, type_args_maker, **parser_kwargs)
     return decorator
 
 
@@ -292,6 +297,7 @@ def make_parser(
     *,
     processors: Sequence[Processor] = (),
     converter: Optional[BaseConverter] = None,
+    base_dir: Path = Path(),
     type_args_maker: Optional[TypeArgsMaker] = None,
     **parser_kwargs: Any,
 ) -> argparse.ArgumentParser:
@@ -316,6 +322,8 @@ def make_parser(
 
             By default, :data:`typed_settings.default_converter()` is used.
 
+        base_dir: Base directory for resolving relative paths in default option values.
+
         type_args_maker: The type args maker that is used to generate keyword
             arguments for :func:`click.option()`.  By default, use
             :class:`.TypeArgsMaker` with :class:`ArgparseHandler`.
@@ -339,26 +347,23 @@ def make_parser(
        Made *converter* and *type_args_maker* a keyword-only argument
     .. versionchanged:: 23.0.0
        Added the *processors* argument
+    .. versionchanged:: 23.1.0
+       Added the *base_dir* argument
     """
     if isinstance(loaders, str):
-        loaders = default_loaders(loaders)
+        loaders = _core.default_loaders(loaders)
     converter = converter or default_converter()
+    state = _core.SettingsState(settings_cls, loaders, processors, converter, base_dir)
     type_args_maker = type_args_maker or TypeArgsMaker(ArgparseHandler())
 
-    return _mk_parser(
-        settings_cls,
-        loaders,
-        processors,
-        converter,
-        type_args_maker,
-        **parser_kwargs,
-    )
+    return _mk_parser(state, type_args_maker, **parser_kwargs)
 
 
 def namespace2settings(
     settings_cls: Type[ST],
     namespace: argparse.Namespace,
     converter: Optional[BaseConverter] = None,
+    base_dir: Path = Path(),
 ) -> ST:
     """
     Create a settings instance from an argparse namespace.
@@ -371,6 +376,7 @@ def namespace2settings(
         converter: An optional :class:`~cattrs.Converter` used for converting
             option values to the required type.  By default,
             :data:`typed_settings.default_converter()` is used.
+        base_dir: Base directory for resolving relative paths in default option values.
 
     Raise:
         ValueError: If settings default or passed CLI options have invalid
@@ -381,16 +387,17 @@ def namespace2settings(
         cattrs.BaseValidationError: If cattrs structural validation fails.
 
     Return: An instance of *settings_cls*.
+
+    .. versionchanged:: 23.1.0
+       Added the *base_dir* argument
     """
     converter = converter or default_converter()
-    return _ns2settings(namespace, settings_cls, converter)
+    state = _core.SettingsState(settings_cls, [], [], converter, base_dir)
+    return _ns2settings(namespace, state)
 
 
 def _get_decorator(
-    settings_cls: Type[ST],
-    loaders: Sequence[Loader],
-    processors: Sequence[Processor],
-    converter: BaseConverter,
+    state: _core.SettingsState[ST],
     type_args_maker: TypeArgsMaker,
     **parser_kwargs: Any,
 ) -> Callable[[CliFn], DecoratedCliFn]:
@@ -414,17 +421,10 @@ def _get_decorator(
         def cli_wrapper() -> Optional[int]:
             if "description" not in parser_kwargs and func.__doc__:
                 parser_kwargs["description"] = func.__doc__.strip()
-            parser = _mk_parser(
-                settings_cls,
-                loaders,
-                processors,
-                converter,
-                type_args_maker,
-                **parser_kwargs,
-            )
+            parser = _mk_parser(state, type_args_maker, **parser_kwargs)
 
             args = parser.parse_args()
-            settings = _ns2settings(args, settings_cls, converter)
+            settings = _ns2settings(args, state)
             return func(settings)
 
         return cli_wrapper
@@ -433,27 +433,25 @@ def _get_decorator(
 
 
 def _mk_parser(
-    settings_cls: Type[ST],
-    loaders: Sequence[Loader],
-    processors: Sequence[Processor],
-    converter: BaseConverter,
+    state: _core.SettingsState[ST],
     type_args_maker: TypeArgsMaker,
     **parser_kwargs: Any,
 ) -> argparse.ArgumentParser:
     """
     Create an :class:`argparse.ArgumentParser` for all options.
     """
-    options = deep_options(settings_cls)
-    settings_dict = _load_settings(settings_cls, options, loaders, processors)
+    merged_settings = _core._load_settings(state)
     grouped_options = [
         (g_cls, list(g_opts))
-        for g_cls, g_opts in itertools.groupby(options, key=lambda o: o.cls)
+        for g_cls, g_opts in itertools.groupby(state.options, key=lambda o: o.cls)
     ]
     parser = argparse.ArgumentParser(**parser_kwargs)
     for g_cls, g_opts in grouped_options:
         group = parser.add_argument_group(g_cls.__name__, f"{g_cls.__name__} options")
         for oinfo in g_opts:
-            default = get_default(oinfo.field, oinfo.path, settings_dict, converter)
+            default = get_default(
+                oinfo.field, oinfo.path, merged_settings, state.converter
+            )
             flags, cfg = _mk_argument(oinfo.path, oinfo.field, default, type_args_maker)
             group.add_argument(*flags, **cfg)
     return parser
@@ -506,21 +504,23 @@ def _mk_argument(
     return (param_decls, kwargs)
 
 
-def _ns2settings(
-    namespace: argparse.Namespace,
-    settings_cls: Type[ST],
-    converter: BaseConverter,
-) -> ST:
+def _ns2settings(namespace: argparse.Namespace, state: _core.SettingsState[ST]) -> ST:
     """
     Convert the :class:`argparse.Namespace` to an instance of the settings
     class and return it.
     """
-    options = deep_options(settings_cls)
-    settings_dict: SettingsDict = {}
-    for option_info in options:
-        value = getattr(namespace, option_info.path.replace(".", "_"))
-        set_path(settings_dict, option_info.path, value)
-    settings = from_dict(settings_dict, settings_cls, converter)
+    meta = LoaderMeta("Command line args")
+    merged_settings: MergedSettings = {}
+    for option_info in state.options:
+        path = option_info.path
+        attr = path.replace(".", "_")
+        if hasattr(namespace, attr):  # pragma: no cover
+            # "path" *should* always be in "cli_options", b/c we *currently*
+            # generate CLI options for all options.  But let's stay safe here
+            # in case the behavior changes in the future.
+            value = getattr(namespace, attr)
+            merged_settings[path] = LoadedValue(value, meta)
+    settings = _core.convert(merged_settings, state)
     return settings
 
 

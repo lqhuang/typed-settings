@@ -1,20 +1,29 @@
 import json
 import logging
+import re
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any, Dict, List, cast
 
+import attrs
 import pytest
 
-from typed_settings import _core
+from typed_settings import _core, dict_utils, exceptions
+from typed_settings._compat import PY_310
 from typed_settings.attrs import option, settings
 from typed_settings.converters import (
     BaseConverter,
     default_converter,
     register_strlist_hook,
 )
-from typed_settings.dict_utils import deep_options
-from typed_settings.loaders import EnvLoader, FileLoader, Loader, TomlFormat
-from typed_settings.types import OptionList, SettingsClass, SettingsDict
+from typed_settings.loaders import DictLoader, EnvLoader, FileLoader, Loader, TomlFormat
+from typed_settings.types import (
+    LoadedSettings,
+    LoadedValue,
+    LoaderMeta,
+    OptionList,
+    SettingsClass,
+    SettingsDict,
+)
 
 
 @settings(frozen=True)
@@ -27,7 +36,7 @@ class Host:
 class Settings:
     host: Host
     url: str
-    default: int = 3
+    default: int = option(default=3, validator=attrs.validators.gt(0))
 
 
 class TestLoadSettings:
@@ -60,24 +69,32 @@ class TestLoadSettings:
             EnvLoader(prefix="EXAMPLE_"),
         ]
 
-    def test__load_settings(self, loaders: List[Loader]) -> None:
+    def test__load_settings(self, loaders: List[Loader], tmp_path: Path) -> None:
         """
         "_load_settings()" is the internal core loader and takes a list of
         options instead of a normal settings class.  It returns a dict and
         not a settings instance.
         """
-        settings = _core._load_settings(
-            cls=Settings,
-            options=deep_options(Settings),
-            loaders=loaders,
-        )
+        cwd = Path.cwd()
+        state = _core.SettingsState(Settings, loaders, [], default_converter(), cwd)
+        settings = _core._load_settings(state)
         assert settings == {
-            "url": "https://example.com",
-            "default": 3,  # This is from the cls
-            "host": {
-                "name": "example.com",
-                "port": "42",  # Value not yet converted
-            },
+            "host.name": LoadedValue(
+                "example.com",
+                LoaderMeta(
+                    f"FileLoader[{tmp_path.joinpath('settings.toml')}]",
+                    base_dir=tmp_path,
+                ),
+            ),
+            "host.port": LoadedValue("42", LoaderMeta("EnvLoader", base_dir=cwd)),
+            "url": LoadedValue(
+                "https://example.com",
+                LoaderMeta(
+                    f"FileLoader[{tmp_path.joinpath('settings.toml')}]",
+                    base_dir=tmp_path,
+                ),
+            ),
+            "default": LoadedValue(3, LoaderMeta("_DefaultsLoader", base_dir=cwd)),
         }
 
     def test_load_settings(self, loaders: List[Loader]) -> None:
@@ -290,15 +307,27 @@ class TestLoadSettings:
         class Settings:
             opt: Test
 
-        monkeypatch.setenv("TEST_OPT", "42")
-
         converter = BaseConverter()
-        converter.register_structure_hook(Test, lambda v, t: Test(int(v)))
+        converter.register_structure_hook(
+            Test, lambda v, t: v if isinstance(v, Test) else Test(int(v))
+        )
 
         result = _core.load_settings(
-            Settings, [EnvLoader("TEST_")], converter=converter
+            Settings, [DictLoader({"opt": "42"})], converter=converter
         )
         assert result == Settings(Test(42))
+
+    def test_custom_option_converter(self) -> None:
+        """
+        Converters defined for individual options are being used.
+        """
+
+        @settings
+        class Settings:
+            opt: str = option(converter=lambda v: f"converted:{v}")
+
+        result = _core.load_settings(Settings, [DictLoader({"opt": "a"})])
+        assert result == Settings("converted:a")
 
     @pytest.mark.parametrize(
         "vals, kwargs",
@@ -337,9 +366,8 @@ class TestLoadSettings:
         monkeypatch.setenv("EXAMPLE_Y", vals[1])
 
         result = _core.load_settings(Settings, loaders, converter=c)
-        assert result == Settings(
-            x=[3, 4, 42], y=[Path("spam"), Path("eggs")], z=[1, 2]
-        )
+        cwd = Path.cwd().joinpath
+        assert result == Settings(x=[3, 4, 42], y=[cwd("spam"), cwd("eggs")], z=[1, 2])
 
     def test_load_empty_cls(self) -> None:
         """
@@ -396,6 +424,135 @@ class TestLoadSettings:
                 port=2,
             ),
         )
+
+    def test_resolve_paths(
+        self, loaders: List[Loader], tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """
+        Field converters are preferred over the cattrs converter.
+        They can be used to resolves paths relative to the loader's cwd.
+
+        See: https://gitlab.com/sscherfke/typed-settings/-/issues/30
+        """
+
+        @settings
+        class S:
+            a: Path
+            b: Path
+            c: Path
+            d: Path
+
+        d1 = tmp_path.joinpath("d1")
+        d1.mkdir()
+        c1 = d1.joinpath("s.toml")
+        c1.write_text('[example]\na = "f0"\nb = "f1"\n')
+        d2 = tmp_path.joinpath("d2")
+        d2.mkdir()
+        c2 = d2.joinpath("s.toml")
+        c2.write_text('[example]\nc = "f2"\n')
+        monkeypatch.setenv("EXAMPLE_D", "f3")
+        cast(FileLoader, loaders[0]).files = [c1, c2]
+
+        result = _core.load_settings(cls=S, loaders=loaders)
+        assert result == S(
+            a=d1.joinpath("f0"),
+            b=d1.joinpath("f1"),
+            c=d2.joinpath("f2"),
+            d=Path.cwd().joinpath("f3"),
+        )
+
+    @pytest.mark.skipif(
+        not PY_310, reason="Error messages differ a bit on older versions"
+    )
+    @pytest.mark.parametrize(
+        "settings, err",
+        [
+            (
+                {"url": "u"},
+                (
+                    "3 errors occured while converting the loaded option values to an "
+                    "instance of 'Settings':\n"
+                    "- No value set for required option 'host.name'\n"
+                    "- No value set for required option 'host.port'\n"
+                    "- Could not convert loaded settings: "
+                    'TypeError("Settings.__init__() missing 1 required positional '
+                    "argument: 'host'\")"
+                ),
+            ),
+            (
+                {"host": {"name": "h"}, "url": "u"},
+                (
+                    "2 errors occured while converting the loaded option values to an "
+                    "instance of 'Settings':\n"
+                    "- No value set for required option 'host.port'\n"
+                    '- Could not convert loaded settings: TypeError("Host.__init__() '
+                    "missing 1 required positional argument: 'port'\")"
+                ),
+            ),
+            (
+                {"host": {"name": "h", "port": "spam"}, "url": "u"},
+                (
+                    "2 errors occured while converting the loaded option values to an "
+                    "instance of 'Settings':\n"
+                    "- Could not convert value 'spam' for option 'host.port' from "
+                    'loader test: ValueError("invalid literal for int() with base 10: '
+                    "'spam'\")\n"
+                    "- Could not convert loaded settings: "
+                    "ValueError(\"invalid literal for int() with base 10: 'h'\")"
+                ),
+            ),
+            (
+                {"host": {"name": "h", "port": 1}, "url": "u", "default": -1},
+                (
+                    "1 errors occured while converting the loaded option values to an "
+                    "instance of 'Settings':\n"
+                    "- Could not convert loaded settings: "
+                    "ValueError(\"'default' must be > 0: -1\")"
+                ),
+            ),
+        ],
+    )
+    def test_convert_errors(self, settings: dict, err: str) -> None:
+        state = _core.SettingsState(Settings, [], [], default_converter(), Path())
+        meta = LoaderMeta("test")
+        merged = dict_utils.merge_settings(
+            state.options, [LoadedSettings(settings, meta)]
+        )
+        # convert() error: Could not convert value
+        # No value set for required option
+        # Could convert loaded settings to instance
+        with pytest.raises(exceptions.InvalidSettingsError, match=re.escape(err)):
+            _core.convert(merged, state)
+
+    def test_load_resolve_default_paths(self, tmp_path: Path) -> None:
+        """
+        Relative paths in default values can be resolved relative to a user specified
+        base dir.
+        """
+
+        @settings(frozen=True)
+        class S:
+            p: Path = Path("tests")
+
+        result = _core.load(S, "test")
+        assert result == S(Path.cwd().joinpath("tests"))
+        result = _core.load(S, "test", base_dir=tmp_path)
+        assert result == S(tmp_path.joinpath("tests"))
+
+    def test_load_settings_resolve_default_paths(self, tmp_path: Path) -> None:
+        """
+        Relative paths in default values can be resolved relative to a user specified
+        base dir.
+        """
+
+        @settings(frozen=True)
+        class S:
+            p: Path = Path("tests")
+
+        result = _core.load_settings(S, [])
+        assert result == S(Path.cwd().joinpath("tests"))
+        result = _core.load_settings(S, [], base_dir=tmp_path)
+        assert result == S(tmp_path.joinpath("tests"))
 
 
 class TestLogging:

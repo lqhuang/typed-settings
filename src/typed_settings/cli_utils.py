@@ -26,8 +26,7 @@ import cattrs
 from attr._make import _Nothing as NothingType
 
 from .converters import BaseConverter
-from .dict_utils import get_path
-from .types import SettingsDict
+from .types import MergedSettings
 
 
 __all__ = [
@@ -381,7 +380,7 @@ class TypeArgsMaker:
 def get_default(
     field: attrs.Attribute,
     path: str,
-    settings: SettingsDict,
+    settings: MergedSettings,
     converter: BaseConverter,
 ) -> Default:
     """
@@ -402,9 +401,11 @@ def get_default(
     """
     try:
         # Use loaded settings value
-        default = get_path(settings, path)
+        default = settings[path].value
     except KeyError:
         # Use field's default
+        # Should always be "None" since settings include defaults
+        # TODO: Just use "None"?
         default = field.default
     else:
         # If the default was found (no KeyError), convert the input value to

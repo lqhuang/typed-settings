@@ -4,6 +4,7 @@ Utilities for generating Click options.
 from datetime import datetime
 from enum import Enum
 from functools import partial, update_wrapper
+from pathlib import Path
 from typing import (
     Any,
     Callable,
@@ -27,7 +28,7 @@ import attrs
 import click
 from attr._make import _Nothing as NothingType
 
-from ._core import _load_settings, default_loaders
+from . import _core, dict_utils
 from .attrs import CLICK_KEY, METADATA_KEY, _SecretRepr
 from .cli_utils import (
     Default,
@@ -36,18 +37,19 @@ from .cli_utils import (
     TypeHandlerFunc,
     get_default,
 )
-from .converters import BaseConverter, default_converter, from_dict
-from .dict_utils import deep_options, group_options, merge_dicts, set_path
+from .converters import BaseConverter, default_converter
 from .loaders import EnvLoader, Loader
 from .processors import Processor
 from .types import (
     SECRET_REPR,
     SECRETS_TYPES,
     ST,
-    OptionInfo,
+    LoadedValue,
+    LoaderMeta,
+    MergedSettings,
+    OptionList,
     SecretStr,
     SettingsClass,
-    SettingsDict,
     T,
 )
 
@@ -97,6 +99,7 @@ def click_options(
     *,
     processors: Sequence[Processor] = (),
     converter: Optional[BaseConverter] = None,
+    base_dir: Path = Path(),
     type_args_maker: Optional[TypeArgsMaker] = None,
     argname: Optional[str] = None,
     decorator_factory: "Optional[DecoratorFactory]" = None,
@@ -114,10 +117,14 @@ def click_options(
             :func:`~typed_settings.default_loaders()` to get the default
             loaders.
 
+        processors: A list of settings :class:`.Processor`'s.
+
         converter: An optional :class:`~cattrs.Converter` used for converting
             option values to the required type.
 
             By default, :data:`typed_settings.default_converter()` is used.
+
+        base_dir: Base directory for resolving relative paths in default option values.
 
         type_args_maker: The type args maker that is used to generate keyword
             arguments for :func:`click.option()`.  By default, use
@@ -182,13 +189,11 @@ def click_options(
        a keyword-only argument
     .. versionchanged:: 23.0.0
        Added the *processors* argument
+    .. versionchanged:: 23.1.0
+       Added the *base_dir* argument
     """
-    cls = attrs.resolve_types(settings_cls)  # type: ignore[type-var]
-    options = [opt for opt in deep_options(cls) if opt.field.init is not False]
-    grouped_options = group_options(cls, options)
-
     if isinstance(loaders, str):
-        loaders = default_loaders(loaders)
+        loaders = _core.default_loaders(loaders)
 
     env_loader: Optional[EnvLoader] = None
     if show_envvars_in_help:
@@ -196,18 +201,17 @@ def click_options(
         if _loaders:
             env_loader = _loaders[-1]
 
-    settings_dict = _load_settings(cls, options, loaders, processors=processors)
-
     converter = converter or default_converter()
+    state = _core.SettingsState(settings_cls, loaders, processors, converter, base_dir)
+    grouped_options = dict_utils.group_options(state.settings_class, state.options)
+    merged_settings = _core._load_settings(state)
     type_args_maker = type_args_maker or TypeArgsMaker(ClickHandler())
     decorator_factory = decorator_factory or ClickOptionFactory()
 
     wrapper = _get_wrapper(
-        cls,
-        settings_dict,
-        options,
+        state,
+        merged_settings,
         grouped_options,
-        converter,
         type_args_maker,
         argname,
         decorator_factory,
@@ -217,11 +221,9 @@ def click_options(
 
 
 def _get_wrapper(
-    cls: Type[ST],
-    settings_dict: SettingsDict,
-    options: List[OptionInfo],
-    grouped_options: List[Tuple[type, List[OptionInfo]]],
-    converter: BaseConverter,
+    state: _core.SettingsState[ST],
+    merged_settings: MergedSettings,
+    grouped_options: List[Tuple[type, OptionList]],
     type_args_maker: TypeArgsMaker,
     argname: Optional[str],
     decorator_factory: "DecoratorFactory",
@@ -240,8 +242,16 @@ def _get_wrapper(
             ctx = click.get_current_context()
             if ctx.obj is None:
                 ctx.obj = {}
-            merge_dicts(options, settings_dict, ctx.obj.get(CTX_KEY, {}))
-            settings = from_dict(settings_dict, cls, converter)
+            meta = LoaderMeta("Command line args")
+            cli_options = ctx.obj.get(CTX_KEY, {})
+            for option in state.options:
+                path = option.path
+                if path in cli_options:  # pragma: no cover
+                    # "path" *should* always be in "cli_options", b/c we *currently*
+                    # generate CLI options for all options.  But let's stay safe here
+                    # in case the behavior changes in the future.
+                    merged_settings[path] = LoadedValue(cli_options[path], meta)
+            settings = _core.convert(merged_settings, state)
             if argname:
                 ctx_key = argname
                 kwargs = {argname: settings, **kwargs}  # type: ignore
@@ -260,7 +270,9 @@ def _get_wrapper(
         option_decorator = decorator_factory.get_option_decorator()
         for g_cls, g_opts in reversed(grouped_options):
             for oinfo in reversed(g_opts):
-                default = get_default(oinfo.field, oinfo.path, settings_dict, converter)
+                default = get_default(
+                    oinfo.field, oinfo.path, merged_settings, state.converter
+                )
                 envvar = env_loader.get_envvar(oinfo) if env_loader else None
                 option = _mk_option(
                     option_decorator,
@@ -668,7 +680,7 @@ def _make_callback(
         if ctx.obj is None:
             ctx.obj = {}
         settings = ctx.obj.setdefault(CTX_KEY, {})
-        set_path(settings, path, value)
+        settings[path] = value
         return value
 
     return cb

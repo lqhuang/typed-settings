@@ -4,34 +4,36 @@ Converters and helpers for :mod:`cattrs`.
 from datetime import datetime
 from enum import Enum
 from pathlib import Path
-from typing import Any, Callable, Optional, Type, Union
+from typing import Any, Callable, List, Optional, Tuple, Type, Union
 
-from attrs import has
+import attrs
 from cattrs import BaseConverter, Converter
 from cattrs._compat import is_frozenset, is_mutable_set, is_sequence, is_tuple
 
-from .exceptions import InvalidValueError
-from .types import ET, SettingsDict, T
+from .types import ET
 
 
 __all__ = [
     "BaseConverter",
     "Converter",
     "default_converter",
+    "get_default_structure_hooks",
     "register_attrs_hook_factory",
     "register_strlist_hook",
-    "from_dict",
     "to_dt",
     "to_bool",
     "to_enum",
     "to_path",
-    "DEFAULT_STRUCTURE_HOOKS",
+    "to_resolved_path",
 ]
 
 
-def default_converter() -> BaseConverter:
+def default_converter(*, resolve_paths: bool = True) -> BaseConverter:
     """
     Get an instanceof the default converter used by Typed Settings.
+
+    Args:
+        resolve_path: Whether or not to resolve relative :class:`Path`s.
 
     Return:
         A :class:`cattrs.BaseConverter` configured with addional hooks for
@@ -53,9 +55,28 @@ def default_converter() -> BaseConverter:
     converter = Converter()
     register_attrs_hook_factory(converter)
     register_strlist_hook(converter, ":")
-    for t, h in DEFAULT_STRUCTURE_HOOKS:
+    for t, h in get_default_structure_hooks(resolve_paths=resolve_paths):
         converter.register_structure_hook(t, h)  # type: ignore
     return converter
+
+
+def get_default_structure_hooks(
+    *,
+    resolve_paths: bool = True,
+) -> List[Tuple[type, Callable[[Any, type], Any]]]:
+    """
+    Return a list of default structure hooks for cattrs.
+
+    Args:
+        resolve_path: Whether or not to resolve relative :class:`Path`s.
+    """
+    path_hook = to_resolved_path if resolve_paths else to_path
+    return [
+        (bool, to_bool),
+        (datetime, to_dt),
+        (Enum, to_enum),
+        (Path, path_hook),
+    ]
 
 
 def register_attrs_hook_factory(converter: BaseConverter) -> None:
@@ -74,7 +95,7 @@ def register_attrs_hook_factory(converter: BaseConverter) -> None:
 
         return structure_attrs
 
-    converter.register_structure_hook_factory(has, allow_attrs_instances)
+    converter.register_structure_hook_factory(attrs.has, allow_attrs_instances)
 
 
 def register_strlist_hook(
@@ -140,28 +161,6 @@ def _generate_hook_factory(structure_func, fn):  # type: ignore[no-untyped-def]
         return str2collection
 
     return gen_func
-
-
-def from_dict(settings: SettingsDict, cls: Type[T], converter: BaseConverter) -> T:
-    """
-    Convert a settings dict to an attrs class instance using a cattrs
-    converter.
-
-    Args:
-        settings: Dictionary with settings
-        cls: Attrs class to which the settings are converted to
-        converter: Cattrs convert to use for the conversion
-
-    Return:
-        An instance of *cls*.
-
-    Raise:
-        InvalidValueError: If a value cannot be converted to the correct type.
-    """
-    try:
-        return converter.structure_attrs_fromdict(settings, cls)
-    except (AttributeError, KeyError, ValueError, TypeError) as e:
-        raise InvalidValueError(str(e)) from e
 
 
 def to_dt(value: Union[datetime, str], _type: type = datetime) -> datetime:
@@ -250,7 +249,6 @@ def to_enum(value: Any, cls: Type[ET]) -> ET:
 
     Raise:
         KeyError: If *value* is not a valid member of *cls*
-
     """
     if isinstance(value, cls):
         return value
@@ -258,13 +256,35 @@ def to_enum(value: Any, cls: Type[ET]) -> ET:
     return cls[value]
 
 
-def to_path(value: Union[Path, str], _type: type) -> Path:
+def to_path(value: Union[Path, str], _cls: type) -> Path:
+    """
+    Return *value* to :class:`.Path`.
+
+    Args:
+        value: The input data
+        _cls: The path type, this argument is ignored.
+
+    Return:
+        An instance of :class:`.Path`
+
+    Raise:
+        TypeError: If *value* cannot be converted to a path.
+    """
     return Path(value)
 
 
-DEFAULT_STRUCTURE_HOOKS = [
-    (bool, to_bool),
-    (datetime, to_dt),
-    (Enum, to_enum),
-    (Path, to_path),
-]
+def to_resolved_path(value: Union[Path, str], _cls: type) -> Path:
+    """
+    Return *value* to :class:`.Path` and resolve it.
+
+    Args:
+        value: The input data
+        _cls: The path type, this argument is ignored.
+
+    Return:
+        An instance of :class:`.Path`
+
+    Raise:
+        TypeError: If *value* cannot be converted to a path.
+    """
+    return Path(value).resolve()
