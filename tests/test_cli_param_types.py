@@ -82,9 +82,11 @@ def make_cli(settings_cls: Type[ST]) -> Cli:
 
 def make_argparser(settings_cls: Type[ST]) -> ArgParser:
     def parse_args(*args: str) -> ST:
-        parser = argparse_utils.make_parser(settings_cls, default_loaders("test"))
+        parser, ms = argparse_utils.make_parser(settings_cls, default_loaders("test"))
         namespace = parser.parse_args(args)
-        return argparse_utils.namespace2settings(settings_cls, namespace)
+        return argparse_utils.namespace2settings(
+            settings_cls, namespace, merged_settings=ms
+        )
 
     return parse_args
 

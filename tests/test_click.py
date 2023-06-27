@@ -320,9 +320,11 @@ class TestSettingsPassing:
         @click.pass_obj
         # def cli(obj: dict, settings: Settings, /) -> None:
         def cli(obj: dict, settings: Settings) -> None:
+            assert settings == Settings(3)
             assert obj["settings"] is settings
 
-        invoke(cli)
+        result = invoke(cli, "--o=3")
+        assert result.exit_code == 0, result.output
 
     def test_pos_arg_order_2(self, invoke: Invoke) -> None:
         """
@@ -340,9 +342,11 @@ class TestSettingsPassing:
         @click_options(Settings, "test")
         # def cli(settings: Settings, obj: dict, /) -> None:
         def cli(settings: Settings, obj: dict) -> None:
+            assert settings == Settings(3)
             assert obj["settings"] is settings
 
-        invoke(cli)
+        result = invoke(cli, "--o=3")
+        assert result.exit_code == 0, result.output
 
     def test_change_arg_name(self, invoke: Invoke) -> None:
         """
@@ -359,7 +363,8 @@ class TestSettingsPassing:
         def cli(*, le_settings: Settings) -> None:
             assert le_settings == Settings(3)
 
-        invoke(cli, "--o=3")
+        result = invoke(cli, "--o=3")
+        assert result.exit_code == 0, result.output
 
     def test_multi_settings(self, invoke: Invoke) -> None:
         """
@@ -380,8 +385,11 @@ class TestSettingsPassing:
         def cli(*, sa: A, sb: B) -> None:
             assert sa == A()
             assert sb == B()
+            print("ok")
 
-        invoke(cli)
+        result = invoke(cli)
+        assert result.output == "ok\n"
+
         result = invoke(cli, "--help")
         assert result.output == (
             "Usage: cli [OPTIONS]\n"
@@ -877,3 +885,65 @@ def test_click_no_load_envvar(
     # If click read from the envvar, the output would be "onoes"
     assert result.output == "spam\n"
     assert result.exit_code == 0
+
+
+def test_resolve_paths(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, invoke: Invoke
+) -> None:
+    """
+    Relative paths passed via the command line are resolved based on the user's CWD.
+    """
+
+    @settings
+    class Settings:
+        a: Path = Path("default")
+        b: Path = Path("default")  # Load from file
+        c: Path = Path("default")  # Load from env var
+        d: Path = Path("default")  # Load from cli arg
+
+    spath = tmp_path.joinpath("settings.toml")
+    spath.write_text('[test]\nb = "file"\n')
+    monkeypatch.setenv("TEST_C", "env")
+
+    # chdir *before* creating the CLI, b/c it will load the defaults immediately:
+    subdir = tmp_path.joinpath("sub")
+    subdir.mkdir()
+    monkeypatch.chdir(subdir)
+
+    result = Settings()  # Will be update by the CLI
+
+    @click.command()
+    @click_options(Settings, default_loaders("test", [spath]))
+    def cli(settings: Settings) -> None:
+        nonlocal result
+        result = settings
+
+    invoke(cli, "--d", "arg")
+    assert result == Settings(
+        a=subdir.joinpath("default"),
+        b=spath.parent.joinpath("file"),
+        c=subdir.joinpath("env"),
+        d=subdir.joinpath("arg"),
+    )
+
+
+def test_multiple_invocations(invoke: Invoke) -> None:
+    """
+    A CLI function can be invoked multiple times w/o carrying state from call to call.
+    """
+
+    @settings
+    class Settings:
+        o: int = 0
+
+    loaded_settings: list[Settings] = []
+
+    @click.command()
+    @click_options(Settings, "example")
+    def cli(settings: Settings) -> None:
+        loaded_settings.append(settings)
+
+    # The order of these invocations is important:
+    invoke(cli, "--o=3")
+    invoke(cli)
+    assert loaded_settings == [Settings(3), Settings(0)]

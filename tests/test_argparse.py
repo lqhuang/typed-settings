@@ -1,4 +1,5 @@
 import sys
+from pathlib import Path
 from typing import Any, Callable, TypeVar
 
 import attrs
@@ -107,9 +108,11 @@ def test_manual_parser() -> None:
     Basic test for "make_parser()" and "namespace2settings"().
     """
 
-    parser = argparse_utils.make_parser(Settings, "test")
+    parser, merged_settings = argparse_utils.make_parser(Settings, "test")
     namespace = parser.parse_args(["--o", "3"])
-    result = argparse_utils.namespace2settings(Settings, namespace)
+    result = argparse_utils.namespace2settings(
+        Settings, namespace, merged_settings=merged_settings
+    )
     assert result == Settings(3)
 
 
@@ -122,7 +125,7 @@ def test_manual_parser_explicit_config() -> None:
     loaders = default_loaders("test")
     converter = default_converter()
     tam = cli_utils.TypeArgsMaker(argparse_utils.ArgparseHandler())
-    parser = argparse_utils.make_parser(
+    parser, merged_settings = argparse_utils.make_parser(
         Settings,
         loaders=loaders,
         converter=converter,
@@ -132,6 +135,7 @@ def test_manual_parser_explicit_config() -> None:
     result = argparse_utils.namespace2settings(
         Settings,
         namespace,
+        merged_settings=merged_settings,
         converter=converter,
     )
     assert result == Settings(3)
@@ -169,3 +173,62 @@ def test_attrs_meta_not_modified() -> None:
     argparse_utils.make_parser(S, "test")
 
     assert meta[ARGPARSE_KEY] == {"help": "spam", "param_decls": "-o"}
+
+
+def test_resolve_paths(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, invoke: Invoke
+) -> None:
+    """
+    Relative paths passed via the command line are resolved based on the user's CWD.
+    """
+
+    @settings
+    class Settings:
+        a: Path = Path("default")
+        b: Path = Path("default")  # Load from file
+        c: Path = Path("default")  # Load from env var
+        d: Path = Path("default")  # Load from cli arg
+
+    spath = tmp_path.joinpath("settings.toml")
+    spath.write_text('[test]\nb = "file"\n')
+    monkeypatch.setenv("TEST_C", "env")
+
+    # chdir *before* creating the CLI, b/c it will load the defaults immediately:
+    subdir = tmp_path.joinpath("sub")
+    subdir.mkdir()
+    monkeypatch.chdir(subdir)
+
+    result = Settings()  # Will be update by the CLI
+
+    @argparse_utils.cli(Settings, default_loaders("test", [spath]))
+    def cli(settings: Settings) -> Settings:
+        return settings
+
+    result = invoke(cli, "--d", "arg")
+    assert result == Settings(
+        a=subdir.joinpath("default"),
+        b=spath.parent.joinpath("file"),
+        c=subdir.joinpath("env"),
+        d=subdir.joinpath("arg"),
+    )
+
+
+def test_multiple_invocations(invoke: Invoke) -> None:
+    """
+    A CLI function can be invoked multiple times w/o carrying state from call to call.
+    """
+
+    @settings
+    class Settings:
+        o: int = 0
+
+    loaded_settings: list[Settings] = []
+
+    @argparse_utils.cli(Settings, "example")
+    def cli(settings: Settings) -> None:
+        loaded_settings.append(settings)
+
+    # The order of these invocations is important:
+    invoke(cli, "--o=3")
+    invoke(cli)
+    assert loaded_settings == [Settings(3), Settings(0)]

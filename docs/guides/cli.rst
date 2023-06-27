@@ -202,13 +202,17 @@ Here's an example:
     ... class Settings:
     ...     spam: int = ts.option(default=42, help="Spam count")
     ...
-    >>> parser = typed_settings.argparse_utils.make_parser(Settings, "example")
+    >>> parser, merged_settings = typed_settings.argparse_utils.make_parser(Settings, "example")
     >>> parser
     ArgumentParser(prog='...', ...)
     >>> namespace = parser.parse_args(["--spam=3"])  # sys.argv[1:], without the prog. name
     >>> namespace
     Namespace(spam=3)
-    >>> typed_settings.argparse_utils.namespace2settings(Settings, namespace)
+    >>> typed_settings.argparse_utils.namespace2settings(
+    ...     Settings,
+    ...     namespace,
+    ...     merged_settings=merged_settings,
+    ... )
     Settings(spam=3)
 
 
@@ -451,7 +455,7 @@ We can achieve this by providing a custom param decl.:
     >>> invoke(cli, "--on")
     Settings(flag=True)
     <BLANKLINE>
-    >>> invoke(cli, )
+    >>> invoke(cli)
     Settings(flag=False)
     <BLANKLINE>
 

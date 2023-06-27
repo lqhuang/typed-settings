@@ -24,12 +24,18 @@
   the source they are loaded from.  This is either the parent directory
   of a config file or the current working directory ([#30]).
 
+- 💥 **BREAKING:** The signature of `argparse_utils`’ `make_parser()`
+  and `namespace2settings()` function changed.  They now return and take
+  the *merged settings*.  The Signature of `cli()` remains unchanged.
+  See [#41].
+
 - ✨ Added a dictionary loader.  This is useful for testing purposes.
 
 - 📦 Switched from [safety] to [pip-audit].
 
 [!16]: https://gitlab.com/sscherfke/typed-settings/-/merge_requests/16
 [#30]: https://gitlab.com/sscherfke/typed-settings/-/issues/30
+[#41]: https://gitlab.com/sscherfke/typed-settings/-/issues/41
 [pip-audit]: https://pypi.org/project/pip-audit
 [safety]: https://pypi.org/project/safety
 

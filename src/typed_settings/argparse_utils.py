@@ -52,6 +52,9 @@ from .types import (
 )
 
 
+_DEFAULT_SENTINEL = object()
+
+
 __all__ = [
     "cli",
     "make_parser",
@@ -68,7 +71,7 @@ __all__ = [
 
 
 WrapppedFunc = Callable[[ST], Any]
-CliFn = Callable[[ST], Optional[int]]
+CliFn = Callable[[ST], Any]
 DecoratedCliFn = Callable[[], Optional[int]]
 
 
@@ -300,7 +303,7 @@ def make_parser(
     base_dir: Path = Path(),
     type_args_maker: Optional[TypeArgsMaker] = None,
     **parser_kwargs: Any,
-) -> argparse.ArgumentParser:
+) -> Tuple[argparse.ArgumentParser, MergedSettings]:
     """
     Return an argument parser for the options of the given settings class.
 
@@ -362,6 +365,8 @@ def make_parser(
 def namespace2settings(
     settings_cls: Type[ST],
     namespace: argparse.Namespace,
+    *,
+    merged_settings: MergedSettings,
     converter: Optional[BaseConverter] = None,
     base_dir: Path = Path(),
 ) -> ST:
@@ -393,7 +398,7 @@ def namespace2settings(
     """
     converter = converter or default_converter()
     state = _core.SettingsState(settings_cls, [], [], converter, base_dir)
-    return _ns2settings(namespace, state)
+    return _ns2settings(namespace, state, merged_settings)
 
 
 def _get_decorator(
@@ -421,10 +426,12 @@ def _get_decorator(
         def cli_wrapper() -> Optional[int]:
             if "description" not in parser_kwargs and func.__doc__:
                 parser_kwargs["description"] = func.__doc__.strip()
-            parser = _mk_parser(state, type_args_maker, **parser_kwargs)
+            parser, merged_settings = _mk_parser(
+                state, type_args_maker, **parser_kwargs
+            )
 
             args = parser.parse_args()
-            settings = _ns2settings(args, state)
+            settings = _ns2settings(args, state, merged_settings)
             return func(settings)
 
         return cli_wrapper
@@ -436,7 +443,7 @@ def _mk_parser(
     state: _core.SettingsState[ST],
     type_args_maker: TypeArgsMaker,
     **parser_kwargs: Any,
-) -> argparse.ArgumentParser:
+) -> Tuple[argparse.ArgumentParser, MergedSettings]:
     """
     Create an :class:`argparse.ArgumentParser` for all options.
     """
@@ -454,7 +461,7 @@ def _mk_parser(
             )
             flags, cfg = _mk_argument(oinfo.path, oinfo.field, default, type_args_maker)
             group.add_argument(*flags, **cfg)
-    return parser
+    return (parser, merged_settings)
 
 
 def _mk_argument(
@@ -493,6 +500,8 @@ def _mk_argument(
             help_extra = f" [default: ({SECRET_REPR})]"
         else:
             help_extra = f" [default: {default_repr}]"
+        if kwargs["default"] not in (None, (), [], {}):
+            kwargs["default"] = _DEFAULT_SENTINEL
     else:
         kwargs["required"] = True
         help_extra = " [required]"
@@ -504,13 +513,16 @@ def _mk_argument(
     return (param_decls, kwargs)
 
 
-def _ns2settings(namespace: argparse.Namespace, state: _core.SettingsState[ST]) -> ST:
+def _ns2settings(
+    namespace: argparse.Namespace,
+    state: _core.SettingsState[ST],
+    merged_settings: MergedSettings,
+) -> ST:
     """
     Convert the :class:`argparse.Namespace` to an instance of the settings
     class and return it.
     """
     meta = LoaderMeta("Command line args")
-    merged_settings: MergedSettings = {}
     for option_info in state.options:
         path = option_info.path
         attr = path.replace(".", "_")
@@ -519,7 +531,8 @@ def _ns2settings(namespace: argparse.Namespace, state: _core.SettingsState[ST]) 
             # generate CLI options for all options.  But let's stay safe here
             # in case the behavior changes in the future.
             value = getattr(namespace, attr)
-            merged_settings[path] = LoadedValue(value, meta)
+            if value is not _DEFAULT_SENTINEL:
+                merged_settings[path] = LoadedValue(value, meta)
     settings = _core.convert(merged_settings, state)
     return settings
 
