@@ -492,13 +492,15 @@ class TestLoadSettings:
             (
                 {"host": {"name": "h", "port": "spam"}, "url": "u"},
                 (
-                    "2 errors occured while converting the loaded option values to an "
+                    "3 errors occured while converting the loaded option values to an "
                     "instance of 'Settings':\n"
                     "- Could not convert value 'spam' for option 'host.port' from "
                     'loader test: ValueError("invalid literal for int() with base 10: '
                     "'spam'\")\n"
+                    "- No value set for required option 'host.port'\n"
                     "- Could not convert loaded settings: "
-                    "ValueError(\"invalid literal for int() with base 10: 'h'\")"
+                    'TypeError("Host.__init__() missing 1 required positional '
+                    "argument: 'port'\")"
                 ),
             ),
             (

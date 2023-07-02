@@ -38,6 +38,10 @@ __all__ = [
 ]
 
 
+DEFAULT_SENTINEL = object()
+DEFAULT_SENTINEL_NAME = "DEFAULT_SENTINEL"
+
+
 NoneType = type(None)
 StrDict = Dict[str, Any]
 Default = Union[Any, None, NothingType]
@@ -403,9 +407,6 @@ def get_default(
         # Use loaded settings value
         default = settings[path].value
     except KeyError:
-        # Use field's default
-        # Should always be "None" since settings include defaults
-        # TODO: Just use "None"?
         default = field.default
     else:
         # If the default was found (no KeyError), convert the input value to
@@ -420,13 +421,12 @@ def get_default(
                 ) from e
 
     if isinstance(default, attrs.Factory):  # type: ignore
-        if default.takes_self:
-            # There is no instance yet.  Passing ``None`` migh be more correct
-            # than passing a fake instance, because it raises an error instead
-            # of silently creating a false value. :-?
-            default = default.factory(None)
-        else:
-            default = default.factory()
+        # Use a fake factory function to indicate a dynamic default value, that is only
+        # computed when the CLI is invoked (and not when the options are generated).
+        def default() -> object:
+            return None
+
+        default.__name__ = DEFAULT_SENTINEL_NAME
 
     return default
 

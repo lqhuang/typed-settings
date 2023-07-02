@@ -142,6 +142,7 @@ exclude_lines = [
     "pragma: no cover",
     "\\.\\.\\.",
     "if TYPE_CHECKING",
+    "pytest.fail",
 ]
 fail_under = 100
 omit = [  # This is also (dynamically) set/overridden in noxfile.py!

@@ -371,6 +371,7 @@ def convert(merged_settings: MergedSettings, state: _core.SettingsState[ST]) -> 
                         f"Could not convert value {value!r} for option "
                         f"{path!r} from loader {meta.name}: {e!r}"
                     )
+                    continue
         else:
             converted_value = value
         dict_utils.set_path(settings_dict, path, converted_value)

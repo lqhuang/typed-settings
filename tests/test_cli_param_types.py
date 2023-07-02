@@ -730,6 +730,37 @@ class TestNoTypeParam(ParamBase):
     expected_settings = Settings(a="eggs")  # type: ignore
 
 
+class TestAttrsDefaultFactory(ParamBase):
+    """
+    Test params with ``attrs`` default factories.
+    """
+
+    @settings
+    class Settings:
+        a: str = option(factory=lambda: "spam")
+
+    click_expected_help = [
+        "  --a TEXT  [default: (dynamic)]",
+    ]
+    argparse_expected_help = [
+        "  --a TEXT    [default: (dynamic)]",
+    ]
+
+    env_vars = {"A": "eggs"}
+    click_expected_env_var_defaults = [
+        "  --a TEXT  [default: eggs]",
+    ]
+    argparse_expected_env_var_defaults = [
+        "  --a TEXT    [default: eggs]",
+    ]
+
+    default_options = []
+    expected_defaults = Settings("spam")
+
+    cli_options = ["--a=bacon"]
+    expected_settings = Settings("bacon")
+
+
 @pytest.fixture(params=ParamBase.classes)
 def param_cls(request: pytest.FixtureRequest) -> Type[ParamBase]:
     return cast(Type[ParamBase], request.param)

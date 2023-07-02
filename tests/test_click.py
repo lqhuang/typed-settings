@@ -279,6 +279,27 @@ class TestDefaultsLoading:
         )
         assert result.exit_code == 0
 
+    def test_default_factory_multiple_invocation(self, invoke: Invoke) -> None:
+        """
+        Default factories are not invoked by click when the CLI is generated.
+        They are evaluate during the "convert" phase each time the CLI is invoked.
+        """
+        loaded_settings: List["Settings"] = []
+
+        @settings
+        class Settings:
+            o: int = option(factory=lambda: len(loaded_settings) + 1)
+
+        @click.command()
+        @click_options(Settings, "example")
+        def cli(settings: Settings) -> None:
+            loaded_settings.append(settings)
+
+        invoke(cli)
+        invoke(cli)
+        invoke(cli, "--o=100")
+        assert loaded_settings == [Settings(1), Settings(2), Settings(100)]
+
 
 class TestSettingsPassing:
     """
@@ -677,8 +698,8 @@ class TestClickConfig:
         self, invoke: Invoke, args: List[str], value: bool
     ) -> None:
         """
-        User callback function is executed as well as
-        the option is added to settings.
+        A user callback is only invoked if an argument was passed, but not if the
+        default is used.
         """
 
         cb = mock.MagicMock(return_value=value)
@@ -696,7 +717,7 @@ class TestClickConfig:
 
         result = invoke(cli, *args)
         assert result.exit_code == 0
-        cb.assert_called_once()
+        assert cb.call_count == int(bool(args))
 
 
 class TestDecoratorFactory:
@@ -936,7 +957,7 @@ def test_multiple_invocations(invoke: Invoke) -> None:
     class Settings:
         o: int = 0
 
-    loaded_settings: list[Settings] = []
+    loaded_settings: List[Settings] = []
 
     @click.command()
     @click_options(Settings, "example")
