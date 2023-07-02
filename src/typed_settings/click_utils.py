@@ -32,6 +32,7 @@ from click.core import ParameterSource
 from . import _core, dict_utils
 from .attrs import CLICK_KEY, METADATA_KEY, _SecretRepr
 from .cli_utils import (
+    DEFAULT_SENTINEL_NAME,
     Default,
     StrDict,
     TypeArgsMaker,
@@ -221,7 +222,7 @@ def click_options(
     return wrapper
 
 
-def _get_wrapper(
+def _get_wrapper(  # noqa: C901
     state: _core.SettingsState[ST],
     merged_settings: MergedSettings,
     grouped_options: List[Tuple[type, OptionList]],
@@ -253,8 +254,11 @@ def _get_wrapper(
                     # generate CLI options for all options.  But let's stay safe here
                     # in case the behavior changes in the future.
                     cli_settings[path] = LoadedValue(cli_options[path], meta)
-                else:
+                elif path in merged_settings:
                     cli_settings[path] = merged_settings[path]
+                # else:
+                #     This is the case, when the default should be used and it is a
+                #     factory function.  The _DefaultsLoader did not invoke it yet.
             settings = _core.convert(cli_settings, state)
             if argname:
                 ctx_key = argname
@@ -676,27 +680,40 @@ def _make_callback(
     """
 
     def cb(ctx: click.Context, param: click.Option, value: Any) -> Any:
+        param_source = ctx.get_parameter_source(param.name or "")
+        param_source_user = param_source in {
+            ParameterSource.COMMANDLINE,
+            ParameterSource.PROMPT,
+        }
+        if not param_source_user:
+            param_source_default = param_source in {
+                ParameterSource.DEFAULT,
+                ParameterSource.DEFAULT_MAP,
+            }
+            # If the values does not come from the user, we may not want to add it to
+            # the settings but perform additional checks:
+            if param_source_default and (
+                callable(param.default)
+                and param.default.__name__ == DEFAULT_SENTINEL_NAME
+            ):
+                # Don't add the value to the settings if it has a default factory.
+                # The factory should be invoked later.
+                return value
+            if param_source_default and value not in (None, (), {}):
+                # Don't add the value to the settings if it is a default.
+                # If we did, it would override the original LoaderMeta.
+                return value
+
         if type_callback is not None:
             value = type_callback(ctx, param, value)
         if user_callback is not None:
             value = user_callback(ctx, param, value)
 
-        param_source = ctx.get_parameter_source(param.name or "")
-        param_source_default = param_source in {
-            ParameterSource.DEFAULT,
-            ParameterSource.DEFAULT_MAP,
-        }
-        param_source_user = param_source in {
-            ParameterSource.COMMANDLINE,
-            ParameterSource.PROMPT,
-        }
-        if param_source_user or (param_source_default and value in (None, (), {})):
-            # Don't add the value to the settings if it is a default.
-            # If we did, it would override the original LoaderMeta.
-            if ctx.obj is None:
-                ctx.obj = {}
-            settings = ctx.obj.setdefault(CTX_KEY, {})
-            settings[path] = value
+        if ctx.obj is None:
+            ctx.obj = {}
+        settings = ctx.obj.setdefault(CTX_KEY, {})
+        settings[path] = value
+
         return value
 
     return cb

@@ -150,6 +150,9 @@ class _DefaultsLoader:
             if opt.field.default is attrs.NOTHING:
                 continue
             if isinstance(opt.field.default, attrs.Factory):  # type: ignore
+                # Do not invoke default factories yet.  This should be done as late as
+                # possible.  This is especially required for CLIs if you want to invoke
+                # the same instance multiple times (e.g., in tests).
                 continue
             set_path(settings, opt.path, opt.field.default)
 

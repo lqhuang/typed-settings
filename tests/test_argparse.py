@@ -1,6 +1,6 @@
 import sys
 from pathlib import Path
-from typing import Any, Callable, TypeVar
+from typing import Any, Callable, List, TypeVar
 
 import attrs
 import pytest
@@ -219,16 +219,38 @@ def test_multiple_invocations(invoke: Invoke) -> None:
     """
 
     @settings
-    class Settings:
+    class S:
         o: int = 0
 
-    loaded_settings: list[Settings] = []
+    loaded_settings: List[S] = []
 
-    @argparse_utils.cli(Settings, "example")
-    def cli(settings: Settings) -> None:
+    @argparse_utils.cli(S, "example")
+    def cli(settings: S) -> None:
         loaded_settings.append(settings)
 
     # The order of these invocations is important:
     invoke(cli, "--o=3")
     invoke(cli)
-    assert loaded_settings == [Settings(3), Settings(0)]
+    assert loaded_settings == [S(3), S(0)]
+
+
+def test_default_factory_multiple_invocations(invoke: Invoke) -> None:
+    """
+    Default factories are not invoked by click when the CLI is generated.
+    They are evaluate during the "convert" phase each time the CLI is invoked.
+    """
+
+    @settings
+    class S:
+        o: int = option(factory=lambda: len(loaded_settings) + 1)
+
+    loaded_settings: List[S] = []
+
+    @argparse_utils.cli(S, "example")
+    def cli(settings: S) -> None:
+        loaded_settings.append(settings)
+
+    invoke(cli)
+    invoke(cli)
+    invoke(cli, "--o=100")
+    assert loaded_settings == [S(1), S(2), S(100)]

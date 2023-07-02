@@ -287,7 +287,7 @@ class TestTypeArgsMaker:
         ),
         (attrs.NOTHING, "a", int, {}, attrs.NOTHING),
         (2, "a", int, {}, 2),
-        (attrs.Factory(list), "a", List[int], {}, []),
+        (attrs.Factory(list), "a", List[int], {}, None),
         (
             attrs.NOTHING,
             "a",
@@ -313,25 +313,30 @@ def test_get_default(
         "test", default, None, None, None, None, None, None, type=type
     )
     result = cli_utils.get_default(field, path, settings, converter)
-    assert result == expected
+    if isinstance(default, attrs.Factory):  # type: ignore[arg-type]
+        assert callable(result)
+        assert result.__name__ == cli_utils.DEFAULT_SENTINEL_NAME
+        assert result() is expected
+    else:
+        assert result == expected
 
 
 def test_get_default_factory() -> None:
     """
-    If the factory "takes self", ``None`` is passed since we do not yet have an
-    instance.
+    Default factories are not invoked to generate a default value.
     """
 
     def factory(self: None) -> str:
-        assert self is None
-        return "eggs"
+        pytest.fail("This should not be invoked")
 
     default = attrs.Factory(factory, takes_self=True)
     field = attrs.Attribute(  # type: ignore[call-arg,var-annotated]
         "test", default, None, None, None, None, None, None, type=str
     )
     result = cli_utils.get_default(field, "a", {}, default_converter())
-    assert result == "eggs"
+    assert callable(result)
+    assert result.__name__ == cli_utils.DEFAULT_SENTINEL_NAME
+    assert result() is None
 
 
 def test_get_default_cattrs_error() -> None:

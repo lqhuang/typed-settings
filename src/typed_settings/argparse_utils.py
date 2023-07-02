@@ -33,6 +33,8 @@ import attrs
 from . import _core
 from .attrs import ARGPARSE_KEY, METADATA_KEY, _SecretRepr
 from .cli_utils import (
+    DEFAULT_SENTINEL,
+    DEFAULT_SENTINEL_NAME,
     Default,
     StrDict,
     TypeArgsMaker,
@@ -50,9 +52,6 @@ from .types import (
     LoaderMeta,
     MergedSettings,
 )
-
-
-_DEFAULT_SENTINEL = object()
 
 
 __all__ = [
@@ -498,10 +497,15 @@ def _mk_argument(
             isinstance(kwtyp, type) and issubclass(kwtyp, SECRETS_TYPES)
         ):
             help_extra = f" [default: ({SECRET_REPR})]"
+        elif (
+            callable(kwargs["default"])
+            and kwargs["default"].__name__ == DEFAULT_SENTINEL_NAME
+        ):
+            help_extra = "[default: (dynamic)]"
         else:
             help_extra = f" [default: {default_repr}]"
         if kwargs["default"] not in (None, (), [], {}):
-            kwargs["default"] = _DEFAULT_SENTINEL
+            kwargs["default"] = DEFAULT_SENTINEL
     else:
         kwargs["required"] = True
         help_extra = " [required]"
@@ -531,7 +535,7 @@ def _ns2settings(
             # generate CLI options for all options.  But let's stay safe here
             # in case the behavior changes in the future.
             value = getattr(namespace, attr)
-            if value is not _DEFAULT_SENTINEL:
+            if value is not DEFAULT_SENTINEL:
                 merged_settings[path] = LoadedValue(value, meta)
     settings = _core.convert(merged_settings, state)
     return settings
