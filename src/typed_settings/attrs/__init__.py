@@ -17,7 +17,6 @@ import attr  # The old namespaces is needed in "combine()"
 import attrs
 
 from ..types import SECRET_REPR
-from .hooks import auto_convert
 
 
 if TYPE_CHECKING:
@@ -33,7 +32,6 @@ if TYPE_CHECKING:
 __all__ = [
     "METADATA_KEY",
     "SECRET",
-    "auto_convert",
     "evolve",
     "option",
     "secret",

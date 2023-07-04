@@ -18,7 +18,10 @@
   You can re-enable the old behavior by explicitly using the converter
   returned by `default_converter(resolve_paths=False)`.
 
-  See [#30], [!16]
+  This also improves error messages for when one or more option values
+  cannot be converted to the desired type.
+
+  See [#20], [#30], [!16]
 
 - 💥 **BREAKING:** Relative paths are now always resolved relative to
   the source they are loaded from.  This is either the parent directory
@@ -29,11 +32,15 @@
   the *merged settings*.  The Signature of `cli()` remains unchanged.
   See [#41].
 
+- 💥 **BREAKING:** The deprecated `typed_settings.attrs.hooks` module
+  has been removed.
+
 - ✨ Added a dictionary loader.  This is useful for testing purposes.
 
 - 📦 Switched from [safety] to [pip-audit].
 
 [!16]: https://gitlab.com/sscherfke/typed-settings/-/merge_requests/16
+[#20]: https://gitlab.com/sscherfke/typed-settings/-/issues/20
 [#30]: https://gitlab.com/sscherfke/typed-settings/-/issues/30
 [#41]: https://gitlab.com/sscherfke/typed-settings/-/issues/41
 [pip-audit]: https://pypi.org/project/pip-audit
