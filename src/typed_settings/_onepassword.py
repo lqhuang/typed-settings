@@ -21,7 +21,7 @@ def run(*args: str) -> str:
         args: The command line arguments to pass to ``op``.
 
     Return:
-        The striped *stdout* of the ``op`` invocation.
+        The stripped *stdout* of the ``op`` invocation.
 
     Raise:
         ValueError: If the CLI is not properly installed or the invocation
@@ -40,8 +40,6 @@ def run(*args: str) -> str:
     except subprocess.CalledProcessError as e:
         _level, _date, _time, msg = e.stderr.strip().split(" ", maxsplit=3)
         raise ValueError(f'"op" error: {msg}') from None
-    "".split()
-
     return result.stdout.strip()
 
 
