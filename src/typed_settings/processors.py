@@ -13,6 +13,7 @@ from .types import OptionList, SettingsClass, SettingsDict
 __all__ = [
     "Protocol",
     "UrlHandler",
+    "Processor",
     "UrlProcessor",
     "handle_raw",
     "handle_script",

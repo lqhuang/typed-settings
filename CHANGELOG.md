@@ -39,7 +39,6 @@
 
 - 📦 Switched from [safety] to [pip-audit].
 
-[!16]: https://gitlab.com/sscherfke/typed-settings/-/merge_requests/16
 [#20]: https://gitlab.com/sscherfke/typed-settings/-/issues/20
 [#30]: https://gitlab.com/sscherfke/typed-settings/-/issues/30
 [#41]: https://gitlab.com/sscherfke/typed-settings/-/issues/41

@@ -39,7 +39,7 @@ from .cli_utils import (
     TypeHandlerFunc,
     get_default,
 )
-from .converters import BaseConverter, default_converter
+from .converters import Converter, default_converter
 from .loaders import EnvLoader, Loader
 from .processors import Processor
 from .types import (
@@ -100,7 +100,7 @@ def click_options(
     loaders: Union[str, Sequence[Loader]],
     *,
     processors: Sequence[Processor] = (),
-    converter: Optional[BaseConverter] = None,
+    converter: Optional[Converter] = None,
     base_dir: Path = Path(),
     type_args_maker: Optional[TypeArgsMaker] = None,
     argname: Optional[str] = None,
@@ -121,7 +121,7 @@ def click_options(
 
         processors: A list of settings :class:`.Processor`'s.
 
-        converter: An optional :class:`~cattrs.Converter` used for converting
+        converter: An optional :class:`.Converter` used for converting
             option values to the required type.
 
             By default, :data:`typed_settings.default_converter()` is used.
@@ -154,12 +154,8 @@ def click_options(
         A decorator for a click command.
 
     Raise:
-        ValueError: If settings default or passed CLI options have invalid
-            values.
-        TypeError: If the settings class uses unsupported types.
-        cattrs.StructureHandlerNotFoundError: If cattrs has no handler for a
-            given type.
-        cattrs.BaseValidationError: If cattrs structural validation fails.
+        InvalidSettingsError: If an instance of *cls* cannot be created for the given
+            settings.
 
     Example:
 

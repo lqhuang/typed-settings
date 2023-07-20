@@ -4,17 +4,31 @@ Converters and helpers for :mod:`cattrs`.
 from datetime import datetime
 from enum import Enum
 from pathlib import Path
-from typing import Any, Callable, List, Optional, Tuple, Type, Union
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Callable,
+    List,
+    Optional,
+    Protocol,
+    Tuple,
+    Type,
+    Union,
+)
 
 import attrs
-from cattrs import BaseConverter, Converter
+import cattrs
+import cattrs._compat
 from cattrs._compat import is_frozenset, is_mutable_set, is_sequence, is_tuple
 
-from .types import ET
+from .types import ET, T
+
+
+if TYPE_CHECKING:
+    import cattrs
 
 
 __all__ = [
-    "BaseConverter",
     "Converter",
     "default_converter",
     "get_default_structure_hooks",
@@ -28,16 +42,24 @@ __all__ = [
 ]
 
 
-def default_converter(*, resolve_paths: bool = True) -> BaseConverter:
+class Converter(Protocol):
+    def structure(self, data: Any, type: Type[T]) -> T:
+        ...
+
+    # def unstructure(self, inst: T) -> Any:
+    #     ...
+
+
+def default_converter(*, resolve_paths: bool = True) -> Converter:
     """
     Get an instanceof the default converter used by Typed Settings.
 
     Args:
-        resolve_path: Whether or not to resolve relative :class:`Path`s.
+        resolve_path: Whether or not to resolve relative paths.
 
     Return:
-        A :class:`cattrs.BaseConverter` configured with addional hooks for
-        loading the follwing types:
+        A :class:`Converter` configured with addional hooks for loading the follwing
+        types:
 
         - :class:`bool` using :func:`.to_bool()`
         - :class:`datetime.datetime` using :func:`.to_dt()`
@@ -52,7 +74,13 @@ def default_converter(*, resolve_paths: bool = True) -> BaseConverter:
     This converter can also be used as a base for converters with custom
     structure hooks.
     """
-    converter = Converter()
+    return get_default_cattrs_converter(resolve_paths=resolve_paths)
+
+
+def get_default_cattrs_converter(resolve_paths: bool = True) -> "cattrs.Converter":
+    import cattrs
+
+    converter = cattrs.Converter()
     register_attrs_hook_factory(converter)
     register_strlist_hook(converter, ":")
     for t, h in get_default_structure_hooks(resolve_paths=resolve_paths):
@@ -68,7 +96,7 @@ def get_default_structure_hooks(
     Return a list of default structure hooks for cattrs.
 
     Args:
-        resolve_path: Whether or not to resolve relative :class:`Path`s.
+        resolve_path: Whether or not to resolve relative paths.
     """
     path_hook = to_resolved_path if resolve_paths else to_path
     return [
@@ -79,7 +107,7 @@ def get_default_structure_hooks(
     ]
 
 
-def register_attrs_hook_factory(converter: BaseConverter) -> None:
+def register_attrs_hook_factory(converter: cattrs.Converter) -> None:
     """
     Register a hook factory that allows using instances of attrs classes where
     cattrs would normally expect a dictionary.
@@ -99,7 +127,7 @@ def register_attrs_hook_factory(converter: BaseConverter) -> None:
 
 
 def register_strlist_hook(
-    converter: BaseConverter,
+    converter: cattrs.Converter,
     sep: Optional[str] = None,
     fn: Optional[Callable[[str], list]] = None,
 ) -> None:
@@ -163,37 +191,7 @@ def _generate_hook_factory(structure_func, fn):  # type: ignore[no-untyped-def]
     return gen_func
 
 
-def to_dt(value: Union[datetime, str], _type: type = datetime) -> datetime:
-    """
-    Convert an ISO formatted string to :class:`datetime.datetime`.  Leave the
-    input untouched if it is already a datetime.
-
-    See: :meth:`datetime.datetime.fromisoformat()`
-
-    The ``Z`` suffix is also supported and will be replaced with ``+00:00``.
-
-    Args:
-        value: The input data
-        _type: The desired output type, will be ignored
-
-    Return:
-        The converted datetime instance
-
-    Raise:
-        TypeError: If *val* is neither a string nor a datetime
-    """
-    if not isinstance(value, (datetime, str)):
-        raise TypeError(
-            f"Invalid type {type(value).__name__!r}; expected 'datetime' or " f"'str'."
-        )
-    if isinstance(value, str):
-        if value[-1] == "Z":
-            value = value.replace("Z", "+00:00")
-        return datetime.fromisoformat(value)
-    return value
-
-
-def to_bool(value: Any, _type: type = bool) -> bool:
+def to_bool(value: Any, _cls: type = bool) -> bool:
     """
     Convert "boolean" strings (e.g., from env. vars.) to real booleans.
 
@@ -232,6 +230,36 @@ def to_bool(value: Any, _type: type = bool) -> bool:
     raise ValueError(f"Cannot convert value to bool: {value}")
 
 
+def to_dt(value: Union[datetime, str], _cls: type = datetime) -> datetime:
+    """
+    Convert an ISO formatted string to :class:`datetime.datetime`.  Leave the
+    input untouched if it is already a datetime.
+
+    See: :meth:`datetime.datetime.fromisoformat()`
+
+    The ``Z`` suffix is also supported and will be replaced with ``+00:00``.
+
+    Args:
+        value: The input data
+        _type: The desired output type, will be ignored
+
+    Return:
+        The converted datetime instance
+
+    Raise:
+        TypeError: If *val* is neither a string nor a datetime
+    """
+    if not isinstance(value, (datetime, str)):
+        raise TypeError(
+            f"Invalid type {type(value).__name__!r}; expected 'datetime' or " f"'str'."
+        )
+    if isinstance(value, str):
+        if value[-1] == "Z":
+            value = value.replace("Z", "+00:00")
+        return datetime.fromisoformat(value)
+    return value
+
+
 def to_enum(value: Any, cls: Type[ET]) -> ET:
     """
     Return a converter that creates an instance of the :class:`~enum.Enum`
@@ -258,14 +286,14 @@ def to_enum(value: Any, cls: Type[ET]) -> ET:
 
 def to_path(value: Union[Path, str], _cls: type) -> Path:
     """
-    Return *value* to :class:`.Path`.
+    Return *value* to :class:`~pathlib.Path`.
 
     Args:
         value: The input data
         _cls: The path type, this argument is ignored.
 
     Return:
-        An instance of :class:`.Path`
+        An instance of :class:`~pathlib.Path`
 
     Raise:
         TypeError: If *value* cannot be converted to a path.

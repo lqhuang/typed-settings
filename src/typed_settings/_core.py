@@ -22,7 +22,7 @@ import attrs
 
 from . import _core, dict_utils
 from .attrs import METADATA_KEY
-from .converters import BaseConverter, default_converter
+from .converters import Converter, default_converter
 from .exceptions import InvalidSettingsError
 from .loaders import EnvLoader, FileLoader, Loader, TomlFormat, _DefaultsLoader
 from .processors import Processor
@@ -53,12 +53,16 @@ LOGGER = logging.getLogger(METADATA_KEY)
 
 
 class SettingsState(Generic[ST]):
+    """
+    A representation of Typed Settings' internal state and configuration.
+    """
+
     def __init__(
         self,
         settings_cls: Type[ST],
         loaders: Sequence[Loader],
         processors: Sequence[Processor],
-        converter: BaseConverter,
+        converter: Converter,
         base_dir: Path,
     ) -> None:
         self._cls = settings_cls
@@ -90,7 +94,7 @@ class SettingsState(Generic[ST]):
         return list(self._processors)
 
     @property
-    def converter(self) -> BaseConverter:
+    def converter(self) -> Converter:
         return self._converter
 
     @property
@@ -270,7 +274,7 @@ def load_settings(
     loaders: Sequence[Loader],
     *,
     processors: Sequence[Processor] = (),
-    converter: Optional[BaseConverter] = None,
+    converter: Optional[Converter] = None,
     base_dir: Path = Path(),
 ) -> ST:
     """
@@ -280,8 +284,8 @@ def load_settings(
         cls: Attrs class with options (and default values).
         loaders: A list of settings :class:`.Loader`'s.
         processors: A list of settings :class:`.Processor`'s.
-        converter: An optional :class:`cattrs.converters.BaseConverter` used
-            for converting option values to the required type.
+        converter: An optional :class:`.Converter` used for converting option values to
+            the required type.
 
             By default, :func:`.default_converter()` is used.
         base_dir: Base directory for resolving relative paths in default option values.

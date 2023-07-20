@@ -7,12 +7,14 @@ from enum import Enum
 from pathlib import Path
 from typing import Any, Dict, FrozenSet, List, Optional, Sequence, Set, Tuple
 
+import attrs
 import pytest
 
 from typed_settings._compat import PY_39
 from typed_settings.attrs import option, secret, settings
 from typed_settings.converters import (
     default_converter,
+    get_default_cattrs_converter,
     register_strlist_hook,
     to_bool,
     to_dt,
@@ -31,6 +33,67 @@ class LeEnum(Enum):
 class S:
     u: str = option()
     p: str = secret()
+
+
+@attrs.frozen
+class Child:
+    x: int
+    y: int = attrs.field(converter=lambda v: (int(v) // 2))  # pragma: no cover
+
+
+@attrs.frozen(kw_only=True)
+class Parent:
+    child: Child
+    a: float
+    b: float = attrs.field(default=3.14, validator=attrs.validators.le(2))
+    c: LeEnum
+    d: datetime
+    e: "List[Child]"  # Test if resolve_types() is called
+    f: Set[datetime]
+
+
+class TestToBool:
+    """Tests for `to_bool`."""
+
+    @pytest.mark.parametrize(
+        "val, expected",
+        [
+            (True, True),
+            ("True", True),
+            ("TRUE", True),
+            ("true", True),
+            ("t", True),
+            ("yes", True),
+            ("Y", True),
+            ("on", True),
+            ("1", True),
+            (1, True),
+            (False, False),
+            ("False", False),
+            ("false", False),
+            ("fAlse", False),
+            ("NO", False),
+            ("n", False),
+            ("off", False),
+            ("0", False),
+            (0, False),
+        ],
+    )
+    def test_to_bool(self, val: str, expected: bool) -> None:
+        """
+        Only a limited set of values can be converted to a bool.
+        """
+        assert to_bool(val, bool) is expected
+
+    @pytest.mark.parametrize("val", ["", [], "spam", 2, -1])
+    def test_to_bool_error(self, val: Any) -> None:
+        """
+        In contrast to ``bool()``, `to_bool` does no take Pythons default
+        truthyness into account.
+
+        Everything that is not in the sets above raises an error.
+        """
+        pytest.raises(ValueError, to_bool, val, bool)
 
 
 class TestToDt:
@@ -83,50 +146,6 @@ class TestToDt:
         """
         with pytest.raises(TypeError):
             to_dt(3)  # type: ignore
-
-
-class TestToBool:
-    """Tests for `to_bool`."""
-
-    @pytest.mark.parametrize(
-        "val, expected",
-        [
-            (True, True),
-            ("True", True),
-            ("TRUE", True),
-            ("true", True),
-            ("t", True),
-            ("yes", True),
-            ("Y", True),
-            ("on", True),
-            ("1", True),
-            (1, True),
-            (False, False),
-            ("False", False),
-            ("false", False),
-            ("fAlse", False),
-            ("NO", False),
-            ("n", False),
-            ("off", False),
-            ("0", False),
-            (0, False),
-        ],
-    )
-    def test_to_bool(self, val: str, expected: bool) -> None:
-        """
-        Only a limited set of values can be converted to a bool.
-        """
-        assert to_bool(val, bool) is expected
-
-    @pytest.mark.parametrize("val", ["", [], "spam", 2, -1])
-    def test_to_bool_error(self, val: Any) -> None:
-        """
-        In contrast to ``bool()``, `to_bool` does no take Pythons default
-        truthyness into account.
-
-        Everything that is not in the sets above raises an error.
-        """
-        pytest.raises(ValueError, to_bool, val, bool)
 
 
 class TestToEnum:
@@ -202,6 +221,27 @@ class TestToResolvedPath:
         # (Nested) attrs classes
         (S, {"u": "user", "p": "pwd"}, S("user", "pwd")),
         (S, S("user", "pwd"), S("user", "pwd")),
+        # (
+        #     Parent,
+        #     {
+        #         "a": "3.14",
+        #         "b": 1,
+        #         "c": "eggs",
+        #         "d": "2023-05-04T13:37:42+00:00",
+        #         "e": [{"x": 0, "y": 0}, {"x": 1, "y": 2}],
+        #         "f": ["2023-05-04T13:37:42+00:00", "2023-05-04T13:37:42+00:00"],
+        #         "child": {"x": 3, "y": 4},
+        #     },
+        #     Parent(
+        #         a=3.14,
+        #         b=1,
+        #         c=LeEnum.eggs,
+        #         d=datetime(2023, 5, 4, 13, 13, 42, tzinfo=timezone.utc),
+        #         e=[Child(0, 0), Child(1, 1)],
+        #         f={datetime(2023, 5, 4, 13, 13, 42, tzinfo=timezone.utc)},
+        #         child=Child(3, 2),
+        #     ),
+        # ),
         # Container types
         (List[int], [1, 2], [1, 2]),
         (List[S], [{"u": 1, "p": 2}], [S("1", "2")]),
@@ -231,7 +271,7 @@ def test_supported_types(typ: type, value: Any, expected: Any) -> None:
         opt: typ  # type: ignore[valid-type]
 
     converter = default_converter()
-    inst = converter.structure_attrs_fromdict({"opt": value}, Settings)
+    inst = converter.structure({"opt": value}, Settings)
     assert inst.opt == expected
 
 
@@ -248,7 +288,7 @@ def test_unsupported_values(val: dict) -> None:
 
     converter = default_converter()
     with pytest.raises(TypeError):
-        converter.structure_attrs_fromdict(val, Settings)
+        converter.structure(val, Settings)
 
 
 STRLIST_TEST_DATA = [
@@ -279,9 +319,9 @@ def test_strlist_hook(input: str, kw: dict, typ: type, expected: Any) -> None:
     class Settings:
         a: typ  # type: ignore
 
-    converter = default_converter()
+    converter = get_default_cattrs_converter()
     register_strlist_hook(converter, **kw)
-    inst = converter.structure_attrs_fromdict({"a": input}, Settings)
+    inst = converter.structure({"a": input}, Settings)
     assert inst == Settings(expected)
 
 
@@ -289,6 +329,6 @@ def test_strlist_hook_either_arg() -> None:
     """
     Either "sep" OR "fn" can be passed to "register_str_list_hook()"
     """
-    converter = default_converter()
+    converter = get_default_cattrs_converter()
     with pytest.raises(ValueError, match="You may either pass"):
         register_strlist_hook(converter, sep=":", fn=lambda v: [v])  # pragma: no cover
