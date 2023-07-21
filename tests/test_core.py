@@ -35,7 +35,7 @@ class Host:
 
 @settings(frozen=True)
 class Settings:
-    host: Host
+    host: "Host"  # Assert that types are resolved
     url: str
     default: int = option(default=3, validator=attrs.validators.gt(0))
 
