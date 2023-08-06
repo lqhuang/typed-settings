@@ -3,7 +3,7 @@ Core functions for loading and working with settings.
 """
 from typing import Any, List
 
-from ._core import default_loaders, load, load_settings
+from ._core import SettingsState, convert, default_loaders, load, load_settings
 from ._file_utils import find
 from .argparse_utils import cli
 from .attrs import combine, evolve, option, secret, settings
@@ -37,9 +37,11 @@ except ImportError:  # pragma: no cover
 
 __all__ = [
     # Core
+    "SettingsState",
     "default_loaders",
     "load",
     "load_settings",
+    "convert",
     # Types
     "Secret",
     "SecretStr",

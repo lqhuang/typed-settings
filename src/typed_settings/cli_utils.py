@@ -22,10 +22,9 @@ else:
 from typing import Any, Collection, Dict, List, Optional, Tuple, Union
 
 import attrs
-import cattrs
 from attr._make import _Nothing as NothingType
 
-from .converters import BaseConverter
+from .converters import Converter
 from .types import MergedSettings
 
 
@@ -385,7 +384,7 @@ def get_default(
     field: attrs.Attribute,
     path: str,
     settings: MergedSettings,
-    converter: BaseConverter,
+    converter: Converter,
 ) -> Default:
     """
     Return the proper default value for an attribute.
@@ -397,7 +396,7 @@ def get_default(
         field: The attrs field description for the attribute.
         path: The dotted path the the option in the settings dict.
         settings: A (nested) dict with the loaded settings.
-        converter: The cattrs converter to be used.
+        converter: The converter to be used.
 
     Return:
         The default value to be used for the option.  This can also be ``None``
@@ -415,7 +414,7 @@ def get_default(
         if field.type:
             try:
                 default = converter.structure(default, field.type)
-            except cattrs.BaseValidationError as e:
+            except Exception as e:
                 raise ValueError(
                     f"Invalid default for type {field.type}: {default}"
                 ) from e

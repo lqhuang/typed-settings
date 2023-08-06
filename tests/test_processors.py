@@ -1,5 +1,4 @@
-import sys
-from typing import Type, Union
+from typing import Callable, Type, Union
 
 import pytest
 
@@ -402,11 +401,7 @@ class TestJinjaProcessor:
             with pytest.raises(expected):
                 processors.JinjaProcessor()(data, Settings, OPTIONS)
 
-    def test_jinja_not_installed(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        # Remove if already imported
-        monkeypatch.delitem(sys.modules, "jinja2", raising=False)
-        # Prevent import:
-        monkeypatch.setattr(sys, "path", [])
-
+    def test_jinja_not_installed(self, unimport: Callable[[str], None]) -> None:
+        unimport("jinja2")
         with pytest.raises(ModuleNotFoundError, match="not installed"):
             processors.JinjaProcessor()

@@ -41,7 +41,7 @@ from .cli_utils import (
     TypeHandlerFunc,
     get_default,
 )
-from .converters import BaseConverter, default_converter
+from .converters import Converter, default_converter
 from .loaders import Loader
 from .processors import Processor
 from .types import (
@@ -218,7 +218,7 @@ def cli(
     loaders: Union[str, Sequence[Loader]],
     *,
     processors: Sequence[Processor] = (),
-    converter: Optional[BaseConverter] = None,
+    converter: Optional[Converter] = None,
     base_dir: Path = Path(),
     type_args_maker: Optional[TypeArgsMaker] = None,
     **parser_kwargs: Any,
@@ -238,8 +238,8 @@ def cli(
 
         processors: A list of settings :class:`.Processor`'s.
 
-        converter: An optional :class:`~cattrs.Converter` used for converting
-            option values to the required type.
+        converter: An optional :class:`.Converter` used for converting option values to
+            the required type.
 
             By default, :data:`typed_settings.default_converter()` is used.
 
@@ -256,12 +256,8 @@ def cli(
         A decorator for an argparse CLI function.
 
     Raise:
-        ValueError: If settings default or passed CLI options have invalid
-            values.
-        TypeError: If the settings class uses unsupported types.
-        cattrs.StructureHandlerNotFoundError: If cattrs has no handler for a
-            given type.
-        cattrs.BaseValidationError: If cattrs structural validation fails.
+        InvalidSettingsError: If an instance of *cls* cannot be created for the given
+            settings.
 
     Example:
 
@@ -298,7 +294,7 @@ def make_parser(
     loaders: Union[str, Sequence[Loader]],
     *,
     processors: Sequence[Processor] = (),
-    converter: Optional[BaseConverter] = None,
+    converter: Optional[Converter] = None,
     base_dir: Path = Path(),
     type_args_maker: Optional[TypeArgsMaker] = None,
     **parser_kwargs: Any,
@@ -319,8 +315,8 @@ def make_parser(
 
         processors: A list of settings :class:`.Processor`'s.
 
-        converter: An optional :class:`~cattrs.Converter` used for converting
-            option values to the required type.
+        converter: An optional :class:`.Converter` used for converting option values to
+            the required type.
 
             By default, :data:`typed_settings.default_converter()` is used.
 
@@ -338,12 +334,8 @@ def make_parser(
         *settings_cls*.
 
     Raise:
-        ValueError: If settings default or passed CLI options have invalid
-            values.
-        TypeError: If the settings class uses unsupported types.
-        cattrs.StructureHandlerNotFoundError: If cattrs has no handler for a
-            given type.
-        cattrs.BaseValidationError: If cattrs structural validation fails.
+        InvalidSettingsError: If an instance of *cls* cannot be created for the given
+            settings.
 
     .. versionchanged:: 23.0.0
        Made *converter* and *type_args_maker* a keyword-only argument
@@ -366,7 +358,7 @@ def namespace2settings(
     namespace: argparse.Namespace,
     *,
     merged_settings: MergedSettings,
-    converter: Optional[BaseConverter] = None,
+    converter: Optional[Converter] = None,
     base_dir: Path = Path(),
 ) -> ST:
     """
@@ -377,18 +369,14 @@ def namespace2settings(
     Args:
         settings_cls: The settings class to instantiate.
         namespace: The namespace returned by the argument parser.
-        converter: An optional :class:`~cattrs.Converter` used for converting
-            option values to the required type.  By default,
-            :data:`typed_settings.default_converter()` is used.
+        converter: An optional :class:`.Converter` used for converting option values to
+            the required type.  By default, :data:`typed_settings.default_converter()`
+            is used.
         base_dir: Base directory for resolving relative paths in default option values.
 
     Raise:
-        ValueError: If settings default or passed CLI options have invalid
-            values.
-        TypeError: If the settings class uses unsupported types.
-        cattrs.StructureHandlerNotFoundError: If cattrs has no handler for a
-            given type.
-        cattrs.BaseValidationError: If cattrs structural validation fails.
+        InvalidSettingsError: If an instance of *cls* cannot be created for the given
+            settings.
 
     Return: An instance of *settings_cls*.
 

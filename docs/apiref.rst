@@ -20,6 +20,7 @@ Core Functions
 .. autofunction:: load_settings
 .. autofunction:: default_loaders
 .. autofunction:: find
+.. autofunction:: convert
 
 
 Aliases
@@ -111,7 +112,7 @@ Dict Utils
    :members:
 
 
-Attrs & Cattrs
+attrs & cattrs
 ==============
 
 Classes and Fields

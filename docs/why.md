@@ -17,15 +17,18 @@ This page introduces you to similar libraries and shows why Typed Settings might
 
 ### Settings Layout and Structure
 
-- Settings are defined as [Attrs] classes with type hints and, optionally, validators.
+- Settings are defined as [attrs] classes with type hints and, optionally, validators.
 
   - Options can be marked/typed as secrets and are hidden when a settings instance is printed.
 
 - Settings classes can be nested if you want to group your settings.
 
-- [Cattrs] is used for converting the loaded values to the proper types.
+- If it is installed, [cattrs] is used for converting the loaded values to the proper types.
+  Typed Settings has a built-in converter that is used as a fallback.
+  It is not as powerful and fast as {program}`cattrs` but reduces the number of dependencies.
 
-  - By default, all basic data types (bool, int, float, str) are supported, as well as enums, paths and datetimes.  Most built-in collection types are supported and optional values, too.
+  - By default, all basic data types (bool, int, float, str) are supported, as well as enums, paths and datetimes
+    Most built-in collection types are supported and optional values, too.
   - You can extend the converter to support additional types.
 
 - Other libraries (like dataclasses or Pydantic) are not yet supported.

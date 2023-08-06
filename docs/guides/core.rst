@@ -216,7 +216,7 @@ The latter makes special cases possible and lets you configure everything in det
 
 - Derives settings for loaders from your *appname* (but some settings can be overridden).
 
-- Uses a default Cattrs converter.
+- Uses a default :program:`cattrs` converter.
 
 
 ``load_settings()``
@@ -226,7 +226,7 @@ The latter makes special cases possible and lets you configure everything in det
 
 - You need to explicitly configure each loader.
 
-- You can pass a custom/extended Cattrs converter.
+- You can pass a custom/extended :program:`cattrs` converter.
 
 .. note::
 
@@ -249,7 +249,7 @@ You can override it with the *env_prefix* argument.
 You can also completely disable environment variable loading by setting *env_prefix* to :code:`None`.
 
 Values loaded from environment variables are strings.
-They are converted to the type specified in the settings class via a Cattrs converter.
+They are converted to the type specified in the settings class via a :program:`cattrs` converter.
 The :func:`~typed_settings.converters.default_converter()` supports the most common types like booleans, dates, enums and paths.
 
 .. danger::

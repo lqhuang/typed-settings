@@ -39,11 +39,13 @@ classifiers = [
 ]
 dependencies = [
     "attrs>=23.1",
-    "cattrs>=22.2",
     "tomli>=2; python_version<'3.11'",
 ]
 
 [project.optional-dependencies]
+cattrs = [
+    "cattrs>=22.2",
+]
 click = [
     "click>=7",
 ]
@@ -55,7 +57,7 @@ jinja = [
     "jinja2",
 ]
 all = [  # All features
-    "typed-settings[click,option-groups,jinja]",
+    "typed-settings[cattrs,click,option-groups,jinja]",
 ]
 docs = [
     "typed-settings[all]",

@@ -5,14 +5,15 @@ from pathlib import Path
 from typing import Any, Dict, List, cast
 
 import attrs
+import cattrs
 import pytest
 
 from typed_settings import _core, dict_utils, exceptions
 from typed_settings._compat import PY_310
 from typed_settings.attrs import option, settings
 from typed_settings.converters import (
-    BaseConverter,
     default_converter,
+    get_default_cattrs_converter,
     register_strlist_hook,
 )
 from typed_settings.loaders import DictLoader, EnvLoader, FileLoader, Loader, TomlFormat
@@ -34,7 +35,7 @@ class Host:
 
 @settings(frozen=True)
 class Settings:
-    host: Host
+    host: "Host"  # Assert that types are resolved
     url: str
     default: int = option(default=3, validator=attrs.validators.gt(0))
 
@@ -307,7 +308,7 @@ class TestLoadSettings:
         class Settings:
             opt: Test
 
-        converter = BaseConverter()
+        converter = cattrs.Converter()
         converter.register_structure_hook(
             Test, lambda v, t: v if isinstance(v, Test) else Test(int(v))
         )
@@ -348,7 +349,7 @@ class TestLoadSettings:
         """
         Lists can be loaded from env vars
         """
-        c = default_converter()
+        c = get_default_cattrs_converter()
         register_strlist_hook(c, **kwargs)
 
         @settings

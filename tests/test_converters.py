@@ -1,25 +1,36 @@
 """
 Tests for `typed_settings.attrs.converters`.
 """
+import dataclasses
 import json
 from datetime import datetime, timedelta, timezone
 from enum import Enum
 from pathlib import Path
-from typing import Any, Dict, FrozenSet, List, Optional, Sequence, Set, Tuple
+from types import MappingProxyType
+from typing import (
+    Any,
+    Callable,
+    Dict,
+    FrozenSet,
+    List,
+    Optional,
+    Sequence,
+    Set,
+    Tuple,
+    Union,
+)
 
+import attrs
+import cattrs
 import pytest
 
-from typed_settings._compat import PY_39
+from typed_settings import converters
+from typed_settings._compat import PY_39, PY_310
 from typed_settings.attrs import option, secret, settings
-from typed_settings.converters import (
-    default_converter,
-    register_strlist_hook,
-    to_bool,
-    to_dt,
-    to_enum,
-    to_path,
-    to_resolved_path,
-)
+
+
+def custom_converter(v: Union[str, Path]) -> Path:
+    return Path(v).resolve()
 
 
 class LeEnum(Enum):
@@ -27,233 +38,364 @@ class LeEnum(Enum):
     eggs = "Le Eggs"
 
 
+@dataclasses.dataclass
+class DataCls:
+    u: str
+    p: str
+
+
 @settings
-class S:
+class AttrsCls:
     u: str = option()
     p: str = secret()
 
 
-class TestToDt:
-    """Tests for `to_dt`."""
-
-    def test_from_dt(self) -> None:
-        """
-        Existing datetimes are returned unchanged.
-        """
-        dt = datetime(2020, 5, 4, 13, 37)
-        result = to_dt(dt, datetime)
-        assert result is dt
-
-    @pytest.mark.parametrize(
-        "value, expected",
-        [
-            ("2020-05-04 13:37:00", datetime(2020, 5, 4, 13, 37)),
-            ("2020-05-04T13:37:00", datetime(2020, 5, 4, 13, 37)),
-            (
-                "2020-05-04T13:37:00Z",
-                datetime(2020, 5, 4, 13, 37, tzinfo=timezone.utc),
-            ),
-            (
-                "2020-05-04T13:37:00+00:00",
-                datetime(2020, 5, 4, 13, 37, tzinfo=timezone.utc),
-            ),
-            (
-                "2020-05-04T13:37:00+02:00",
-                datetime(
-                    2020,
-                    5,
-                    4,
-                    13,
-                    37,
-                    tzinfo=timezone(timedelta(seconds=7200)),
-                ),
-            ),
-        ],
-    )
-    def test_from_str(self, value: str, expected: datetime) -> None:
-        """
-        Existing datetimes are returned unchanged.
-        """
-        result = to_dt(value, datetime)
-        assert result == expected
-
-    def test_invalid_input(self) -> None:
-        """
-        Invalid inputs raises a TypeError.
-        """
-        with pytest.raises(TypeError):
-            to_dt(3)  # type: ignore
+@attrs.frozen
+class Child:
+    x: int
+    y: Path = attrs.field(converter=custom_converter)
 
 
-class TestToBool:
-    """Tests for `to_bool`."""
-
-    @pytest.mark.parametrize(
-        "val, expected",
-        [
-            (True, True),
-            ("True", True),
-            ("TRUE", True),
-            ("true", True),
-            ("t", True),
-            ("yes", True),
-            ("Y", True),
-            ("on", True),
-            ("1", True),
-            (1, True),
-            (False, False),
-            ("False", False),
-            ("false", False),
-            ("fAlse", False),
-            ("NO", False),
-            ("n", False),
-            ("off", False),
-            ("0", False),
-            (0, False),
-        ],
-    )
-    def test_to_bool(self, val: str, expected: bool) -> None:
-        """
-        Only a limited set of values can be converted to a bool.
-        """
-        assert to_bool(val, bool) is expected
-
-    @pytest.mark.parametrize("val", ["", [], "spam", 2, -1])
-    def test_to_bool_error(self, val: Any) -> None:
-        """
-        In contrast to ``bool()``, `to_bool` does no take Pythons default
-        truthyness into account.
-
-        Everything that is not in the sets above raises an error.
-        """
-        pytest.raises(ValueError, to_bool, val, bool)
+@attrs.frozen(kw_only=True)
+class Parent:
+    child: Child
+    a: float
+    b: float = attrs.field(default=3.14, validator=attrs.validators.le(2))
+    c: LeEnum
+    d: datetime
+    e: List[Child]
+    f: Set[datetime]
 
 
-class TestToEnum:
-    """Tests for `to_enum`."""
+Example3T = List[Tuple[str, Any, Any]]  # 3-tuple example
+Example4T = List[Tuple[str, Any, Any, Any]]  # 4-tuple example
 
-    @pytest.mark.parametrize(
-        "value, expected",
-        [
-            (LeEnum.spam, LeEnum.spam),
-            ("spam", LeEnum.spam),
-        ],
-    )
-    def test_to_enum(self, value: Any, expected: LeEnum) -> None:
-        """
-        `to_enum()` accepts Enums and member names.
-        """
-        assert to_enum(value, LeEnum) is expected
+# This list is filled with examples for each supported data type below.
+# It is used to check that all supported converters can convert the same data.
+SUPPORTED_TYPES_DATA: Example4T = []
 
+# Any - types remain unchanged
+SUPPORTED_ANY: Example3T = [
+    ("Any(int)", 2, 2),
+    ("Any(str)", "2", "2"),
+    ("Any(None)", None, None),
+]
+SUPPORTED_TYPES_DATA += [(n, v, e, Any) for n, v, e in SUPPORTED_ANY]
 
-class TestToPath:
-    """Tests for `to_path`."""
+# bool - can be parsed from a defined set of values
+SUPPORTED_BOOL: Example3T = [
+    ("bool(True)", True, True),
+    ("bool('True')", "True", True),
+    ("bool('True')", "TRUE", True),
+    ("bool('true')", "true", True),
+    ("bool('true')", "t", True),
+    ("bool('yes')", "yes", True),
+    ("bool('yes')", "Y", True),
+    ("bool('yes')", "on", True),
+    ("bool('1')", "1", True),
+    ("bool(1)", 1, True),
+    ("bool(False)", False, False),
+    ("bool('False')", "False", False),
+    ("bool('False')", "fAlse", False),  # sic!
+    ("bool('false')", "false", False),
+    ("bool('no')", "NO", False),
+    ("bool('no')", "n", False),
+    ("bool('no')", "OFF", False),
+    ("bool('0')", "0", False),
+    ("bool(0)", 0, False),
+]
+SUPPORTED_TYPES_DATA += [(n, v, e, bool) for n, v, e in SUPPORTED_BOOL]
 
-    @pytest.mark.parametrize(
-        "value, expected",
-        [
-            ("spam", Path("spam")),
-            (Path("eggs"), Path("eggs")),
-        ],
-    )
-    def test_to_path(self, value: Any, expected: Path) -> None:
-        assert to_path(value, Path) == expected
+# int, float, str - nothing special about these ...
+SUPPORTED_STDTYPES: Example4T = [
+    # Nothing special about these ...
+    ("int(23)", 23, 23, int),
+    ("int('42')", "42", 42, int),
+    ("float(3.14)", 3.14, 3.14, float),
+    ("float('.815')", ".815", 0.815, float),
+    ("str('spam')", "spam", "spam", str),
+]
+SUPPORTED_TYPES_DATA += [(n, i, e, t) for n, i, e, t in SUPPORTED_STDTYPES]
 
+# datetime - can be parsed from a limit set of ISO formats
+SUPPORTED_DATETIME: Example3T = [
+    ("datetime(naive-space)", "2020-05-04 13:37:00", datetime(2020, 5, 4, 13, 37)),
+    ("datetime(naive-T)", "2020-05-04T13:37:00", datetime(2020, 5, 4, 13, 37)),
+    (
+        "datetime(tz-Z)",
+        "2020-05-04T13:37:00Z",
+        datetime(2020, 5, 4, 13, 37, tzinfo=timezone.utc),
+    ),
+    (
+        "datetime(tz-offset-utc)",
+        "2020-05-04T13:37:00+00:00",
+        datetime(2020, 5, 4, 13, 37, tzinfo=timezone.utc),
+    ),
+    (
+        "datetime(tz-offset-2h)",
+        "2020-05-04T13:37:00+02:00",
+        datetime(2020, 5, 4, 13, 37, tzinfo=timezone(timedelta(seconds=7200))),
+    ),
+    ("datetime(inst)", datetime(2020, 5, 4, 13, 37), datetime(2020, 5, 4, 13, 37)),
+]
+SUPPORTED_TYPES_DATA += [(n, v, e, datetime) for n, v, e in SUPPORTED_DATETIME]
 
-class TestToResolvedPath:
-    """Tests for `to_resolved_path`."""
+# Enum - Enums are parsed from their "key"
+SUPPORTED_ENUM: Example3T = [
+    ("enum(str)", "eggs", LeEnum.eggs),
+    ("enum(inst)", LeEnum.eggs, LeEnum.eggs),
+]
+SUPPORTED_TYPES_DATA += [(n, v, e, LeEnum) for n, v, e in SUPPORTED_ENUM]
 
-    @pytest.mark.parametrize(
-        "value, expected",
-        [
-            ("spam", Path.cwd().joinpath("spam")),
-            (Path("eggs"), Path.cwd().joinpath("eggs")),
-        ],
-    )
-    def test_to_resolved_path(self, value: Any, expected: Path) -> None:
-        assert to_resolved_path(value, Path) == expected
+# Path - Paths are resolved by default
+SUPPORTED_PATH = [
+    ("path(str)", "spam", Path.cwd().joinpath("spam")),
+    ("path(inst)", Path("eggs"), Path.cwd().joinpath("eggs")),
+]
+SUPPORTED_TYPES_DATA += [(n, v, e, Path) for n, v, e in SUPPORTED_PATH]
+
+# list
+SUPPORTED_LIST: Example4T = [
+    ("List[any]", [1, "2"], [1, "2"], List),
+    ("list[any]", [1, "2"], [1, "2"], list),
+    ("List[int]", [1, 2], [1, 2], List[int]),
+    (
+        "list[datetime]",
+        ["2023-05-04T13:37:42+00:00"],
+        [datetime(2023, 5, 4, 13, 37, 42, tzinfo=timezone.utc)],
+        List[datetime],
+    ),
+]
+if PY_39:
+    SUPPORTED_LIST += [
+        ("list[int]", [1, "2"], [1, 2], list[int]),
+    ]
+SUPPORTED_TYPES_DATA += [(n, i, e, t) for n, i, e, t in SUPPORTED_LIST]
+
+# tuple
+SUPPORTED_TUPLE: Example4T = [
+    ("tuple[any]", [1, "2"], (1, "2"), tuple),
+    ("Tuple[Any]", [1, "2"], (1, "2"), Tuple),
+    ("Tuple[int, ...]", [1, 2, "3"], (1, 2, 3), Tuple[int, ...]),
+    ("Tuple[int, float]", [1, "2.3"], (1, 2.3), Tuple[int, float]),
+    (
+        "list[datetime]",
+        ["2023-05-04T13:37:42+00:00"],
+        (datetime(2023, 5, 4, 13, 37, 42, tzinfo=timezone.utc),),
+        Tuple[datetime],
+    ),
+]
+if PY_39:
+    SUPPORTED_TUPLE += [
+        ("tuple[int, ...]", [1, 2, "3"], (1, 2, 3), tuple[int, ...]),
+        ("tuple[int, float]", [1, "2.3"], (1, 2.3), tuple[int, float]),
+    ]
+SUPPORTED_TYPES_DATA += [(n, i, e, t) for n, i, e, t in SUPPORTED_TUPLE]
+
+# dict
+SUPPORTED_DICT: Example4T = [
+    ("dict[any, any]", {"y": 1, "n": 3.1}, {"y": 1, "n": 3.1}, dict),
+    ("Dict[Any, Any]", {"y": 1, "n": 3.1}, {"y": 1, "n": 3.1}, Dict),
+    ("Dict[bool, int]", {"y": 1, "n": 3.1}, {True: 1, False: 3}, Dict[bool, int]),
+    (
+        "dict[str, datetime]",
+        {"a": "2023-05-04T13:37:42+00:00"},
+        {"a": datetime(2023, 5, 4, 13, 37, 42, tzinfo=timezone.utc)},
+        Dict[str, datetime],
+    ),
+]
+if PY_39:
+    SUPPORTED_DICT += [
+        (
+            "dict[bool, int]",
+            {"y": 1, "n": 3.1},
+            {True: 1, False: 3},
+            dict[bool, int],
+        ),
+    ]
+SUPPORTED_TYPES_DATA += [(n, i, e, t) for n, i, e, t in SUPPORTED_DICT]
+
+# MappingProxy
+SUPPORTED_MAPPINGPROXY: Example4T = []
+if PY_39:
+    SUPPORTED_MAPPINGPROXY += [
+        (
+            "MappingProxyType[Any, Any]",
+            {"y": 1, "n": 3.1},
+            MappingProxyType({"y": 1, "n": 3.1}),
+            MappingProxyType,
+        ),
+        (
+            "MappingProxyType[bool, int]",
+            {"y": 1, "n": 3.1},
+            MappingProxyType({True: 1, False: 3}),
+            MappingProxyType[bool, int],
+        ),
+    ]
+SUPPORTED_TYPES_DATA += [(n, i, e, t) for n, i, e, t in SUPPORTED_MAPPINGPROXY]
+
+# set
+SUPPORTED_SET: Example4T = [
+    ("set[any]", [1, "2"], {1, "2"}, set),
+    ("Set[any]", [1, "2"], {1, "2"}, Set),
+    ("Set[int]", [1, 2], {1, 2}, Set[int]),
+]
+if PY_39:
+    SUPPORTED_SET += [
+        ("set[int]", [1, "2"], {1, 2}, set[int]),
+    ]
+SUPPORTED_TYPES_DATA += [(n, i, e, t) for n, i, e, t in SUPPORTED_SET]
+
+# frozenset
+SUPPORTED_FROZENSET: Example4T = [
+    ("frozenset[any]", [1, "2"], frozenset({1, "2"}), frozenset),
+    ("Frozenset[any]", [1, "2"], frozenset({1, "2"}), FrozenSet),
+    ("Frozenset[int]", [1, 2], frozenset({1, 2}), FrozenSet[int]),
+]
+if PY_39:
+    SUPPORTED_FROZENSET += [
+        ("frozenset(int)", [1, "2"], frozenset({1, 2}), frozenset[int]),
+    ]
+SUPPORTED_TYPES_DATA += [(n, i, e, t) for n, i, e, t in SUPPORTED_FROZENSET]
+
+# Union / Optional
+SUPPORTED_UNION: Example4T = [
+    ("Optional(None)", None, None, Optional[str]),
+    ("Optional(int)", 1, "1", Optional[str]),
+    ("attrs|None(None)", None, None, Optional[AttrsCls]),
+    ("attrs|None(dict)", {"u": "u", "p": "p"}, AttrsCls("u", "p"), Optional[AttrsCls]),
+    ("enum|None", "spam", LeEnum.spam, Optional[LeEnum]),
+    # ("Union(None)", None, None, Union[None, S, List[str]]),
+    # (
+    #     "Union(attrs)",
+    #     {"u": "u", "p": "p"},
+    #     S("u", "p"),
+    #     Union[None, S, List[str]],
+    # ),
+    # ("Union(list)", [1, 2], ["1", "2"], Union[None, S, List[str]]),
+]
+SUPPORTED_TYPES_DATA += [(n, i, e, t) for n, i, e, t in SUPPORTED_UNION]
+if PY_310:
+    SUPPORTED_UNION = [
+        ("str|None(None)", None, None, str | None),
+        ("str|None(int)", 1, "1", str | None),
+        # (S | List[str], [1, 2], ["1", "2"], "attrs|list(list)"),
+    ]
+
+# attrs classes
+SUPPORTED_ATTRSCLASSES: Example4T = [
+    ("attrs(dict)", {"u": "user", "p": "pwd"}, AttrsCls("user", "pwd"), AttrsCls),
+    ("attrs(inst)", AttrsCls("user", "pwd"), AttrsCls("user", "pwd"), AttrsCls),
+    (
+        "attrs(nested)",
+        {
+            "a": "3.14",
+            "b": 1,
+            "c": "eggs",
+            "d": "2023-05-04T13:37:42+00:00",
+            "e": [{"x": 0, "y": "a"}, {"x": 1, "y": "b"}],
+            "f": ["2023-05-04T13:37:42+00:00", "2023-05-04T13:37:42+00:00"],
+            "child": {"x": 3, "y": "c"},
+        },
+        Parent(
+            a=3.14,
+            b=1,
+            c=LeEnum.eggs,
+            d=datetime(2023, 5, 4, 13, 37, 42, tzinfo=timezone.utc),
+            e=[
+                Child(0, Path.cwd().joinpath("a")),
+                Child(1, Path.cwd().joinpath("b")),
+            ],
+            f={datetime(2023, 5, 4, 13, 37, 42, tzinfo=timezone.utc)},
+            child=Child(3, Path.cwd().joinpath("c")),
+        ),
+        Parent,
+    ),
+]
+SUPPORTED_TYPES_DATA += [(n, i, e, t) for n, i, e, t in SUPPORTED_ATTRSCLASSES]
 
 
 @pytest.mark.parametrize(
-    "typ, value, expected",
+    "converter",
     [
-        # Bools can be parsed from a defined set of values
-        (bool, True, True),
-        (bool, "True", True),
-        (bool, "true", True),
-        (bool, "yes", True),
-        (bool, "1", True),
-        (bool, 1, True),
-        (bool, False, False),
-        (bool, "False", False),
-        (bool, "false", False),
-        (bool, "no", False),
-        (bool, "0", False),
-        (bool, 0, False),
-        # Other simple types
-        (int, 23, 23),
-        (int, "42", 42),
-        (float, 3.14, 3.14),
-        (float, ".815", 0.815),
-        (str, "spam", "spam"),
-        (datetime, "2020-05-04T13:37:00", datetime(2020, 5, 4, 13, 37)),
-        # Enums are parsed from their "key"
-        (LeEnum, "eggs", LeEnum.eggs),
-        # (Nested) attrs classes
-        (S, {"u": "user", "p": "pwd"}, S("user", "pwd")),
-        (S, S("user", "pwd"), S("user", "pwd")),
-        # Container types
-        (List[int], [1, 2], [1, 2]),
-        (List[S], [{"u": 1, "p": 2}], [S("1", "2")]),
-        (Dict[str, int], {"a": 1, "b": 3.1}, {"a": 1, "b": 3}),
-        (Dict[str, S], {"a": {"u": "u", "p": "p"}}, {"a": S("u", "p")}),
-        (Tuple[str, ...], [1, "2", 3], ("1", "2", "3")),
-        (Tuple[int, bool, str], [0, "0", 0], (0, False, "0")),
-        # "Special types"
-        (Any, 2, 2),
-        (Any, "2", "2"),
-        (Any, None, None),
-        (Optional[str], 1, "1"),
-        (Optional[S], None, None),
-        (Optional[S], {"u": "u", "p": "p"}, S("u", "p")),
-        (Optional[LeEnum], "spam", LeEnum.spam),
+        pytest.param(converters.get_default_cattrs_converter(), id="converter:cattrs"),
+        pytest.param(converters.get_default_ts_converter(), id="converter:ts"),
     ],
 )
-def test_supported_types(typ: type, value: Any, expected: Any) -> None:
+@pytest.mark.parametrize(
+    "value, typ, expected",
+    [pytest.param(v, t, e, id=n) for n, v, e, t in SUPPORTED_TYPES_DATA],
+)
+def test_supported_types(
+    converter: converters.Converter, value: Any, typ: type, expected: Any
+) -> None:
     """
-    All oficially supported types can be converted.
+    All officially supported types can be converted.
+
+    The list :data:`SUPPORTED_TYPES_DATA` is the officially source of truth.
 
     Please create an issue if something is missing here.
     """
-
-    @settings
-    class Settings:
-        opt: typ  # type: ignore[valid-type]
-
-    converter = default_converter()
-    inst = converter.structure_attrs_fromdict({"opt": value}, Settings)
-    assert inst.opt == expected
+    assert converter.structure(value, typ) == expected
 
 
-@pytest.mark.parametrize("val", [{"foo": 3}, {"opt", "x"}])
-def test_unsupported_values(val: dict) -> None:
+@pytest.mark.parametrize(
+    "converter",
+    [
+        pytest.param(converters.get_default_cattrs_converter, id="converter:cattrs"),
+        pytest.param(converters.get_default_ts_converter, id="converter:ts"),
+    ],
+)
+@pytest.mark.parametrize(
+    "value, expected", [pytest.param(v, e, id=n) for n, v, e in SUPPORTED_PATH]
+)
+@pytest.mark.parametrize("resolve_paths", [True, False])
+def test_resolve_path(
+    converter: Callable[[bool], converters.Converter],
+    value: Any,
+    expected: Any,
+    resolve_paths: bool,
+) -> None:
     """
-    An InvalidValueError is raised if a settings dict cannot be converted
-    to the settings class.
+    The path-resolving behavior can be explicitly set.
     """
+    if not resolve_paths:
+        expected = expected.relative_to(Path.cwd())
+    c = converter(resolve_paths)
+    assert c.structure(value, Path) == expected
 
-    @settings
-    class Settings:
-        opt: int
 
-    converter = default_converter()
-    with pytest.raises(TypeError):
-        converter.structure_attrs_fromdict(val, Settings)
+@pytest.mark.parametrize(
+    "cls, value",
+    [
+        # "to_bool()" is flexible, but does not accept anything
+        (bool, ""),
+        (bool, []),
+        (bool, "spam"),
+        (bool, 2),
+        (bool, -1),
+        (datetime, 3),
+        # len(value) does not match len(tuple-args)
+        (Tuple[int, int], (1,)),
+        (Tuple[int, int], (1, 2, 3)),
+        (Union[int, datetime, None], "3.1"),  # float is not part of the Union
+        (Sequence, [0, 1]),  # Type not supported
+        (AttrsCls, {"foo": 3}),  # Invalid attribute
+        (AttrsCls, {"opt", "x"}),  # Invalid value
+    ],
+)
+def test_unsupported_values(value: Any, cls: type) -> None:
+    """
+    Unsupported input leads to low level exceptions.  These are later unified by
+    "_core.convert()".
+    """
+    converter = converters.TSConverter()
+    with pytest.raises((KeyError, TypeError, ValueError)):
+        converter.structure(value, cls)
 
 
 STRLIST_TEST_DATA = [
     (List[int], [1, 2, 3]),
-    (Sequence[int], [1, 2, 3]),
     (Set[int], {1, 2, 3}),
     (FrozenSet[int], frozenset({1, 2, 3})),
     (Tuple[int, ...], (1, 2, 3)),
@@ -274,21 +416,73 @@ if PY_39:
     "input, kw", [("1:2:3", {"sep": ":"}), ("[1,2,3]", {"fn": json.loads})]
 )
 @pytest.mark.parametrize("typ, expected", STRLIST_TEST_DATA)
-def test_strlist_hook(input: str, kw: dict, typ: type, expected: Any) -> None:
-    @settings
+def test_cattrs_strlist_hook(input: str, kw: dict, typ: type, expected: Any) -> None:
+    @attrs.frozen
     class Settings:
         a: typ  # type: ignore
 
-    converter = default_converter()
-    register_strlist_hook(converter, **kw)
-    inst = converter.structure_attrs_fromdict({"a": input}, Settings)
-    assert inst == Settings(expected)
+    converter = converters.get_default_cattrs_converter()
+    converters.register_strlist_hook(converter, **kw)
+    result = converter.structure({"a": input}, Settings)
+    assert result == Settings(expected)
 
 
-def test_strlist_hook_either_arg() -> None:
+def test_cattrs_strlist_hook_either_arg() -> None:
     """
     Either "sep" OR "fn" can be passed to "register_str_list_hook()"
     """
-    converter = default_converter()
+    converter = converters.get_default_cattrs_converter()
     with pytest.raises(ValueError, match="You may either pass"):
-        register_strlist_hook(converter, sep=":", fn=lambda v: [v])  # pragma: no cover
+        converters.register_strlist_hook(
+            converter, sep=":", fn=lambda v: [v]
+        )  # pragma: no cover
+
+
+@pytest.mark.parametrize(
+    "input, sep", [("1:2:3", ":"), ("[1,2,3]", json.loads), ("123", None)]
+)
+@pytest.mark.parametrize("typ, expected", STRLIST_TEST_DATA)
+def test_ts_strlist_hook(
+    input: str, sep: Union[str, Callable], typ: type, expected: Any
+) -> None:
+    """
+    The TSConverter has a builtin strlist hook that takes a separator string or a
+    function.  It can be disabled with ``None``.
+    """
+
+    @attrs.frozen
+    class Settings:
+        a: typ  # type: ignore
+
+    converter = converters.TSConverter(strlist_sep=sep)
+    result = converter.structure({"a": input}, Settings)
+    assert result == Settings(expected)
+
+
+def test_get_default_converter_cattrs_installed() -> None:
+    """
+    If cattrs is installed, a cattrs converter is used by default.
+    """
+    converter = converters.default_converter()
+    assert isinstance(converter, cattrs.Converter)
+
+
+def test_get_default_converter_cattrs_uninstalled(
+    unimport: Callable[[str], None]
+) -> None:
+    """
+    If cattrs is not installed, the builtin converter is used by default.
+    """
+    unimport("cattrs")
+    converter = converters.default_converter()
+    assert isinstance(converter, converters.TSConverter)
+
+
+def test_get_cattrs_converter_uninstalled(unimport: Callable[[str], None]) -> None:
+    """
+    An exception is raised by "get_default_cattrs_converter()" if  cattrs is not
+    installed.
+    """
+    unimport("cattrs")
+    with pytest.raises(ModuleNotFoundError):
+        converters.get_default_cattrs_converter()
