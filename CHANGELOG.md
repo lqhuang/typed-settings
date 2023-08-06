@@ -38,6 +38,9 @@
 - ✨ Added a built-in `TSConverter` as an alternative for `cattrs`
   (which is still supported and recommended).
 
+- ✨ `cattrs` is now an optional dependency.  You can install it with
+  `python -m pip install -U typed-settings[cattrs]`.
+
 - ✨ Added a dictionary loader.  This is useful for testing purposes.
 
 - 📦 Switched from [safety] to [pip-audit].

@@ -20,7 +20,12 @@ Install :program:`typed-settings` into your virtualenv_:
 
    $ python -m pip install typed-settings
 
-Typed Settings has some optional dependencies for some features that some people might not need:
+Typed Settings has some optional dependencies for features that some people might not need:
+
+Enable the powerful and fast :program:`cattrs` converter:
+  .. code-block:: console
+
+     $ python -m pip install typed-settings[cattrs]
 
 Support for :program:`Click` options:
   .. code-block:: console

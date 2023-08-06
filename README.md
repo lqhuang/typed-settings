@@ -24,12 +24,12 @@ You can use Typed Settings in any context, e.g.:
 
 ## What does it do?
 
-- It loads settings from multiple sources (e.g., env vars, config files, vaults) in a unified way and merges the loaded values.
+- It loads settings from multiple sources (e.g., env vars, config files, secret vaults) in a unified way and merges the loaded values.
   You can add loaders for sources we cannot imagine yet.
 
 - It can post-process loaded values.
   This allows value interpolation/templating or calling helpers that retrieve secrets from vaults.
-  You can create and add any processors you can image if the built-in ones are not enought.
+  You can create and add any processors you can image if the built-in ones are not enough.
 
 - You can add a CLI on top to let users update the loaded settings via command line arguments.
   [Click](https://click.palletsprojects.com) and [argparse](https://docs.python.org/3/library/argparse.html) are currently supported.
@@ -37,7 +37,9 @@ You can use Typed Settings in any context, e.g.:
 - Settings are cleanly structured and typed.
   The type annotations are used to convert the loaded settings to the proper types.
   This also includes higher level structures like dates, paths and various collections (lists, dicts, …).
-  This is currently done with [attrs](https://www.attrs.org) and [cattrs](https://cattrs.readthedocs.io)) (but we know people also love Pydantic or dataclasses).
+  This is currently done with [attrs](https://www.attrs.org) classes (but we know people also love Pydantic or dataclasses).
+
+  Types Settings uses the powerful and fast [cattrs](https://cattrs.readthedocs.io)) by default and falls back to an internal converter if **cattrs** is not installed.
 
 The documentation contains a [full list](https://typed-settings.readthedocs.io/en/latest/why.html#comprehensive-list-of-features) of all features.
 
@@ -58,10 +60,11 @@ $ python -m pip install typed-settings[<feature>,...]
 
 Available features:
 
-- `typed-settings[click]`: Enable support for Click options
-- `typed-settings[option-groups]`: Enable support for Click and Click option groups
-- `typed-settings[jinja]`: Enable support for value interpolation with Jinja templates
-- `typed-settings[all]`: Install all optional requirements
+- `typed-settings[cattrs]`: Enable usage of the powerful and fast **cattrs** converter.
+- `typed-settings[click]`: Enable support for **Click** options.
+- `typed-settings[option-groups]`: Enable support for **Click** and **Click option groups**.
+- `typed-settings[jinja]`: Enable support for value interpolation with **Jinja** templates.
+- `typed-settings[all]`: Install all optional requirements.
 
 ## Examples
 
