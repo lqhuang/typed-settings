@@ -112,7 +112,7 @@ Dict Utils
    :members:
 
 
-Attrs & Cattrs
+attrs & cattrs
 ==============
 
 Classes and Fields

@@ -35,6 +35,9 @@
 - 💥 **BREAKING:** The deprecated `typed_settings.attrs.hooks` module
   has been removed.
 
+- ✨ Added a built-in `TSConverter` as an alternative for `cattrs`
+  (which is still supported and recommended).
+
 - ✨ Added a dictionary loader.  This is useful for testing purposes.
 
 - 📦 Switched from [safety] to [pip-audit].

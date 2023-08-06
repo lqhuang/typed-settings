@@ -842,7 +842,7 @@ that you want to use a single command line option for it (like :samp:`--color {R
 
    If we used ``attrs`` instead of :mod:`dataclasses` here, Typed Settings would automatically generate three options ``--color-r``, ``--color-g``, and ``--color-b``.
 
-Since Cattrs has no built-in support for dataclasses, we need to register a converter for it:
+Since :program:`cattrs` has no built-in support for dataclasses, we need to register a converter for it:
 
 .. code-block:: python
 

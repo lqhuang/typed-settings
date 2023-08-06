@@ -1,4 +1,3 @@
-import sys
 import unittest.mock as mock
 from pathlib import Path
 from typing import Any, Callable, Generic, List, Optional, TypeVar, Union
@@ -284,7 +283,7 @@ class TestDefaultsLoading:
         Default factories are not invoked by click when the CLI is generated.
         They are evaluate during the "convert" phase each time the CLI is invoked.
         """
-        loaded_settings: List["Settings"] = []
+        loaded_settings: List["Settings"] = []  # noqa: UP037
 
         @settings
         class Settings:
@@ -803,14 +802,11 @@ class TestDecoratorFactory:
             "  --help              Show this message and exit.",
         ]
 
-    def test_not_installed(self, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test_not_installed(self, unimport: Callable[[str], None]) -> None:
         """
         The factory checks if click-option-group is installed.
         """
-        # Remove if already imported
-        monkeypatch.delitem(sys.modules, "click_option_group", raising=False)
-        # Prevent import:
-        monkeypatch.setattr(sys, "path", [])
+        unimport("click_option_group")
         with pytest.raises(ModuleNotFoundError):
             click_utils.OptionGroupFactory()
 
