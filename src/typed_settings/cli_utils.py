@@ -338,7 +338,7 @@ class TypeArgsMaker:
             kwargs = {"strict": True} if PY_310 else {}
             default_val = tuple(
                 self.get_kwargs(a, d)["default"]
-                for a, d in zip(args, default, **kwargs)  # noqa: B905
+                for a, d in zip(args, default, **kwargs)
             )
         else:
             default_val = None

@@ -1,3 +1,6 @@
+"""
+Tests for "typed_settings.argparse_utils".
+"""
 import sys
 from pathlib import Path
 from typing import Any, Callable, List, TypeVar
@@ -27,6 +30,8 @@ Cli = Callable[[], Any]
 
 @settings
 class Settings:
+    """A simple settings class for testing."""
+
     o: int
 
 
@@ -34,7 +39,7 @@ class Settings:
 def _invoke(monkeypatch: pytest.MonkeyPatch) -> Invoke:
     def invoke(cli: Callable[[], Any], *args: str) -> Any:
         with monkeypatch.context() as m:
-            m.setattr(sys, "argv", [cli.__name__] + list(args))
+            m.setattr(sys, "argv", [cli.__name__, *list(args)])
             return cli()
 
     return invoke
@@ -56,7 +61,6 @@ def test_cli_explicit_config(invoke: Invoke) -> None:
     """
     Basic test "cli()" with explicit loaders, converter config.
     """
-
     loaders = default_loaders("test")
     converter = default_converter()
     tam = cli_utils.TypeArgsMaker(argparse_utils.ArgparseHandler())
@@ -74,25 +78,33 @@ def test_cli_explicit_config(invoke: Invoke) -> None:
 
 
 def test_cli_desc_from_func(invoke: Invoke, capsys: pytest.CaptureFixture) -> None:
+    """
+    The CLI function's docstring is used as argparse CLI description.
+    """
+
     @argparse_utils.cli(Settings, "test")
     def cli(settings: Settings) -> None:
         """
-        Le description
+        Le description.
         """
 
     with pytest.raises(SystemExit):
         invoke(cli, "--help")
 
     out, err = capsys.readouterr()
-    assert out.startswith("usage: cli [-h] --o INT\n\nLe description\n")
+    assert out.startswith("usage: cli [-h] --o INT\n\nLe description.\n")
     assert err == ""
 
 
 def test_cli_desc_from_kwarg(invoke: Invoke, capsys: pytest.CaptureFixture) -> None:
+    """
+    The argparse CLI description can be explicitly configured with a keyword arg.
+    """
+
     @argparse_utils.cli(Settings, "test", description="Le description")
     def cli(settings: Settings) -> None:
         """
-        spam spam spam
+        spam spam spam.
         """
 
     with pytest.raises(SystemExit):
@@ -107,7 +119,6 @@ def test_manual_parser() -> None:
     """
     Basic test for "make_parser()" and "namespace2settings"().
     """
-
     parser, merged_settings = argparse_utils.make_parser(Settings, "test")
     namespace = parser.parse_args(["--o", "3"])
     result = argparse_utils.namespace2settings(
@@ -121,7 +132,6 @@ def test_manual_parser_explicit_config() -> None:
     Basic test for "make_parser()" and "namespace2settings"() with explicit
     config.
     """
-
     loaders = default_loaders("test")
     converter = default_converter()
     tam = cli_utils.TypeArgsMaker(argparse_utils.ArgparseHandler())

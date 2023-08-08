@@ -1,3 +1,6 @@
+"""
+Shared fixtures for all tests.
+"""
 import sys
 from typing import Any, Callable, Dict, Optional
 
@@ -13,12 +16,16 @@ from typed_settings.types import OptionList
 # mutable settings but not necessarily the other way around.
 @attrs.frozen
 class Host:
+    """Host settings."""
+
     name: str
     port: int = attrs.field(converter=int)
 
 
 @attrs.frozen
 class Settings:
+    """Main settings."""
+
     host: Host
     url: str
     default: int = 3

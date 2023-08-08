@@ -70,14 +70,14 @@ class Converter(Protocol):
 
     def structure(self, value: Any, cls: Type[T]) -> T:
         """
-        Convert *data* to an instance of *cls* and return it.
+        Convert *value* to an instance of *cls* and return it.
 
         Args:
             value: The data to be converted.
-            cls: The type to convert *data* to.
+            cls: The type to convert *value* to.
 
         Return:
-            An instance of *cls* for *data*.
+            An instance of *cls* for *value*.
         """
         ...
 
@@ -98,7 +98,7 @@ class TSConverter:
         if strlist_sep is None:
             self.strlist_hook: Optional[Callable[[str], list]] = None
         elif isinstance(strlist_sep, str):
-            self.strlist_hook = lambda v: v.split(strlist_sep)  # type: ignore  # noqa
+            self.strlist_hook = lambda v: v.split(strlist_sep)  # type: ignore
         else:
             self.strlist_hook = strlist_sep
 
@@ -125,10 +125,14 @@ class TSConverter:
 
     def structure(self, value: Any, cls: Type[T]) -> T:
         """
-        Recursively convert simple and composite types and return the result.
+        Convert *value* to an instance of *cls* and return it.
 
         Args:
-            value: The value to convert
+            value: The data to be converted.
+            cls: The type to convert *value* to.
+
+        Return:
+            An instance of *cls* for *value*.
         """
         for ctype, convert in self.scalar_converters.items():
             if cls is ctype or (
@@ -146,6 +150,10 @@ class TSConverter:
         raise TypeError(f"Cannot create converter for generic type: {cls}")
 
     def maybe_apply_strlist_hook(self, value: T) -> Union[list, T]:
+        """
+        Apply the string list hook to *value* if one is defined and if *value* is a
+        string.
+        """
         if self.strlist_hook and isinstance(value, str):
             return self.strlist_hook(value)
         return value
@@ -157,7 +165,7 @@ def default_converter(*, resolve_paths: bool = True) -> Converter:
     the loaded settings.
 
     Args:
-        resolve_path: Whether or not to resolve relative paths.
+        resolve_paths: Whether or not to resolve relative paths.
 
     Return:
         If :program:`cattrs` is installed, a :class:`cattrs.Converter`.  Else, a
@@ -207,7 +215,7 @@ def get_default_ts_converter(resolve_paths: bool = True) -> "TSConverter":
     (see :func:`default_converter()` for argument and return value description).
 
     Args:
-        resolve_path: Whether or not to resolve relative paths.
+        resolve_paths: Whether or not to resolve relative paths.
 
     Return:
         A :class:`TSConverter` instance with default configuration.
@@ -221,7 +229,7 @@ def get_default_cattrs_converter(resolve_paths: bool = True) -> "cattrs.Converte
     (see :func:`default_converter()` for argument and return value description).
 
     Args:
-        resolve_path: Whether or not to resolve relative paths.
+        resolve_paths: Whether or not to resolve relative paths.
 
     Return:
         A :class:`cattrs.Converter` instance with default configuration.
@@ -254,7 +262,7 @@ def get_default_structure_hooks(
     Return a list of default structure hooks for cattrs.
 
     Args:
-        resolve_path: Whether or not to resolve relative paths.
+        resolve_paths: Whether or not to resolve relative paths.
 
     Return:
         A list of tuples that can be used as args for
@@ -329,7 +337,6 @@ def register_strlist_hook(
             :func:`json.loads()`.  Cannot be used together with *spe*.
 
     Example:
-
         >>> from typing import List
         >>>
         >>> converter = default_converter()
@@ -343,7 +350,6 @@ def register_strlist_hook(
         >>> register_strlist_hook(converter, fn=json.loads)
         >>> converter.structure("[1,2,3]", List[int])
         [1, 2, 3]
-
 
     """
     if (sep is None and fn is None) or (sep is not None and fn is not None):

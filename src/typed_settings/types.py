@@ -223,6 +223,10 @@ class SecretStr(str):
     """
 
     def __repr__(self) -> str:
+        """
+        Return a secret representation if a non-empty value is set, else a repr for an
+        empty string.
+        """
         return f"{SECRET_REPR!r}" if self else "''"
 
 
@@ -250,9 +254,16 @@ class Secret(Generic[T]):
         self._secret_value = secret_value
 
     def __bool__(self) -> bool:
+        """
+        Return the boolean representation of the stored secret.
+        """
         return bool(self._secret_value)
 
     def __repr__(self) -> str:
+        """
+        Return a secret representation if a non-empty value is set, else a repr for an
+        empty string.
+        """
         r = repr(
             self._secret_value
             if not self._secret_value and self._is_collection
@@ -261,6 +272,10 @@ class Secret(Generic[T]):
         return f"{self.__class__.__name__}({r})"
 
     def __str__(self) -> str:
+        """
+        Return a secret representation if a non-empty value is set, else an empty
+        string.
+        """
         return str(
             self._secret_value
             if not self._secret_value and self._is_collection

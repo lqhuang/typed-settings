@@ -122,7 +122,7 @@ def default_loaders(
     environment variable *config_files_var*.
 
     Args:
-        appname: Your application's name – used to derive defaults for the
+        appname: Your application's name -- used to derive defaults for the
           remaining args.
 
         config_files: Load settings from these files.  The last one has the
@@ -188,7 +188,7 @@ def load(
     base_dir: Path = Path(),
 ) -> ST:
     """
-    Load settings for *appname* and return an instance of *cls*
+    Load settings for *appname* and return an instance of *cls*.
 
     This function is a shortcut for :func:`load_settings()` with
     :func:`default_loaders()`.
@@ -318,7 +318,7 @@ def _load_settings(state: SettingsState) -> MergedSettings:
     This function makes it easier to extend settings since it returns a dict
     that can easily be updated.
     """
-    loaders = [_DefaultsLoader(state.cwd)] + list(state.loaders)
+    loaders = [_DefaultsLoader(state.cwd), *state.loaders]
     loaded_settings: List[LoadedSettings] = []
     for loader in loaders:
         result = loader(state.settings_class, state.options)
@@ -341,14 +341,11 @@ def _load_settings(state: SettingsState) -> MergedSettings:
 
 def convert(merged_settings: MergedSettings, state: _core.SettingsState[ST]) -> ST:
     """
-    Create an instance of *cls* from the settings in *merged_settings* using the given
-    *converter*.
+    Create an instance of *cls* from the settings in *merged_settings*.
 
     Args:
-        merged_settings: The list of settings values to convert.
-        cls: The class to convert to.
-        option_infos: The list of all available settings for *cls*.
-        converter: The converter to use.
+        merged_settings: The loaded and merged settings by settings name.
+        state: The state and configuration for this run.
 
     Return:
         An instance of *cls*.

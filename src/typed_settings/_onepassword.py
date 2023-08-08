@@ -2,7 +2,7 @@
 Helpers for invoking the 1Password CLI.
 """
 import json
-import subprocess  # noqa: S404
+import subprocess
 from typing import Any, Dict, Optional
 
 
@@ -27,7 +27,7 @@ def run(*args: str) -> str:
         ValueError: If the CLI is not properly installed or the invocation
             failed.
     """
-    cmd = ("op",) + args
+    cmd = ("op", *args)
     try:
         result = subprocess.run(
             cmd, capture_output=True, text=True, check=True  # noqa: S603

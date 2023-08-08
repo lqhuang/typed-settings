@@ -339,7 +339,7 @@ class FileLoader:
         options: OptionList,
     ) -> SettingsDict:
         """
-        Load a file and return its cleaned contents
+        Load a file and return its cleaned contents.
         """
         # "clean_settings()" must be called for each loaded file individually
         # because of the "-"/"_" normalization.  This also allows us to tell

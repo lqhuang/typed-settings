@@ -1,3 +1,6 @@
+"""
+Tests for "typed_settings.onepasword".
+"""
 import os
 import subprocess
 from typing import Any, Optional, Tuple

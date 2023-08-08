@@ -11,12 +11,20 @@ import typed_settings as ts
 
 @ts.settings
 class Settings:
+    """
+    A simple test class with the TS aliases for attrs.
+    """
+
     u: str = ts.option()
     p: str = ts.secret()
 
 
 @ts.settings(frozen=True)
 class FrozenSettings:
+    """
+    A frozen test class with the TS aliases for attrs.
+    """
+
     u: str = ts.option()
     p: str = ts.secret()
 

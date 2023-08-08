@@ -27,7 +27,6 @@ def find(
         The resolved path to *filename* if found, else ``Path(filename)``.
 
     Examples:
-
         Find :file:`settings.toml` until the root of the current directory
         is reached::
 

@@ -1,3 +1,6 @@
+"""
+Tests for "typed_settings.attrs".
+"""
 import typing as t
 
 import attrs
@@ -21,6 +24,8 @@ FieldFunc = t.Callable[..., t.Any]
 
 @settings
 class S:
+    """A simple settings class with the TS aliases for attrs."""
+
     u: str = option()
     p: str = secret()
 
@@ -275,7 +280,7 @@ class TestEvolve:
 
 class TestCombine:
     """
-    Tests for "combine()"
+    Tests for "combine()".
     """
 
     def test_combine(self) -> None:
@@ -333,7 +338,7 @@ class TestCombine:
 
     def test_docstring(self) -> None:
         """
-        The created class copies the costring from the base class
+        The created class copies the costring from the base class.
         """
 
         @attrs.define
@@ -343,9 +348,9 @@ class TestCombine:
         # Dynamic composition
         @attrs.define
         class BaseSettings:
-            """Le doc string"""
+            """Le doc string."""
 
             a: str = ""
 
         Composed = combine("Composed", BaseSettings, {"n1": Nested1()})
-        assert Composed.__doc__ == "Le doc string"
+        assert Composed.__doc__ == "Le doc string."

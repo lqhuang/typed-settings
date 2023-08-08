@@ -223,7 +223,7 @@ def cli(
     type_args_maker: Optional[TypeArgsMaker] = None,
     **parser_kwargs: Any,
 ) -> Callable[[CliFn[ST]], DecoratedCliFn]:
-    """
+    r"""
     **Decorator:** Generate an argument parser for the options of the given
     settings class and pass an instance of that class to the decorated
     function.
@@ -232,7 +232,7 @@ def cli(
         settings_cls: The settings class to generate options for.
 
         loaders: Either a string with your app name or a list of
-            :class:`.Loader`\\ s.  If it's a string, use it with
+            :class:`.Loader`\ s.  If it's a string, use it with
             :func:`~typed_settings.default_loaders()` to get the default
             loaders.
 
@@ -260,7 +260,6 @@ def cli(
             settings.
 
     Example:
-
         .. code-block:: python
 
            import typed_settings as ts
@@ -299,7 +298,7 @@ def make_parser(
     type_args_maker: Optional[TypeArgsMaker] = None,
     **parser_kwargs: Any,
 ) -> Tuple[argparse.ArgumentParser, MergedSettings]:
-    """
+    r"""
     Return an argument parser for the options of the given settings class.
 
     Use :func:`namespace2settings()` to convert the parser's namespace to an
@@ -309,7 +308,7 @@ def make_parser(
         settings_cls: The settings class to generate options for.
 
         loaders: Either a string with your app name or a list of
-            :class:`.Loader`\\ s.  If it's a string, use it with
+            :class:`.Loader`\ s.  If it's a string, use it with
             :func:`~typed_settings.default_loaders()` to get the default
             loaders.
 
@@ -369,6 +368,7 @@ def namespace2settings(
     Args:
         settings_cls: The settings class to instantiate.
         namespace: The namespace returned by the argument parser.
+        merged_settings: The loaded and merged settings by settings name.
         converter: An optional :class:`.Converter` used for converting option values to
             the required type.  By default, :data:`typed_settings.default_converter()`
             is used.
@@ -530,6 +530,10 @@ def _ns2settings(
 
 
 class BooleanOptionalAction(argparse.Action):
+    """
+    An argparse action for handling boolean flags.
+    """
+
     def __init__(
         self,
         option_strings: Sequence[str],
@@ -580,6 +584,10 @@ class BooleanOptionalAction(argparse.Action):
 
 
 class ListAction(argparse.Action):
+    """
+    An argparse action for handling lists.
+    """
+
     def __init__(
         self,
         option_strings: Sequence[str],
@@ -625,6 +633,10 @@ class ListAction(argparse.Action):
 
 
 class DictItemAction(argparse.Action):
+    """
+    An argparse action for handling dicts.
+    """
+
     def __init__(
         self,
         option_strings: Sequence[str],

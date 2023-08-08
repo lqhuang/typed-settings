@@ -37,8 +37,14 @@ else:  # pragma: no cover
     attr_attrib_makers.add("typed_settings.attrs.secret")
 
     class MyPlugin(Plugin):
-        # Our plugin does nothing but it has to exist so this file gets loaded.
+        """
+        Our plugin does nothing but it has to exist so this file gets loaded.
+        """
+
         pass
 
     def plugin(version: str) -> Type[Plugin]:
+        """
+        Return the class for our plugin.
+        """
         return MyPlugin

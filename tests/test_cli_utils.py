@@ -1,3 +1,6 @@
+"""
+Tests for "typed_settings.cli_utils".
+"""
 from collections.abc import (
     Mapping,
     MutableMapping,
@@ -26,6 +29,9 @@ from typed_settings._compat import PY_39, PY_310
 def handle_int(
     type: type, default: cli_utils.Default, is_optional: bool
 ) -> cli_utils.StrDict:
+    """
+    An example handler function for the test TypeHandler.
+    """
     return {
         "type": type,
         "default": default,
@@ -35,6 +41,10 @@ def handle_int(
 
 
 class TypeHandler:
+    """
+    An example TypeHandler for testing.
+    """
+
     def get_scalar_handlers(self) -> Dict[type, cli_utils.TypeHandlerFunc]:
         return {
             int: handle_int,
@@ -100,6 +110,10 @@ class TypeHandler:
 
 
 class TestTypeArgsMaker:
+    """
+    Tests for "TypeArgsMaker".
+    """
+
     @pytest.fixture
     def tam(self) -> cli_utils.TypeArgsMaker:
         return cli_utils.TypeArgsMaker(TypeHandler())

@@ -1,3 +1,6 @@
+"""
+Tests for "typed_settings.dict_utils".
+"""
 from typing import Any, Dict, Type, Union
 
 import attrs
@@ -121,6 +124,10 @@ class TestDeepOptions:
 
 
 class TestGroupOptions:
+    """
+    Tests for "group_options()".
+    """
+
     def test_only_scalars(self) -> None:
         """
         If there are only scalar settings, create s single group.
@@ -392,6 +399,10 @@ def test_update_settings() -> None:
 
 
 def test_flat2nested() -> None:
+    """
+    "flat2nested" converts a flat dict "option_path: value" to a nested dict.  The
+    keys no longer contain dots.
+    """
     merged = {
         "1a": types.LoadedValue(3, types.LoaderMeta("l1")),
         "1b.2a": types.LoadedValue("eggs", types.LoaderMeta("l2")),

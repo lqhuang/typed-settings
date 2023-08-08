@@ -1,3 +1,6 @@
+"""
+Tests for supported CLI param types for both, Click and argparse.
+"""
 import re
 from datetime import datetime, timezone
 from enum import Enum
@@ -37,6 +40,8 @@ from typed_settings.types import ST
 
 
 class CliResult(click.testing.Result, Generic[ST]):
+    """A container for the settings passed to a test CLI."""
+
     settings: Optional[ST]
 
 
@@ -81,6 +86,10 @@ def make_cli(settings_cls: Type[ST]) -> Cli:
 
 
 def make_argparser(settings_cls: Type[ST]) -> ArgParser:
+    """
+    Create an argument parser for the argparse tests.
+    """
+
     def parse_args(*args: str) -> ST:
         parser, ms = argparse_utils.make_parser(settings_cls, default_loaders("test"))
         namespace = parser.parse_args(args)
@@ -92,6 +101,8 @@ def make_argparser(settings_cls: Type[ST]) -> ArgParser:
 
 
 class LeEnum(Enum):
+    """A simple enum for testing."""
+
     spam = "Le spam"
     eggs = "Le eggs"
 
@@ -112,22 +123,25 @@ class ParamBase:
 
     @settings
     class Settings:
-        pass
+        """Just a dummy settings class."""
 
-    expected_help: List[str] = []
+    expected_help: ClassVar[List[str]] = []
 
-    env_vars: Dict[str, str] = {}
-    expected_env_var_defaults: List[str] = []
+    env_vars: ClassVar[Dict[str, str]] = {}
+    expected_env_var_defaults: ClassVar[List[str]] = []
 
-    default_options: List[str] = []
-    expected_defaults: Any = None
+    default_options: ClassVar[List[str]] = []
+    expected_defaults: ClassVar[Any] = None
 
-    cli_options: List[str] = []
-    expected_settings: Any = None
+    cli_options: ClassVar[List[str]] = []
+    expected_settings: ClassVar[Any] = None
 
     classes: ClassVar[List[Type["ParamBase"]]] = []
 
     def __init_subclass__(cls, **kwargs: Any) -> None:
+        """
+        Register subclasses that handle the various param types.
+        """
         super().__init_subclass__(**kwargs)
         cls.classes.append(cls)
 
@@ -327,7 +341,7 @@ class TestDateTimeParam(ParamBase):
 
 class TestEnumParam(ParamBase):
     """
-    Test enum cli_options
+    Test enum cli_options.
     """
 
     @settings
@@ -368,7 +382,7 @@ class TestEnumParam(ParamBase):
 
 class TestPathParam(ParamBase):
     """
-    Test Path cli_options
+    Test Path cli_options.
     """
 
     @settings
@@ -409,7 +423,7 @@ class TestPathParam(ParamBase):
 
 class TestNestedParam(ParamBase):
     """
-    Test cli_options for nested settings
+    Test cli_options for nested settings.
     """
 
     @settings
@@ -624,7 +638,7 @@ class TestNestedTupleParam(ParamBase):
 
     # A list of tuples cannot be loaded with the default converter,
     # so we skip this test here.
-    env_vars: Dict[str, Any] = {}
+    env_vars: ClassVar[Dict[str, Any]] = {}
     click_expected_env_var_defaults = [
         "  --a <INTEGER INTEGER>...",
     ]
@@ -665,7 +679,7 @@ class TestDictParam(ParamBase):
 
     # A dictionary cannot be loaded with the default converter,
     # so we skip this test here.
-    env_vars: Dict[str, Any] = {}
+    env_vars: ClassVar[Dict[str, Any]] = {}
     click_expected_env_var_defaults = [
         "  --a KEY=VALUE",
         "  --b KEY=VALUE",
@@ -763,10 +777,17 @@ class TestAttrsDefaultFactory(ParamBase):
 
 @pytest.fixture(params=ParamBase.classes)
 def param_cls(request: pytest.FixtureRequest) -> Type[ParamBase]:
+    """
+    Create a test for each "ParamBase" sublclass and return that subclass.
+    """
     return cast(Type[ParamBase], request.param)
 
 
 class TestClick:
+    """
+    Test the supported types with Click.
+    """
+
     prefix = "click"
 
     @pytest.fixture
@@ -783,7 +804,8 @@ class TestClick:
             "Usage: cli [OPTIONS] COMMAND [ARGS]...",
             "",
             "Options:",
-        ] + param_cls.get_expected_help(self.prefix)
+            *param_cls.get_expected_help(self.prefix),
+        ]
 
     def test_defaults_from_envvars(
         self,
@@ -806,7 +828,8 @@ class TestClick:
             "Usage: cli [OPTIONS] COMMAND [ARGS]...",
             "",
             "Options:",
-        ] + param_cls.get_expected_env_var_defaults(self.prefix)
+            *param_cls.get_expected_env_var_defaults(self.prefix),
+        ]
 
     def test_defaults(self, param_cls: Type[ParamBase], cli: Cli[ST]) -> None:
         """
@@ -826,6 +849,10 @@ class TestClick:
 
 
 class TestArgparse:
+    """
+    Test the supported types with argparse.
+    """
+
     prefix = "argparse"
 
     @pytest.fixture

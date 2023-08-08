@@ -168,7 +168,9 @@ def option(  # type: ignore[no-untyped-def]
     click=None,
     argparse=None,
 ):
-    """An alias to :func:`attrs.field()`"""
+    """
+    An alias to :func:`attrs.field()`.
+    """
     metadata = _get_metadata(metadata, help, click, argparse)
 
     return attrs.field(
@@ -303,15 +305,13 @@ def secret(  # type: ignore[no-untyped-def]
     When printing a settings instances, secret settings will represented with
     `***` istead of their actual value.
 
-    See also:
-
+    See Also:
         All arguments are describted here:
 
         - :func:`option()`
         - :func:`attrs.field()`
 
     Example:
-
         >>> from typed_settings import settings, secret
         >>>
         >>> @settings
@@ -436,7 +436,6 @@ def combine(
             defines an attribute.
 
     Example:
-
         >>> import typed_settings as ts
         >>>
         >>> @ts.settings
@@ -472,7 +471,6 @@ def combine(
 
     .. versionadded:: 1.1.0
     """
-
     attribs = {
         a.name: attr.attrib(
             default=a.default,

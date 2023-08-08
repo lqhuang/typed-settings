@@ -30,34 +30,45 @@ from typed_settings.attrs import option, secret, settings
 
 
 def custom_converter(v: Union[str, Path]) -> Path:
+    """A custom converter for attrs fields."""
     return Path(v).resolve()
 
 
 class LeEnum(Enum):
+    """A simple enum for testing."""
+
     spam = "Le Spam"
     eggs = "Le Eggs"
 
 
 @dataclasses.dataclass
 class DataCls:
+    """A base "dataclass" for testing."""
+
     u: str
     p: str
 
 
 @settings
 class AttrsCls:
+    """A base "attrs" class for testing."""
+
     u: str = option()
     p: str = secret()
 
 
 @attrs.frozen
 class Child:
+    """A simple nested class."""
+
     x: int
     y: Path = attrs.field(converter=custom_converter)
 
 
 @attrs.frozen(kw_only=True)
 class Parent:
+    """A rather complex class with various scalar and composite attribute types."""
+
     child: Child
     a: float
     b: float = attrs.field(default=3.14, validator=attrs.validators.le(2))
@@ -417,6 +428,10 @@ if PY_39:
 )
 @pytest.mark.parametrize("typ, expected", STRLIST_TEST_DATA)
 def test_cattrs_strlist_hook(input: str, kw: dict, typ: type, expected: Any) -> None:
+    """
+    The strlist hook for can be configured with a separator string or a function.
+    """
+
     @attrs.frozen
     class Settings:
         a: typ  # type: ignore
@@ -429,7 +444,7 @@ def test_cattrs_strlist_hook(input: str, kw: dict, typ: type, expected: Any) -> 
 
 def test_cattrs_strlist_hook_either_arg() -> None:
     """
-    Either "sep" OR "fn" can be passed to "register_str_list_hook()"
+    Either "sep" OR "fn" can be passed to "register_str_list_hook()".
     """
     converter = converters.get_default_cattrs_converter()
     with pytest.raises(ValueError, match="You may either pass"):

@@ -107,17 +107,19 @@ def group_options(cls: type, options: OptionList) -> List[Tuple[type, OptionList
     return grouped_options
 
 
-def iter_settings(dct: SettingsDict, options: OptionList) -> Generator[Any, None, None]:
+def iter_settings(
+    dct: SettingsDict, options: OptionList
+) -> Generator[Tuple[str, Any], None, None]:
     """
     Iterate over the (possibly nested) options dict *dct* and yield
-    *(path, value)* tuples.
+    *(option_path, value)* tuples.
 
     Args:
-        dct:
-        options:
+        dct: The dict of settings as returned by a loader.
+        options: The list of all available options for a settings class.
 
     Return:
-
+        A generator yield *(opton_path, value)* tuples.
     """
     for option in options:
         try:

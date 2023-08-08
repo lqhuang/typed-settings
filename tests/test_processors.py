@@ -1,3 +1,6 @@
+"""
+Tests for "typed_settings.processors".
+"""
 from typing import Callable, Type, Union
 
 import pytest
@@ -8,18 +11,24 @@ from typed_settings.dict_utils import deep_options
 
 @settings
 class ChildA:
+    """A nested class."""
+
     aa: str
     ab: str
 
 
 @settings
 class ChildB:
+    """A nested class."""
+
     ba: str
     bb: str
 
 
 @settings
 class Settings:
+    """A parent class."""
+
     a: ChildA
     b: ChildB
     c: str

@@ -1,3 +1,6 @@
+"""
+Tests for "typed_settings.types".
+"""
 from typing import Any
 
 import pytest
@@ -10,7 +13,7 @@ def test_auto_singleton() -> None:
     """
     `_Auto()`  is a singleton.
     """
-    assert types._Auto() is types.AUTO  # noqa: E721
+    assert types._Auto() is types.AUTO
 
 
 def test_auto_repr() -> None:
@@ -21,16 +24,20 @@ def test_auto_repr() -> None:
 
 
 class TestSecretStr:
+    """
+    Tests for "SecretStr".
+    """
+
     def test_repr(self) -> None:
         """
-        The repr of a non empty string is seven *
+        The repr of a non empty string is seven "*".
         """
         secret = types.SecretStr("spam")
         assert repr(secret) == "'*******'"
 
     def test_empty_repr(self) -> None:
         """
-        The repr of a non empty string is seven \\*.
+        The repr of a non empty string is seven "*".
         """
         secret = types.SecretStr("")
         assert repr(secret) == "''"
@@ -60,9 +67,13 @@ class TestSecretStr:
 
 
 class TestSecret:
+    """
+    Tests for "Secret".
+    """
+
     def test_repr(self) -> None:
         """
-        The repr of a non empty string is seven *
+        The repr of a non empty string is seven *.
         """
         secret = types.Secret("spam")
         assert_type(secret, types.Secret[str])
@@ -70,7 +81,7 @@ class TestSecret:
 
     def test_empty_repr(self) -> None:
         """
-        The repr of a non empty string is seven \\*.
+        The repr of a non empty string is seven "*".
         """
         secret = types.Secret("")
         assert repr(secret) == "Secret('')"

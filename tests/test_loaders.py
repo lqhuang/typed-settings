@@ -1,3 +1,6 @@
+"""
+Tests for "typed_settings.loaders".
+"""
 import textwrap
 from itertools import product
 from pathlib import Path
@@ -30,12 +33,16 @@ from typed_settings.types import LoadedSettings, LoaderMeta, OptionList, Setting
 
 @settings(frozen=True)
 class Host:
+    """Host settings."""
+
     name: str
     port: int
 
 
 @settings(frozen=True)
 class Settings:
+    """Main settings."""
+
     host: Host
     url: str
     default: int = 3
@@ -98,9 +105,8 @@ class TestCleanSettings:
 
     def test_invalid_settings(self) -> None:
         """
-        Settings for which there is no attribute are errors
+        Settings for which there is no attribute are errors.
         """
-
         s = {
             "url": "abc",
             "host": {"port": 23, "eggs": 42},
@@ -143,7 +149,7 @@ class TestCleanSettings:
 
 
 class TestPythonFormat:
-    """Tests for PythonFormat"""
+    """Tests for PythonFormat."""
 
     @pytest.mark.parametrize(
         "fmt, data",
@@ -239,7 +245,7 @@ class TestPythonFormat:
 
 
 class TestTomlFormat:
-    """Tests for TomlFormat"""
+    """Tests for TomlFormat."""
 
     @pytest.mark.parametrize(
         "fmt, data",
@@ -359,7 +365,7 @@ class TestTomlFormat:
 
 
 class TestFileLoader:
-    """Tests for FileLoader"""
+    """Tests for FileLoader."""
 
     @pytest.fixture
     def fnames(self, tmp_path: Path) -> List[Path]:
@@ -547,7 +553,7 @@ class TestFileLoader:
 
 
 class TestEnvLoader:
-    """Tests for EnvLoader"""
+    """Tests for EnvLoader."""
 
     def test_from_env(
         self, settings_cls: type, options: OptionList, monkeypatch: MonkeyPatch
@@ -580,7 +586,7 @@ class TestEnvLoader:
 
 
 class TestInstanceLoader:
-    """Tests for InstanceLoader"""
+    """Tests for InstanceLoader."""
 
     def test_from_inst(
         self, settings_cls: type, options: OptionList, monkeypatch: MonkeyPatch

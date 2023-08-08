@@ -1,3 +1,6 @@
+"""
+Fixtures for the documentation tests and examples.
+"""
 import os
 import re
 import subprocess
@@ -29,6 +32,13 @@ END_PATTERN_TEMPLATE = "(\n\\Z|\n[ \t]{{0,{len_prefix}}}(?=\\S))"
 
 
 class DirectiveLexer(BlockLexer):
+    """
+    A lexer for ReST directives.
+    Both ``directive`` and ``arguments`` are regex patterns.
+
+    Copied and adjusted from Sybil.
+    """
+
     delimiter = "::"
 
     def __init__(
@@ -37,10 +47,6 @@ class DirectiveLexer(BlockLexer):
         arguments: str = "",
         mapping: Optional[Dict[str, str]] = None,
     ):
-        """
-        A lexer for ReST directives.
-        Both ``directive`` and ``arguments`` are regex patterns.
-        """
         super().__init__(
             start_pattern=re.compile(
                 START_PATTERN_TEMPLATE.format(
@@ -68,6 +74,12 @@ class DirectiveLexer(BlockLexer):
 
 
 class AbstractCodeBlockParser:
+    """
+    Abstract base class for code block parsers.
+
+    Copied and adjusted from Sybil.
+    """
+
     language: str
 
     def __init__(
@@ -100,6 +112,10 @@ class AbstractCodeBlockParser:
 
 
 class CodeBlockParser(AbstractCodeBlockParser):
+    """
+    Parser for "code-block" directives.
+    """
+
     def __init__(
         self,
         language: Optional[str] = None,
@@ -108,9 +124,7 @@ class CodeBlockParser(AbstractCodeBlockParser):
         super().__init__(
             [
                 DirectiveLexer(directive=r"code-block"),
-                DirectiveInCommentLexer(
-                    directive=r"(invisible-)?code(-block)?"
-                ),
+                DirectiveInCommentLexer(directive=r"(invisible-)?code(-block)?"),
             ],
             language,
             evaluator,
@@ -120,6 +134,10 @@ class CodeBlockParser(AbstractCodeBlockParser):
 
 
 class CodeFileParser(CodeBlockParser):
+    """
+    Parser for included/referenced files.
+    """
+
     ext: str
 
     def __init__(
@@ -146,6 +164,12 @@ class CodeFileParser(CodeBlockParser):
 
 
 class ConsoleCodeBlockParser(CodeBlockParser):
+    """
+    Code block parser for Console sessions.
+
+    Parses the command as well as the expected output.
+    """
+
     language = "console"
 
     def evaluate(self, example: Example) -> None:
@@ -154,7 +178,7 @@ class ConsoleCodeBlockParser(CodeBlockParser):
         for cmd, expected in cmds:
             result = subprocess.run(
                 cmd,
-                shell=True,
+                shell=True,  # noqa: S602
                 # cwd=str(tmp_path),
                 capture_output=True,
                 text=True,
@@ -181,6 +205,9 @@ class ConsoleCodeBlockParser(CodeBlockParser):
 
 @pytest.fixture(scope="module")
 def tempdir(tmp_path_factory: pytest.TempPathFactory) -> Iterator[Path]:
+    """
+    Create a a "doctests" diretory in "tmp_path" and make that dir the CWD.
+    """
     tmp_path = tmp_path_factory.mktemp("doctests")
     old_cwd = os.getcwd()
     os.chdir(tmp_path)
@@ -191,6 +218,11 @@ def tempdir(tmp_path_factory: pytest.TempPathFactory) -> Iterator[Path]:
 
 
 class Env:
+    """
+    This object is returned by the :func:`env()` fixture and allows setting environment
+    variables that are only visible for the current code block.
+    """
+
     def __init__(self) -> None:
         self._mp = pytest.MonkeyPatch()
 
@@ -203,6 +235,12 @@ class Env:
 
 @pytest.fixture(scope="module")
 def env() -> Iterator[Env]:
+    """
+    Return an :class:`Env` object that allows setting env vars for the current code
+    block.
+
+    All vars are deleted afterwards.
+    """
     e = Env()
     try:
         yield e
@@ -214,9 +252,7 @@ pytest_collect_file = Sybil(
     parsers=[
         SkipParser(),
         DocTestParser(optionflags=ELLIPSIS),
-        CodeFileParser(
-            "python", ext=".py", fallback_evaluator=PythonEvaluator()
-        ),
+        CodeFileParser("python", ext=".py", fallback_evaluator=PythonEvaluator()),
         CodeFileParser("toml", ext=".toml"),
         ConsoleCodeBlockParser(),
     ],

@@ -1,3 +1,6 @@
+"""
+Configuration and tasks for **Nox**.
+"""
 import glob
 import os
 import pathlib
@@ -48,6 +51,9 @@ else:
 
 @nox.session
 def build(session: nox.Session) -> None:
+    """
+    Build an sdist and a wheel for TS.
+    """
     session.install("hatch", "check-wheel-contents")
     session.run("rm", "-rf", "build", "dist", external=True)
     session.run("hatch", "build")  # , external=True)
@@ -62,6 +68,18 @@ def build(session: nox.Session) -> None:
 )
 @nox.parametrize("pkg_format", ["tar.gz", "whl"], ["src", "whl"])
 def test(session: nox.Session, deps_min_version: bool, pkg_format: str) -> None:
+    """
+    Run all tests for various configurations (Python and dependency versions).
+
+    Run the full matrix (all combinations of latest/min dependencies and packakge
+    formats) only for the latest stable Python version to save some CI/CD minutes.
+    """
+    if session.python != LATEST_STABLE_PYTHON:
+        # We need to save GitLab CI minutes so we skip running the tests for some
+        # configurations if this is not the latest stable Python version.
+        if pkg_format != "whl" or deps_min_version:
+            session.skip(f"Skipping this session for Python {session.python}")
+
     pkgs = glob.glob(f"dist/*.{pkg_format}")
     if len(pkgs) == 0:
         session.log('Package not found, running "build" ...')
@@ -76,13 +94,6 @@ def test(session: nox.Session, deps_min_version: bool, pkg_format: str) -> None:
     # these versions.
     install_deps = []
     if deps_min_version:
-        if session.python != LATEST_STABLE_PYTHON:
-            # We need to save GitLab CI minutes so we only perform the test
-            # against minimal dependency versions for the latest stable
-            # Python version.
-            session.warn(f"Skipping this session for Python {session.python}")
-            return
-
         pyproject = tomllib.loads(PROJECT_DIR.joinpath("pyproject.toml").read_text())
         deps = pyproject["project"]["dependencies"]
         for dep in deps:
@@ -110,6 +121,9 @@ def test(session: nox.Session, deps_min_version: bool, pkg_format: str) -> None:
 
 @nox.session(name="coverage-report", tags=["test"])
 def coverage_report(session: nox.Session) -> None:
+    """
+    Create a coverate report from the results of the test sessions.
+    """
     args = []
     if OMMIT_IN_REPORT:
         args.append(f"--omit={','.join(OMMIT_IN_REPORT)}")
@@ -124,18 +138,27 @@ def coverage_report(session: nox.Session) -> None:
 
 @nox.session(python=False, tags=["lint"])
 def fix(session: nox.Session) -> None:
+    """
+    Run code fixers.
+    """
     session.run("black", *LINT_PATHS)
     session.run("ruff", "--fix-only", *LINT_PATHS)
 
 
 @nox.session(tags=["lint"])
 def lint(session: nox.Session) -> None:
+    """
+    Run the linters.
+    """
     session.install(".[lint]")
     session.run("ruff", *LINT_PATHS)
 
 
 @nox.session(tags=["lint"])
 def mypy(session: nox.Session) -> None:
+    """
+    Run type checking with MyPy.
+    """
     session.install(".[dev]")
     for paths in MYPY_PATHS:
         session.run("mypy", "--show-error-codes", *paths)
@@ -143,5 +166,8 @@ def mypy(session: nox.Session) -> None:
 
 @nox.session(name="sec-check", tags=["lint"])
 def sec_check(session: nox.Session) -> None:
+    """
+    Run a security check with pip-audit.
+    """
     session.install(".[dev]")  # Install *everything*
     session.run("pip-audit")

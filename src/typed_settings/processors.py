@@ -3,7 +3,7 @@ This module contains the settings processors provided by Typed Settings and the
 protocol specification that they must implement.
 """
 import logging
-import subprocess  # noqa: S404
+import subprocess
 from typing import Any, Dict, Protocol
 
 from .dict_utils import iter_settings, set_path
@@ -46,7 +46,7 @@ class Processor(Protocol):
         Modify or update values in *settings_dict* and return an updated
         version.
 
-        You may modify settings_dict in place – you don't need to return a
+        You may modify settings_dict in place - you don't need to return a
         copy of it.
 
         You should not add additional keys.
@@ -120,7 +120,7 @@ class UrlProcessor:
         Modify or update values in *settings_dict* and return an updated
         version.
 
-        You may modify settings_dict in place – you don't need to return a
+        You may modify settings_dict in place - you don't need to return a
         copy of it.
 
         You should not add additional keys.

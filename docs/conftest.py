@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import (
     TYPE_CHECKING,
     Callable,
+    ClassVar,
     Dict,
     Generator,
     List,
@@ -46,7 +47,7 @@ def invoke_(monkeypatch: pytest.MonkeyPatch) -> Callable[..., None]:
             print(runner.invoke(cli, args).output)
         else:
             with monkeypatch.context() as m:
-                m.setattr(sys, "argv", [cli.__name__] + list(args))
+                m.setattr(sys, "argv", [cli.__name__, *args])
                 try:
                     cli()
                 except SystemExit:
@@ -57,6 +58,12 @@ def invoke_(monkeypatch: pytest.MonkeyPatch) -> Callable[..., None]:
 
 @pytest.fixture(autouse=True)
 def add_np(doctest_namespace, invoke, monkeypatch):
+    """
+    Inject pytest fixtures into the doctest's namespace.
+
+    - :func:`invoke()`
+    - :func:`.monkeypatch`
+    """
     doctest_namespace["invoke"] = invoke
     doctest_namespace["monkeypatch"] = monkeypatch
 
@@ -72,7 +79,9 @@ def is_relative_to(path: Path, other: Path) -> bool:
 
 
 def pytest_ignore_collect(collection_path: Path, config: "Config") -> bool:
-    """Do not collect Python files from the examples."""
+    """
+    Do not collect Python files from the examples.
+    """
     return (
         is_relative_to(collection_path, EXAMPLES_DIR)
         and collection_path.suffix == ".py"
@@ -80,8 +89,9 @@ def pytest_ignore_collect(collection_path: Path, config: "Config") -> bool:
 
 
 def pytest_collect_file(file_path: Path, parent: "Session") -> Optional["ExampleFile"]:
-    """Checks if the file is a rst file and creates an
-    :class:`ExampleFile` instance."""
+    """
+    Checks if the file is a rst file and creates an.  :class:`ExampleFile` instance.
+    """
     if is_relative_to(file_path, EXAMPLES_DIR) and file_path.name == "test.console":
         return ExampleFile.from_parent(parent, path=file_path)
     return None
@@ -150,10 +160,10 @@ class ExampleItem(pytest.Item):
 class ReprFailExample(TerminalRepr):
     """Reports output mismatches in a nice and informative representation."""
 
-    markup = {
-        "+": dict(green=True),
-        "-": dict(red=True),
-        "?": dict(bold=True),
+    markup: ClassVar[Dict[str, Dict[str, bool]]] = {
+        "+": {"green": True},
+        "-": {"red": True},
+        "?": {"bold": True},
     }
     """Colorization codes for the diff markup."""
 

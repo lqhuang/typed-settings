@@ -1,3 +1,6 @@
+"""
+Tests for "typed_settings.click_utils".
+"""
 import unittest.mock as mock
 from pathlib import Path
 from typing import Any, Callable, Generic, List, Optional, TypeVar, Union
@@ -27,6 +30,8 @@ Invoke = Callable[..., click.testing.Result]
 
 
 class CliResult(click.testing.Result, Generic[T]):
+    """A container for the settings passed to a test CLI."""
+
     settings: Optional[T]
 
 
@@ -104,7 +109,7 @@ def test_attrs_meta_not_modified() -> None:
 
 class TestDefaultsLoading:
     """
-    Tests for loading default values
+    Tests for loading default values.
     """
 
     def test_no_default(self, invoke: Invoke, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -243,7 +248,6 @@ class TestDefaultsLoading:
         default for click cli_options - *not* the default defined in the
         Settings class.
         """
-
         tmp_path.joinpath("settings.toml").write_text('[test]\na = "x"\n')
         spath = tmp_path.joinpath("settings2.toml")
         spath.write_text('[test]\nb = "y"\n')
@@ -283,7 +287,7 @@ class TestDefaultsLoading:
         Default factories are not invoked by click when the CLI is generated.
         They are evaluate during the "convert" phase each time the CLI is invoked.
         """
-        loaded_settings: List["Settings"] = []  # noqa: UP037
+        loaded_settings: List["Settings"] = []
 
         @settings
         class Settings:
@@ -472,7 +476,7 @@ class TestPassSettings:
     """Tests for pass_settings()."""
 
     @settings
-    class Settings:
+    class Settings:  # noqa: D106
         opt: str = ""
 
     def test_pass_settings(self, invoke: Invoke) -> None:
@@ -700,7 +704,6 @@ class TestClickConfig:
         A user callback is only invoked if an argument was passed, but not if the
         default is used.
         """
-
         cb = mock.MagicMock(return_value=value)
 
         click_config = {"callback": cb}
@@ -730,7 +733,7 @@ class TestDecoratorFactory:
         class Nested1:
             """
             Docs for Nested1
-            """
+            """  # noqa: D415
 
             a: int = 0
 
@@ -743,7 +746,7 @@ class TestDecoratorFactory:
         class Settings:
             """
             Main docs
-            """
+            """  # noqa: D415
 
             a: int = 0
             n1: Nested1 = Nested1()
@@ -776,7 +779,7 @@ class TestDecoratorFactory:
 
     def test_option_group_factory(self, settings_cls: type, invoke: Invoke) -> None:
         """
-        Option groups can be created via the OptionGroupFactory
+        Option groups can be created via the OptionGroupFactory.
         """
 
         @click.command()
@@ -873,7 +876,7 @@ def test_click_no_load_envvar(
 ) -> None:
     """
     The "show_envvars_in_help" option does not cause Click to load settings
-    from envvars
+    from envvars.
     """
     tmp_path.joinpath("settings.toml").write_text('[test]\na = "x"\n')
     spath = tmp_path.joinpath("settings2.toml")

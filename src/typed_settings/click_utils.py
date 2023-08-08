@@ -107,7 +107,7 @@ def click_options(
     decorator_factory: "Optional[DecoratorFactory]" = None,
     show_envvars_in_help: bool = False,
 ) -> Callable[[F], F]:
-    """
+    r"""
     **Decorator:** Generate :mod:`click` options for a CLI which override
     settings loaded via :func:`.load_settings()`.
 
@@ -115,7 +115,7 @@ def click_options(
         settings_cls: The settings class to generate options for.
 
         loaders: Either a string with your app name or a list of
-            :class:`.Loader`\\ s.  If it's a string, use it with
+            :class:`.Loader`\ s.  If it's a string, use it with
             :func:`~typed_settings.default_loaders()` to get the default
             loaders.
 
@@ -158,7 +158,6 @@ def click_options(
             settings.
 
     Example:
-
         .. code-block:: python
 
            import click
@@ -261,7 +260,7 @@ def _get_wrapper(  # noqa: C901
                 kwargs = {argname: settings, **kwargs}  # type: ignore
             else:
                 ctx_key = CTX_KEY
-                args = (settings,) + args  # type: ignore
+                args = (settings, *args)  # type: ignore
             ctx.obj[ctx_key] = settings
             return f(*args, **kwargs)
 
@@ -320,6 +319,8 @@ def pass_settings(
     settings instance is then passed as keyword argument.
 
     Args:
+        f: If this decorator is applied without any arguments, this is the to be
+            decrorated function.  If you pass any keyword arguments, this is ``None``.
         argname: An optional argument name.  If it is set, the settings
             instance is no longer passed as positional argument but as key
             word argument.
@@ -328,7 +329,6 @@ def pass_settings(
         A decorator for a click command.
 
     Example:
-
         .. code-block:: python
 
            import click
@@ -367,7 +367,7 @@ def pass_settings(
             if argname:
                 kwargs = {argname: settings, **kwargs}
             else:
-                args = (settings,) + args
+                args = (settings, *args)
 
             return ctx.invoke(f, *args, **kwargs)
 

@@ -1,3 +1,6 @@
+"""
+Tests for "typed_settings._core".
+"""
 import json
 import logging
 import re
@@ -29,12 +32,16 @@ from typed_settings.types import (
 
 @settings(frozen=True)
 class Host:
+    """Host settings."""
+
     name: str
     port: int
 
 
 @settings(frozen=True)
 class Settings:
+    """Main settings."""
+
     host: "Host"  # Assert that types are resolved
     url: str
     default: int = option(default=3, validator=attrs.validators.gt(0))
@@ -347,7 +354,7 @@ class TestLoadSettings:
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
         """
-        Lists can be loaded from env vars
+        Lists can be loaded from env vars.
         """
         c = get_default_cattrs_converter()
         register_strlist_hook(c, **kwargs)
