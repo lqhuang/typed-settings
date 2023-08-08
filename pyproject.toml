@@ -92,7 +92,7 @@ dev = [  # Everything needed for development
 Homepage = "https://gitlab.com/sscherfke/typed-settings"
 Documentation = "https://typed-settings.readthedocs.io"
 Changelog = "https://typed-settings.readthedocs.io/en/latest/changelog.html"
-"Bug Tracker" = "https://gitlab.com/sscherfke/typed-settings/-/issues"
+Issues = "https://gitlab.com/sscherfke/typed-settings/-/issues"
 "Source Code" = "https://gitlab.com/sscherfke/typed-settings"
 
 [tool.hatch.build.targets.sdist]
