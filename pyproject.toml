@@ -193,6 +193,7 @@ ignore = [
     # Docstyle is a bit too strict:
     "D107",  # I never document __init__()
     "D102",
+    "D105",  # I don't always write docstrings for __ meths, esp. for __str__.
     "D200",  # Allow putting the """ in separate lines in one-line docstrings
     "D205",  # Allow the first line spanning another line.
     "D212",  # Allow putting the """ in separate lines in multi-line docstrings

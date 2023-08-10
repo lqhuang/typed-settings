@@ -1,6 +1,7 @@
 """
 Internal data structures.
 """
+import dataclasses
 from collections.abc import Collection
 from enum import Enum
 from pathlib import Path
@@ -11,6 +12,7 @@ from typing import (
     Final,
     Generic,
     NamedTuple,
+    Optional,
     Tuple,
     Type,
     TypeVar,
@@ -92,7 +94,7 @@ def _type2name(value: Union[str, Any]) -> str:
     return type(value).__name__
 
 
-@attrs.frozen
+@dataclasses.dataclass(frozen=True)
 class OptionInfo:
     """
     Information about (possibly nested) option attributes.
@@ -133,7 +135,6 @@ A dict version of :class:`OptionList`.
 """
 
 
-@attrs.frozen
 class LoaderMeta:
     """
     Meta data about the loader that loaded a set of option values.
@@ -142,21 +143,41 @@ class LoaderMeta:
     target type.
     """
 
-    name: str = attrs.field(converter=_type2name)
-    """
-    The loader's name.  Can be a string or the loader class itself (it's class name is
-    will then be used).
-    """
+    def __init__(self, name: Union[str, Any], base_dir: Optional[Path] = None):
+        self._name: str = _type2name(name)
+        self._base_dir = base_dir or Path.cwd()
 
-    base_dir: Path = attrs.field(factory=Path.cwd)
-    """
-    The loader's base directory.
+    def __str__(self) -> str:
+        return f"{type(self).__name__}({self._name!r}, {self.base_dir!r})"
 
-    It is used to resolve relative paths in loaded option values in the proper context.
+    def __eq__(self, other: Any) -> bool:
+        return (
+            isinstance(other, type(self))
+            and self.name == other.name
+            and self.base_dir == other.base_dir
+        )
 
-    For most loaders, this should be the *cwd* (which is also the default).  For file
-    loaders, the parent directory of a loaded file might be a better alternative.
-    """
+    @property
+    def name(self) -> str:
+        """
+        The loader's name.  Can be a string or the loader class itself (it's class name
+        is will then be used).
+        """
+        return self._name
+
+    @property
+    def base_dir(self) -> Path:
+        """
+        The loader's base directory.
+
+        It is used to resolve relative paths in loaded option values in the proper
+        context.
+
+        For most loaders, this should be the *cwd* (which is also the default).  For
+        file loaders, the parent directory of a loaded file might be a better
+        alternative.
+        """
+        return self._base_dir
 
 
 class LoadedValue(NamedTuple):
@@ -175,7 +196,7 @@ class LoadedValue(NamedTuple):
     """
 
 
-@attrs.frozen
+@dataclasses.dataclass(frozen=True)
 class LoadedSettings:
     """
     A container for the settings loaded by a single loader, and the meta data of that

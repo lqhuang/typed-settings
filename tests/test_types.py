@@ -1,6 +1,7 @@
 """
 Tests for "typed_settings.types".
 """
+from pathlib import Path
 from typing import Any
 
 import pytest
@@ -21,6 +22,15 @@ def test_auto_repr() -> None:
     `_Auto()` has a nice repr.
     """
     assert repr(types._Auto()) == "AUTO"
+
+
+@pytest.mark.parametrize("name", [type, "type"])
+def test_loader_meta_str(name: Any) -> None:
+    """
+    "LoaderMeta" has a nice str repr (even though it is not an attrs cls ;-)).
+    """
+    lm = types.LoaderMeta(name, Path("spam"))
+    assert str(lm) == "LoaderMeta('type', PosixPath('spam'))"
 
 
 class TestSecretStr:
