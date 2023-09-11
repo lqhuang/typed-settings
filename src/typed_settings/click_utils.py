@@ -24,15 +24,15 @@ from typing import (
     overload,
 )
 
-import attrs
 import click
 from attr._make import _Nothing as NothingType
 from click.core import ParameterSource
 
 from . import _core, dict_utils
-from .attrs import CLICK_KEY, METADATA_KEY, _SecretRepr
+from .attrs import CLICK_KEY
 from .cli_utils import (
     DEFAULT_SENTINEL_NAME,
+    NO_DEFAULT,
     Default,
     StrDict,
     TypeArgsMaker,
@@ -44,11 +44,11 @@ from .loaders import EnvLoader, Loader
 from .processors import Processor
 from .types import (
     SECRET_REPR,
-    SECRETS_TYPES,
     ST,
     LoadedValue,
     LoaderMeta,
     MergedSettings,
+    OptionInfo,
     OptionList,
     SecretStr,
     SettingsClass,
@@ -273,14 +273,11 @@ def _get_wrapper(  # noqa: C901
         option_decorator = decorator_factory.get_option_decorator()
         for g_cls, g_opts in reversed(grouped_options):
             for oinfo in reversed(g_opts):
-                default = get_default(
-                    oinfo.field, oinfo.path, merged_settings, state.converter
-                )
+                default = get_default(oinfo, merged_settings, state.converter)
                 envvar = env_loader.get_envvar(oinfo) if env_loader else None
                 option = _mk_option(
                     option_decorator,
-                    oinfo.path,
-                    oinfo.field,
+                    oinfo,
                     default,
                     type_args_maker,
                     envvar,
@@ -535,7 +532,7 @@ class ClickHandler:
         is_optional: bool,
     ) -> StrDict:
         kwargs: StrDict = {"type": type}
-        if default not in (None, attrs.NOTHING):
+        if default not in (None, NO_DEFAULT):
             kwargs["default"] = default
         elif is_optional:
             kwargs["default"] = None
@@ -568,7 +565,7 @@ class ClickHandler:
         default: Optional[Collection[Any]],
         is_optional: bool,
     ) -> StrDict:
-        kwargs = type_args_maker.get_kwargs(types[0], attrs.NOTHING)
+        kwargs = type_args_maker.get_kwargs(types[0], NO_DEFAULT)
         kwargs["default"] = default
         kwargs["multiple"] = True
         return kwargs
@@ -605,19 +602,18 @@ class ClickHandler:
 
 def _mk_option(
     option_fn: Callable[..., Decorator[F]],
-    path: str,
-    field: attrs.Attribute,
-    default: Any,
+    oinfo: OptionInfo,
+    default: Default,
     type_args_maker: TypeArgsMaker,
     envvar: Optional[str],
 ) -> Decorator[F]:
     """
     Recursively creates click options and returns them as a list.
     """
-    user_config = dict(field.metadata.get(METADATA_KEY, {}).get(CLICK_KEY, {}))
+    user_config = dict(oinfo.metadata.get(CLICK_KEY, {}))
 
     # The option type specifies the default option kwargs
-    kwargs = type_args_maker.get_kwargs(field.type, default)
+    kwargs = type_args_maker.get_kwargs(oinfo.cls, default)
     if envvar:
         kwargs["envvar"] = envvar
         kwargs["show_envvar"] = True
@@ -626,7 +622,7 @@ def _mk_option(
     user_param_decls: Union[str, Sequence[str]]
     user_param_decls = user_config.pop("param_decls", ())
     if not user_param_decls:
-        option_name = path.replace(".", "-").replace("_", "-")
+        option_name = oinfo.path.replace(".", "-").replace("_", "-")
         if kwargs.get("is_flag"):
             param_decls = (f"--{option_name}/--no-{option_name}",)
         else:
@@ -641,18 +637,15 @@ def _mk_option(
     kwargs["show_default"] = True
     kwargs["expose_value"] = False
     kwargs["callback"] = _make_callback(
-        path, kwargs.get("callback"), user_config.pop("callback", None)
+        oinfo.path, kwargs.get("callback"), user_config.pop("callback", None)
     )
 
     # Get "help" from the user_config *now*, because we may need to update it
     # below.  Also replace "None" with "".
     kwargs["help"] = user_config.pop("help", None) or ""
 
-    kwtyp: Any = kwargs.get("type")
     if "default" in kwargs:  # pragma: no cover
-        if isinstance(field.repr, _SecretRepr) or (
-            isinstance(kwtyp, type) and issubclass(kwtyp, SECRETS_TYPES)
-        ):
+        if oinfo.is_secret:
             kwargs["show_default"] = SECRET_REPR
     else:
         kwargs["required"] = True

@@ -2,11 +2,13 @@
 Utility functions for working settings dicts and serilizing nested settings.
 """
 from itertools import groupby
-from typing import Any, Generator, List, Sequence, Tuple, Type
+from typing import Any, Generator, List, Sequence, Tuple, Type, cast
 
 import attrs
 
+from .attrs import METADATA_KEY, _SecretRepr
 from .types import (
+    SECRETS_TYPES,
     ST,
     LoadedSettings,
     LoadedValue,
@@ -56,7 +58,26 @@ def deep_options(cls: Type[ST]) -> OptionList:
             if field.type is not None and attrs.has(field.type):
                 iter_attribs(field.type, f"{prefix}{field.name}.")
             else:
-                result.append(OptionInfo(f"{prefix}{field.name}", field, r_cls))
+                is_nothing = field.default is attrs.NOTHING
+                is_factory = isinstance(field.default, cast(type, attrs.Factory))
+                oinfo = OptionInfo(
+                    parent_cls=r_cls,
+                    path=f"{prefix}{field.name}",
+                    cls=field.type,
+                    is_secret=(
+                        isinstance(field.repr, _SecretRepr)
+                        or (
+                            isinstance(field.type, type)
+                            and issubclass(field.type, SECRETS_TYPES)
+                        )
+                    ),
+                    default=field.default,
+                    has_no_default=is_nothing,
+                    default_is_factory=is_factory,
+                    converter=field.converter,
+                    metadata=field.metadata.get(METADATA_KEY, {}),
+                )
+                result.append(oinfo)
 
     iter_attribs(cls, "")
     return tuple(result)

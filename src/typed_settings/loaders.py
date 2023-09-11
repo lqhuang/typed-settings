@@ -147,14 +147,14 @@ class _DefaultsLoader:
         # Populate dict with default settings.  This avoids problems with nested
         # settings classes for which no settings are loaded.
         for opt in options:
-            if opt.field.default is attrs.NOTHING:
+            if opt.has_no_default:
                 continue
-            if isinstance(opt.field.default, attrs.Factory):  # type: ignore
+            if opt.default_is_factory:
                 # Do not invoke default factories yet.  This should be done as late as
                 # possible.  This is especially required for CLIs if you want to invoke
                 # the same instance multiple times (e.g., in tests).
                 continue
-            set_path(settings, opt.path, opt.field.default)
+            set_path(settings, opt.path, opt.default)
 
         return LoadedSettings(settings, LoaderMeta(self, base_dir=self.base_dir))
 

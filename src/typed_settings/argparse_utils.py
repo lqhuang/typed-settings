@@ -28,13 +28,12 @@ from typing import (
 if TYPE_CHECKING:
     from argparse import FileType
 
-import attrs
-
 from . import _core
-from .attrs import ARGPARSE_KEY, METADATA_KEY, _SecretRepr
+from .attrs import ARGPARSE_KEY
 from .cli_utils import (
     DEFAULT_SENTINEL,
     DEFAULT_SENTINEL_NAME,
+    NO_DEFAULT,
     Default,
     StrDict,
     TypeArgsMaker,
@@ -46,11 +45,11 @@ from .loaders import Loader
 from .processors import Processor
 from .types import (
     SECRET_REPR,
-    SECRETS_TYPES,
     ST,
     LoadedValue,
     LoaderMeta,
     MergedSettings,
+    OptionInfo,
 )
 
 
@@ -156,7 +155,7 @@ class ArgparseHandler:
                 kwargs["metavar"] = str(type.__name__).upper()
 
         # if default is not None or is_optional:
-        if default not in (None, attrs.NOTHING):
+        if default not in (None, NO_DEFAULT):
             kwargs["default"] = default
         elif is_optional:
             kwargs["default"] = None
@@ -189,7 +188,7 @@ class ArgparseHandler:
         default: Optional[Collection[Any]],
         is_optional: bool,
     ) -> StrDict:
-        kwargs = type_args_maker.get_kwargs(types[0], attrs.NOTHING)
+        kwargs = type_args_maker.get_kwargs(types[0], NO_DEFAULT)
         kwargs["default"] = default or []  # Don't use None as default
         kwargs["action"] = ListAction
         return kwargs
@@ -437,36 +436,35 @@ def _mk_parser(
     merged_settings = _core._load_settings(state)
     grouped_options = [
         (g_cls, list(g_opts))
-        for g_cls, g_opts in itertools.groupby(state.options, key=lambda o: o.cls)
+        for g_cls, g_opts in itertools.groupby(
+            state.options, key=lambda o: o.parent_cls
+        )
     ]
     parser = argparse.ArgumentParser(**parser_kwargs)
     for g_cls, g_opts in grouped_options:
         group = parser.add_argument_group(g_cls.__name__, f"{g_cls.__name__} options")
         for oinfo in g_opts:
-            default = get_default(
-                oinfo.field, oinfo.path, merged_settings, state.converter
-            )
-            flags, cfg = _mk_argument(oinfo.path, oinfo.field, default, type_args_maker)
+            default = get_default(oinfo, merged_settings, state.converter)
+            flags, cfg = _mk_argument(oinfo, default, type_args_maker)
             group.add_argument(*flags, **cfg)
     return (parser, merged_settings)
 
 
 def _mk_argument(
-    path: str,
-    field: attrs.Attribute,
-    default: Any,
+    oinfo: OptionInfo,
+    default: Default,
     type_args_maker: TypeArgsMaker,
 ) -> Tuple[Tuple[str, ...], Dict[str, Any]]:
-    user_config = dict(field.metadata.get(METADATA_KEY, {}).get(ARGPARSE_KEY, {}))
+    user_config = dict(oinfo.metadata.get(ARGPARSE_KEY, {}))
 
     # The option type specifies the default option kwargs
-    kwargs = type_args_maker.get_kwargs(field.type, default)
+    kwargs = type_args_maker.get_kwargs(oinfo.cls, default)
 
     param_decls: Tuple[str, ...]
     user_param_decls: Union[str, Sequence[str]]
     user_param_decls = user_config.pop("param_decls", ())
     if not user_param_decls:
-        option_name = path.replace(".", "-").replace("_", "-")
+        option_name = oinfo.path.replace(".", "-").replace("_", "-")
         param_decls = (f"--{option_name}",)
     elif isinstance(user_param_decls, str):
         param_decls = (user_param_decls,)
@@ -476,14 +474,11 @@ def _mk_argument(
     # Get "help" from the user_config *now*, because we may need to update it
     # below.  Also replace "None" with "".
     kwargs["help"] = user_config.pop("help", None) or ""
-    if "default" in kwargs and kwargs["default"] is not attrs.NOTHING:
+    if "default" in kwargs and kwargs["default"] is not NO_DEFAULT:
         default_repr = kwargs.pop("default_repr", kwargs["default"])
-        kwtyp: Any = kwargs.get("type")
         if kwargs["default"] is None:
             help_extra = ""
-        elif isinstance(field.repr, _SecretRepr) or (
-            isinstance(kwtyp, type) and issubclass(kwtyp, SECRETS_TYPES)
-        ):
+        elif oinfo.is_secret:
             help_extra = f" [default: ({SECRET_REPR})]"
         elif (
             callable(kwargs["default"])
@@ -538,7 +533,7 @@ class BooleanOptionalAction(argparse.Action):
         self,
         option_strings: Sequence[str],
         dest: str,
-        default: Any = None,
+        default: Default = None,
         type: Union[Callable[[str], Any], "FileType", None] = None,
         choices: Optional[Iterable[Any]] = None,
         required: bool = False,
@@ -593,7 +588,7 @@ class ListAction(argparse.Action):
         option_strings: Sequence[str],
         dest: str,
         nargs: Union[int, str, None] = None,
-        default: Any = None,
+        default: Default = None,
         type: Union[Callable[[str], Any], "FileType", None] = None,
         choices: Optional[Iterable[Any]] = None,
         required: bool = False,
@@ -641,7 +636,7 @@ class DictItemAction(argparse.Action):
         self,
         option_strings: Sequence[str],
         dest: str,
-        default: Any = None,
+        default: Default = None,
         type: Union[Callable[[str], Any], "FileType", None] = None,
         choices: Optional[Iterable[Any]] = None,
         required: bool = False,

@@ -10,22 +10,6 @@ from typed_settings import dict_utils as du
 from typed_settings import option, settings, types
 
 
-def mkattr(name: str, typ: type) -> attrs.Attribute:
-    """Creates an Attribute with *name* and *type*."""
-    return attrs.Attribute(  # type: ignore
-        name,
-        attrs.NOTHING,
-        None,
-        True,
-        None,
-        None,
-        True,
-        False,
-        type=typ,
-        alias=name,
-    )
-
-
 class TestDeepOptions:
     """Tests for deep_options()."""
 
@@ -45,12 +29,40 @@ class TestDeepOptions:
             y: Child
             z: str
 
-        options = du.deep_options(Parent)
-        assert options == (
-            types.OptionInfo("x", mkattr("x", str), Parent),
-            types.OptionInfo("y.x", mkattr("x", float), Child),
-            types.OptionInfo("y.y.x", mkattr("x", int), GrandChild),
-            types.OptionInfo("z", mkattr("z", str), Parent),
+        option_infos = du.deep_options(Parent)
+        assert option_infos == (
+            types.OptionInfo(
+                parent_cls=Parent,
+                path="x",
+                cls=str,
+                default=attrs.NOTHING,
+                has_no_default=True,
+                default_is_factory=False,
+            ),
+            types.OptionInfo(
+                parent_cls=Child,
+                path="y.x",
+                cls=float,
+                default=attrs.NOTHING,
+                has_no_default=True,
+                default_is_factory=False,
+            ),
+            types.OptionInfo(
+                parent_cls=GrandChild,
+                path="y.y.x",
+                cls=int,
+                default=attrs.NOTHING,
+                has_no_default=True,
+                default_is_factory=False,
+            ),
+            types.OptionInfo(
+                parent_cls=Parent,
+                path="z",
+                cls=str,
+                default=attrs.NOTHING,
+                has_no_default=True,
+                default_is_factory=False,
+            ),
         )
 
     def test_unresolved_types(self) -> None:
@@ -265,11 +277,16 @@ def test_iter_settings():
     "iter_settings()" iterates the settings.  It ignores invalid settings keys
     or non-existing settings.
     """
-    option_list = [
-        types.OptionInfo("a", mkattr("a", int), None),
-        types.OptionInfo("b.x", mkattr("x", int), None),
-        types.OptionInfo("b.y", mkattr("y", int), None),
-        types.OptionInfo("c", mkattr("c", int), None),
+    option_infos = [
+        types.OptionInfo(
+            parent_cls=type,
+            path=path,
+            cls=int,
+            default=attrs.NOTHING,
+            has_no_default=True,
+            default_is_factory=False,
+        )
+        for path in ["a", "b.x", "b.y", "c"]
     ]
     settings = {
         "a": 0,
@@ -278,7 +295,7 @@ def test_iter_settings():
         },
         "z": 2,
     }
-    result = list(du.iter_settings(settings, option_list))
+    result = list(du.iter_settings(settings, option_infos))
     assert result == [
         ("a", 0),
         ("b.y", 1),
@@ -335,14 +352,16 @@ def test_merge_settings() -> None:
     When settings are merged, merging only applies to keys for options, not list or
     dict values.
     """
-    options = (
-        types.OptionInfo("1a", None, None),  # type: ignore
-        types.OptionInfo("1b.2a", None, None),  # type: ignore
-        types.OptionInfo("1b.2b.3a", None, None),  # type: ignore
-        types.OptionInfo("1b.2b.3b", None, None),  # type: ignore
-        types.OptionInfo("1c", None, None),  # type: ignore
-        types.OptionInfo("1d", None, None),  # type: ignore
-        types.OptionInfo("1e", None, None),  # type: ignore
+    option_infos = tuple(
+        types.OptionInfo(
+            parent_cls=type,
+            path=path,
+            cls=tuple,
+            default=attrs.NOTHING,
+            has_no_default=True,
+            default_is_factory=False,
+        )
+        for path in ["1a", "1b.2a", "1b.2b.3a", "1b.2b.3b", "1c", "1d", "1e"]
     )
     d1 = types.LoadedSettings(
         {
@@ -363,7 +382,7 @@ def test_merge_settings() -> None:
         },
         types.LoaderMeta("l2"),
     )
-    result = du.merge_settings(options, [d1, d2])
+    result = du.merge_settings(option_infos, [d1, d2])
     assert result == {
         "1a": types.LoadedValue(3, types.LoaderMeta("l1")),
         "1b.2a": types.LoadedValue("eggs", types.LoaderMeta("l2")),

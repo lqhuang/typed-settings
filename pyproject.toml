@@ -137,6 +137,7 @@ line-length = 88
 source = [
     "src",
     ".nox/test-*/**/site-packages",
+    "tests",
 ]
 
 [tool.coverage.report]

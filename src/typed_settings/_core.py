@@ -18,8 +18,6 @@ from typing import (
     Union,
 )
 
-import attrs
-
 from . import _core, dict_utils
 from .attrs import METADATA_KEY
 from .converters import Converter, default_converter
@@ -359,14 +357,14 @@ def convert(merged_settings: MergedSettings, state: _core.SettingsState[ST]) -> 
     loaded_settings_paths: Set[str] = set()
     oi_by_path = state.options_by_path
     for path, (value, meta) in merged_settings.items():
-        field = oi_by_path[path].field
-        if field.type:
+        oinfo = oi_by_path[path]
+        if oinfo.cls:
             with _set_context(meta):
                 try:
-                    if field.converter:
-                        converted_value = field.converter(value)
+                    if oinfo.converter:
+                        converted_value = oinfo.converter(value)
                     else:
-                        converted_value = state.converter.structure(value, field.type)
+                        converted_value = state.converter.structure(value, oinfo.cls)
                 except Exception as e:
                     errors.append(
                         f"Could not convert value {value!r} for option "
@@ -381,7 +379,7 @@ def convert(merged_settings: MergedSettings, state: _core.SettingsState[ST]) -> 
     for option_info in state.options:
         if option_info.path in loaded_settings_paths:
             continue
-        if option_info.field.default is not attrs.NOTHING:
+        if option_info.has_default:
             continue
         errors.append(f"No value set for required option {option_info.path!r}")
 
