@@ -18,8 +18,7 @@ from typing import (
     Union,
 )
 
-from . import _core, dict_utils
-from .attrs import METADATA_KEY
+from . import dict_utils
 from .converters import Converter, default_converter
 from .exceptions import InvalidSettingsError
 from .loaders import EnvLoader, FileLoader, Loader, TomlFormat, _DefaultsLoader
@@ -47,7 +46,7 @@ __all__ = [
 ]
 
 
-LOGGER = logging.getLogger(METADATA_KEY)
+LOGGER = logging.getLogger("typed-settings")
 
 
 class SettingsState(Generic[ST]):
@@ -337,7 +336,7 @@ def _load_settings(state: SettingsState) -> MergedSettings:
     return merged_settings
 
 
-def convert(merged_settings: MergedSettings, state: _core.SettingsState[ST]) -> ST:
+def convert(merged_settings: MergedSettings, state: SettingsState[ST]) -> ST:
     """
     Create an instance of *cls* from the settings in *merged_settings*.
 

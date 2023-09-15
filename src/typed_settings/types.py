@@ -27,6 +27,7 @@ from ._compat import PY_39
 
 __all__ = [
     "AUTO",
+    "METADATA_KEY",
     "SECRET_REPR",
     "T",
     "ET",
@@ -49,6 +50,7 @@ __all__ = [
 ]
 
 
+METADATA_KEY: Final[str] = "typed_settings"
 SECRET_REPR: Final[str] = "*******"
 
 
@@ -323,6 +325,14 @@ class Secret(Generic[T]):
         Return the wrapped secret value.
         """
         return self._secret_value
+
+
+class SecretRepr:
+    def __call__(self, v: Any) -> str:
+        return repr(v if not v and isinstance(v, Collection) else SECRET_REPR)
+
+    def __repr__(self) -> str:
+        return "***"
 
 
 SECRETS_TYPES = (Secret, SecretStr)

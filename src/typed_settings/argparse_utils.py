@@ -29,7 +29,6 @@ if TYPE_CHECKING:
     from argparse import FileType
 
 from . import _core
-from .attrs import ARGPARSE_KEY
 from .cli_utils import (
     DEFAULT_SENTINEL,
     DEFAULT_SENTINEL_NAME,
@@ -60,12 +59,16 @@ __all__ = [
     "handle_datetime",
     "handle_enum",
     "handle_path",
+    "METADATA_KEY",
     "DEFAULT_TYPES",
     "ArgparseHandler",
     "BooleanOptionalAction",
     "ListAction",
     "DictItemAction",
 ]
+
+
+METADATA_KEY = "argparse"
 
 
 WrapppedFunc = Callable[[ST], Any]
@@ -455,7 +458,7 @@ def _mk_argument(
     default: Default,
     type_args_maker: TypeArgsMaker,
 ) -> Tuple[Tuple[str, ...], Dict[str, Any]]:
-    user_config = dict(oinfo.metadata.get(ARGPARSE_KEY, {}))
+    user_config = dict(oinfo.metadata.get(METADATA_KEY, {}))
 
     # The option type specifies the default option kwargs
     kwargs = type_args_maker.get_kwargs(oinfo.cls, default)

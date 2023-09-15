@@ -6,8 +6,8 @@ from typing import Any, Generator, List, Sequence, Tuple, Type, cast
 
 import attrs
 
-from .attrs import METADATA_KEY, _SecretRepr
 from .types import (
+    METADATA_KEY,
     SECRETS_TYPES,
     ST,
     LoadedSettings,
@@ -15,6 +15,7 @@ from .types import (
     MergedSettings,
     OptionInfo,
     OptionList,
+    SecretRepr,
     SettingsDict,
 )
 
@@ -65,7 +66,7 @@ def deep_options(cls: Type[ST]) -> OptionList:
                     path=f"{prefix}{field.name}",
                     cls=field.type,
                     is_secret=(
-                        isinstance(field.repr, _SecretRepr)
+                        isinstance(field.repr, SecretRepr)
                         or (
                             isinstance(field.type, type)
                             and issubclass(field.type, SECRETS_TYPES)

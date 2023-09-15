@@ -1,7 +1,6 @@
 """
 Helpers for and additions to :mod:`attrs`.
 """
-from collections.abc import Collection
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -16,7 +15,8 @@ from typing import (
 import attr  # The old namespaces is needed in "combine()"
 import attrs
 
-from ..types import SECRET_REPR
+from .. import argparse_utils, click_utils
+from ..types import METADATA_KEY, SecretRepr
 
 
 if TYPE_CHECKING:
@@ -30,7 +30,6 @@ if TYPE_CHECKING:
 
 
 __all__ = [
-    "METADATA_KEY",
     "SECRET",
     "evolve",
     "option",
@@ -38,20 +37,8 @@ __all__ = [
     "settings",
 ]
 
-METADATA_KEY = "typed_settings"
-CLICK_KEY = "click"
-ARGPARSE_KEY = "argparse"
 
-
-class _SecretRepr:
-    def __call__(self, v: Any) -> str:
-        return repr(v if not v and isinstance(v, Collection) else SECRET_REPR)
-
-    def __repr__(self) -> str:
-        return "***"
-
-
-SECRET = _SecretRepr()
+SECRET = SecretRepr()
 
 
 settings = attrs.define
@@ -194,7 +181,7 @@ def secret(
     *,
     default: None = ...,
     validator: None = ...,
-    repr: _SecretRepr = ...,
+    repr: SecretRepr = ...,
     hash: Optional[bool] = ...,
     init: bool = ...,
     metadata: Optional[Dict[Any, Any]] = ...,
@@ -218,7 +205,7 @@ def secret(
     *,
     default: None = ...,
     validator: "Optional[_ValidatorArgType[_T]]" = ...,
-    repr: _SecretRepr = ...,
+    repr: SecretRepr = ...,
     hash: Optional[bool] = ...,
     init: bool = ...,
     metadata: Optional[Dict[Any, Any]] = ...,
@@ -241,7 +228,7 @@ def secret(
     *,
     default: "_T",
     validator: "Optional[_ValidatorArgType[_T]]" = ...,
-    repr: _SecretRepr = ...,
+    repr: SecretRepr = ...,
     hash: Optional[bool] = ...,
     init: bool = ...,
     metadata: Optional[Dict[Any, Any]] = ...,
@@ -264,7 +251,7 @@ def secret(
     *,
     default: "Optional[_T]" = ...,
     validator: "Optional[_ValidatorArgType[_T]]" = ...,
-    repr: _SecretRepr = ...,
+    repr: SecretRepr = ...,
     hash: Optional[bool] = ...,
     init: bool = ...,
     metadata: Optional[Dict[Any, Any]] = ...,
@@ -356,8 +343,8 @@ def _get_metadata(
         metadata = {}
     ts_meta = metadata.setdefault(METADATA_KEY, {})
     ts_meta["help"] = help
-    ts_meta[CLICK_KEY] = click_config
-    ts_meta[ARGPARSE_KEY] = argparse_config
+    ts_meta[click_utils.METADATA_KEY] = click_config
+    ts_meta[argparse_utils.METADATA_KEY] = argparse_config
     return metadata
 
 

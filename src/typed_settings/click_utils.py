@@ -29,7 +29,6 @@ from attr._make import _Nothing as NothingType
 from click.core import ParameterSource
 
 from . import _core, dict_utils
-from .attrs import CLICK_KEY
 from .cli_utils import (
     DEFAULT_SENTINEL_NAME,
     NO_DEFAULT,
@@ -80,11 +79,13 @@ __all__ = [
     "handle_datetime",
     "handle_enum",
     "DEFAULT_TYPES",
+    "METADATA_KEY",
     "ClickHandler",
 ]
 
 
 CTX_KEY = "settings"
+METADATA_KEY = "click"
 
 
 DefaultType = Union[None, NothingType, T]
@@ -610,7 +611,7 @@ def _mk_option(
     """
     Recursively creates click options and returns them as a list.
     """
-    user_config = dict(oinfo.metadata.get(CLICK_KEY, {}))
+    user_config = dict(oinfo.metadata.get(METADATA_KEY, {}))
 
     # The option type specifies the default option kwargs
     kwargs = type_args_maker.get_kwargs(oinfo.cls, default)

@@ -19,7 +19,7 @@ from typed_settings import (
     secret,
     settings,
 )
-from typed_settings.attrs import CLICK_KEY, METADATA_KEY
+from typed_settings.attrs import METADATA_KEY
 from typed_settings.types import SecretStr
 
 
@@ -99,12 +99,12 @@ def test_attrs_meta_not_modified() -> None:
 
     meta = attrs.fields(S).opt.metadata[METADATA_KEY]
 
-    assert meta[CLICK_KEY] == {"help": "spam", "callback": print}
+    assert meta[click_utils.METADATA_KEY] == {"help": "spam", "callback": print}
 
     click_options(S, "test")(lambda s: None)  # pragma: no cover
     click_options(S, "test")(lambda s: None)  # pragma: no cover
 
-    assert meta[CLICK_KEY] == {"help": "spam", "callback": print}
+    assert meta[click_utils.METADATA_KEY] == {"help": "spam", "callback": print}
 
 
 class TestDefaultsLoading:

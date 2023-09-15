@@ -15,8 +15,8 @@ from typed_settings import (
     default_loaders,
     option,
     settings,
+    types,
 )
-from typed_settings.attrs import ARGPARSE_KEY, METADATA_KEY
 
 
 T = TypeVar("T")
@@ -175,14 +175,14 @@ def test_attrs_meta_not_modified() -> None:
     class S:
         opt: int = option(help="spam", argparse={"param_decls": "-o"})
 
-    meta = attrs.fields(S).opt.metadata[METADATA_KEY]
+    meta = attrs.fields(S).opt.metadata[types.METADATA_KEY]
 
-    assert meta[ARGPARSE_KEY] == {"help": "spam", "param_decls": "-o"}
+    assert meta[argparse_utils.METADATA_KEY] == {"help": "spam", "param_decls": "-o"}
 
     argparse_utils.make_parser(S, "test")
     argparse_utils.make_parser(S, "test")
 
-    assert meta[ARGPARSE_KEY] == {"help": "spam", "param_decls": "-o"}
+    assert meta[argparse_utils.METADATA_KEY] == {"help": "spam", "param_decls": "-o"}
 
 
 def test_resolve_paths(

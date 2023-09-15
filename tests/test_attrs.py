@@ -6,9 +6,8 @@ import typing as t
 import attrs
 import pytest
 
+from typed_settings import argparse_utils, click_utils
 from typed_settings.attrs import (
-    ARGPARSE_KEY,
-    CLICK_KEY,
     METADATA_KEY,
     SECRET,
     combine,
@@ -79,8 +78,8 @@ class TestFieldExtensions:
         assert field.metadata == {
             METADATA_KEY: {
                 "help": None,
-                CLICK_KEY: {"help": None},
-                ARGPARSE_KEY: {"help": None},
+                click_utils.METADATA_KEY: {"help": None},
+                argparse_utils.METADATA_KEY: {"help": None},
             },
         }
 
@@ -97,8 +96,8 @@ class TestFieldExtensions:
         assert field.metadata == {
             METADATA_KEY: {
                 "help": "spam",
-                CLICK_KEY: {"help": "spam"},
-                ARGPARSE_KEY: {"help": "spam"},
+                click_utils.METADATA_KEY: {"help": "spam"},
+                argparse_utils.METADATA_KEY: {"help": "spam"},
             },
         }
 
@@ -111,8 +110,8 @@ class TestFieldExtensions:
         assert field.metadata == {
             METADATA_KEY: {
                 "help": "spam",
-                CLICK_KEY: {"help": "eggs"},
-                ARGPARSE_KEY: {"help": "spam"},
+                click_utils.METADATA_KEY: {"help": "eggs"},
+                argparse_utils.METADATA_KEY: {"help": "spam"},
             },
         }
 
@@ -129,8 +128,8 @@ class TestFieldExtensions:
         assert field.metadata == {
             METADATA_KEY: {
                 "help": None,
-                CLICK_KEY: {"help": None, "param_decls": ("-o",)},
-                ARGPARSE_KEY: {"help": None},
+                click_utils.METADATA_KEY: {"help": None, "param_decls": ("-o",)},
+                argparse_utils.METADATA_KEY: {"help": None},
             },
         }
 
@@ -152,8 +151,8 @@ class TestFieldExtensions:
             "spam": "eggs",
             METADATA_KEY: {
                 "help": "halp!",
-                CLICK_KEY: {"help": "halp!", "param_decls": ("-o",)},
-                ARGPARSE_KEY: {"help": "halp!"},
+                click_utils.METADATA_KEY: {"help": "halp!", "param_decls": ("-o",)},
+                argparse_utils.METADATA_KEY: {"help": "halp!"},
             },
         }
 
