@@ -126,7 +126,7 @@ SUPPORTED_STDTYPES: Example4T = [
     ("float('.815')", ".815", 0.815, float),
     ("str('spam')", "spam", "spam", str),
 ]
-SUPPORTED_TYPES_DATA += [(n, i, e, t) for n, i, e, t in SUPPORTED_STDTYPES]
+SUPPORTED_TYPES_DATA += SUPPORTED_STDTYPES
 
 # datetime - can be parsed from a limit set of ISO formats
 SUPPORTED_DATETIME: Example3T = [
@@ -181,7 +181,7 @@ if PY_39:
     SUPPORTED_LIST += [
         ("list[int]", [1, "2"], [1, 2], list[int]),
     ]
-SUPPORTED_TYPES_DATA += [(n, i, e, t) for n, i, e, t in SUPPORTED_LIST]
+SUPPORTED_TYPES_DATA += SUPPORTED_LIST
 
 # tuple
 SUPPORTED_TUPLE: Example4T = [
@@ -201,7 +201,7 @@ if PY_39:
         ("tuple[int, ...]", [1, 2, "3"], (1, 2, 3), tuple[int, ...]),
         ("tuple[int, float]", [1, "2.3"], (1, 2.3), tuple[int, float]),
     ]
-SUPPORTED_TYPES_DATA += [(n, i, e, t) for n, i, e, t in SUPPORTED_TUPLE]
+SUPPORTED_TYPES_DATA += SUPPORTED_TUPLE
 
 # dict
 SUPPORTED_DICT: Example4T = [
@@ -224,7 +224,7 @@ if PY_39:
             dict[bool, int],
         ),
     ]
-SUPPORTED_TYPES_DATA += [(n, i, e, t) for n, i, e, t in SUPPORTED_DICT]
+SUPPORTED_TYPES_DATA += SUPPORTED_DICT
 
 # MappingProxy
 SUPPORTED_MAPPINGPROXY: Example4T = []
@@ -243,7 +243,7 @@ if PY_39:
             MappingProxyType[bool, int],
         ),
     ]
-SUPPORTED_TYPES_DATA += [(n, i, e, t) for n, i, e, t in SUPPORTED_MAPPINGPROXY]
+SUPPORTED_TYPES_DATA += SUPPORTED_MAPPINGPROXY
 
 # set
 SUPPORTED_SET: Example4T = [
@@ -255,7 +255,7 @@ if PY_39:
     SUPPORTED_SET += [
         ("set[int]", [1, "2"], {1, 2}, set[int]),
     ]
-SUPPORTED_TYPES_DATA += [(n, i, e, t) for n, i, e, t in SUPPORTED_SET]
+SUPPORTED_TYPES_DATA += SUPPORTED_SET
 
 # frozenset
 SUPPORTED_FROZENSET: Example4T = [
@@ -267,7 +267,7 @@ if PY_39:
     SUPPORTED_FROZENSET += [
         ("frozenset(int)", [1, "2"], frozenset({1, 2}), frozenset[int]),
     ]
-SUPPORTED_TYPES_DATA += [(n, i, e, t) for n, i, e, t in SUPPORTED_FROZENSET]
+SUPPORTED_TYPES_DATA += SUPPORTED_FROZENSET
 
 # Union / Optional
 SUPPORTED_UNION: Example4T = [
@@ -285,7 +285,7 @@ SUPPORTED_UNION: Example4T = [
     # ),
     # ("Union(list)", [1, 2], ["1", "2"], Union[None, S, List[str]]),
 ]
-SUPPORTED_TYPES_DATA += [(n, i, e, t) for n, i, e, t in SUPPORTED_UNION]
+SUPPORTED_TYPES_DATA += SUPPORTED_UNION
 if PY_310:
     SUPPORTED_UNION = [
         ("str|None(None)", None, None, str | None),
@@ -323,7 +323,7 @@ SUPPORTED_ATTRSCLASSES: Example4T = [
         Parent,
     ),
 ]
-SUPPORTED_TYPES_DATA += [(n, i, e, t) for n, i, e, t in SUPPORTED_ATTRSCLASSES]
+SUPPORTED_TYPES_DATA += SUPPORTED_ATTRSCLASSES
 
 
 @pytest.mark.parametrize(
