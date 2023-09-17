@@ -35,6 +35,12 @@
 - 💥 **BREAKING:** The deprecated `typed_settings.attrs.hooks` module
   has been removed.
 
+
+- 🗑 The modules `typed_settings.argparse_utils` and
+  `typed_settings.ckick_utils` are deprecated and are now aliases of the
+  renamed `typed_settings.cli_argparse` and `typed_settings.cli_click`.
+  They will be removed in the next release.
+
 - ✨ Added a built-in `TSConverter` as an alternative for `cattrs`
   (which is still supported and recommended).
 
