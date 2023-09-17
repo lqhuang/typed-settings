@@ -15,7 +15,7 @@ from typing import (
 import attr  # The old namespaces is needed in "combine()"
 import attrs
 
-from .. import argparse_utils, click_utils
+from .. import cli_argparse, cli_click
 from ..types import METADATA_KEY, SecretRepr
 
 
@@ -343,8 +343,8 @@ def _get_metadata(
         metadata = {}
     ts_meta = metadata.setdefault(METADATA_KEY, {})
     ts_meta["help"] = help
-    ts_meta[click_utils.METADATA_KEY] = click_config
-    ts_meta[argparse_utils.METADATA_KEY] = argparse_config
+    ts_meta[cli_click.METADATA_KEY] = click_config
+    ts_meta[cli_argparse.METADATA_KEY] = argparse_config
     return metadata
 
 

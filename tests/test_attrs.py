@@ -6,7 +6,7 @@ import typing as t
 import attrs
 import pytest
 
-from typed_settings import argparse_utils, click_utils
+from typed_settings import cli_argparse, cli_click
 from typed_settings.attrs import (
     METADATA_KEY,
     SECRET,
@@ -78,8 +78,8 @@ class TestFieldExtensions:
         assert field.metadata == {
             METADATA_KEY: {
                 "help": None,
-                click_utils.METADATA_KEY: {"help": None},
-                argparse_utils.METADATA_KEY: {"help": None},
+                cli_click.METADATA_KEY: {"help": None},
+                cli_argparse.METADATA_KEY: {"help": None},
             },
         }
 
@@ -96,8 +96,8 @@ class TestFieldExtensions:
         assert field.metadata == {
             METADATA_KEY: {
                 "help": "spam",
-                click_utils.METADATA_KEY: {"help": "spam"},
-                argparse_utils.METADATA_KEY: {"help": "spam"},
+                cli_click.METADATA_KEY: {"help": "spam"},
+                cli_argparse.METADATA_KEY: {"help": "spam"},
             },
         }
 
@@ -110,8 +110,8 @@ class TestFieldExtensions:
         assert field.metadata == {
             METADATA_KEY: {
                 "help": "spam",
-                click_utils.METADATA_KEY: {"help": "eggs"},
-                argparse_utils.METADATA_KEY: {"help": "spam"},
+                cli_click.METADATA_KEY: {"help": "eggs"},
+                cli_argparse.METADATA_KEY: {"help": "spam"},
             },
         }
 
@@ -128,8 +128,8 @@ class TestFieldExtensions:
         assert field.metadata == {
             METADATA_KEY: {
                 "help": None,
-                click_utils.METADATA_KEY: {"help": None, "param_decls": ("-o",)},
-                argparse_utils.METADATA_KEY: {"help": None},
+                cli_click.METADATA_KEY: {"help": None, "param_decls": ("-o",)},
+                cli_argparse.METADATA_KEY: {"help": None},
             },
         }
 
@@ -151,8 +151,8 @@ class TestFieldExtensions:
             "spam": "eggs",
             METADATA_KEY: {
                 "help": "halp!",
-                click_utils.METADATA_KEY: {"help": "halp!", "param_decls": ("-o",)},
-                argparse_utils.METADATA_KEY: {"help": "halp!"},
+                cli_click.METADATA_KEY: {"help": "halp!", "param_decls": ("-o",)},
+                cli_argparse.METADATA_KEY: {"help": "halp!"},
             },
         }
 

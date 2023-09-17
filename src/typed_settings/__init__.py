@@ -5,15 +5,15 @@ from typing import Any, List
 
 from ._core import SettingsState, convert, default_loaders, load, load_settings
 from ._file_utils import find
-from .argparse_utils import cli
 from .attrs import combine, evolve, option, secret, settings
+from .cli_argparse import cli
 from .converters import default_converter, register_strlist_hook
 from .loaders import EnvLoader, FileLoader, TomlFormat
 from .types import Secret, SecretStr
 
 
 try:
-    from .click_utils import click_options, pass_settings
+    from .cli_click import click_options, pass_settings
 except ImportError:  # pragma: no cover
 
     def __getattr__(name: str) -> Any:
@@ -23,12 +23,12 @@ except ImportError:  # pragma: no cover
         Raise an :exc:`ImportError` if their dependencies are missing.
         """
         if name == "click_options":
-            from .click_utils import click_options
+            from .cli_click import click_options
 
             return click_options
 
         if name == "pass_settings":
-            from .click_utils import pass_settings
+            from .cli_click import pass_settings
 
             return pass_settings
 
