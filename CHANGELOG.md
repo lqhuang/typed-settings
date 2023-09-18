@@ -36,10 +36,12 @@
   has been removed.
 
 
-- 🗑 The modules `typed_settings.argparse_utils` and
-  `typed_settings.ckick_utils` are deprecated and are now aliases of the
-  renamed `typed_settings.cli_argparse` and `typed_settings.cli_click`.
-  They will be removed in the next release.
+- 🗑 The modules `typed_settings.argparse_utils`,
+  `typed_settings.ckick_utils`, and `typed_settings.attrs` are
+  deprecated and are now aliases of the renamed
+  `typed_settings.cli_argparse`, `typed_settings.cli_click`, and
+  `typed_settings.cls_attrs`.  They will be removed in the next release.
+
 
 - ✨ Added a built-in `TSConverter` as an alternative for `cattrs`
   (which is still supported and recommended).

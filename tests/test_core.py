@@ -13,7 +13,7 @@ import pytest
 
 from typed_settings import _core, dict_utils, exceptions
 from typed_settings._compat import PY_310
-from typed_settings.attrs import option, settings
+from typed_settings.cls_attrs import option, settings
 from typed_settings.converters import (
     default_converter,
     get_default_cattrs_converter,

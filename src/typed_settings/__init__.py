@@ -5,8 +5,8 @@ from typing import Any, List
 
 from ._core import SettingsState, convert, default_loaders, load, load_settings
 from ._file_utils import find
-from .attrs import combine, evolve, option, secret, settings
 from .cli_argparse import cli
+from .cls_attrs import combine, evolve, option, secret, settings
 from .converters import default_converter, register_strlist_hook
 from .loaders import EnvLoader, FileLoader, TomlFormat
 from .types import Secret, SecretStr

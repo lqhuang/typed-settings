@@ -9,7 +9,7 @@ from typing import Any, Dict, List, Optional
 import pytest
 from pytest import MonkeyPatch
 
-from typed_settings.attrs import settings
+from typed_settings.cls_attrs import settings
 from typed_settings.dict_utils import deep_options
 from typed_settings.exceptions import (
     ConfigFileLoadError,

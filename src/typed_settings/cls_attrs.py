@@ -15,8 +15,7 @@ from typing import (
 import attr  # The old namespaces is needed in "combine()"
 import attrs
 
-from .. import cli_argparse, cli_click
-from ..types import METADATA_KEY, SecretRepr
+from . import cli_argparse, cli_click, types
 
 
 if TYPE_CHECKING:
@@ -38,7 +37,7 @@ __all__ = [
 ]
 
 
-SECRET = SecretRepr()
+SECRET = types.SecretRepr()
 
 
 settings = attrs.define
@@ -181,7 +180,7 @@ def secret(
     *,
     default: None = ...,
     validator: None = ...,
-    repr: SecretRepr = ...,
+    repr: types.SecretRepr = ...,
     hash: Optional[bool] = ...,
     init: bool = ...,
     metadata: Optional[Dict[Any, Any]] = ...,
@@ -205,7 +204,7 @@ def secret(
     *,
     default: None = ...,
     validator: "Optional[_ValidatorArgType[_T]]" = ...,
-    repr: SecretRepr = ...,
+    repr: types.SecretRepr = ...,
     hash: Optional[bool] = ...,
     init: bool = ...,
     metadata: Optional[Dict[Any, Any]] = ...,
@@ -228,7 +227,7 @@ def secret(
     *,
     default: "_T",
     validator: "Optional[_ValidatorArgType[_T]]" = ...,
-    repr: SecretRepr = ...,
+    repr: types.SecretRepr = ...,
     hash: Optional[bool] = ...,
     init: bool = ...,
     metadata: Optional[Dict[Any, Any]] = ...,
@@ -251,7 +250,7 @@ def secret(
     *,
     default: "Optional[_T]" = ...,
     validator: "Optional[_ValidatorArgType[_T]]" = ...,
-    repr: SecretRepr = ...,
+    repr: types.SecretRepr = ...,
     hash: Optional[bool] = ...,
     init: bool = ...,
     metadata: Optional[Dict[Any, Any]] = ...,
@@ -341,7 +340,7 @@ def _get_metadata(
         argparse_config.update(argparse)
     if metadata is None:
         metadata = {}
-    ts_meta = metadata.setdefault(METADATA_KEY, {})
+    ts_meta = metadata.setdefault(types.METADATA_KEY, {})
     ts_meta["help"] = help
     ts_meta[cli_click.METADATA_KEY] = click_config
     ts_meta[cli_argparse.METADATA_KEY] = argparse_config

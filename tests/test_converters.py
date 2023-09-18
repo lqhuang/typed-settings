@@ -26,7 +26,7 @@ import pytest
 
 from typed_settings import converters
 from typed_settings._compat import PY_39, PY_310
-from typed_settings.attrs import option, secret, settings
+from typed_settings.cls_attrs import option, secret, settings
 
 
 def custom_converter(v: Union[str, Path]) -> Path:
