@@ -6,7 +6,7 @@ from typing import Callable, Type, Union
 import pytest
 
 from typed_settings import processors, settings
-from typed_settings.dict_utils import deep_options
+from typed_settings.cls_utils import deep_options
 
 
 @settings

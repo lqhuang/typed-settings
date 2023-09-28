@@ -18,7 +18,7 @@ from typing import (
     Union,
 )
 
-from . import dict_utils
+from . import cls_utils, dict_utils
 from .converters import Converter, default_converter
 from .exceptions import InvalidSettingsError
 from .loaders import EnvLoader, FileLoader, Loader, TomlFormat, _DefaultsLoader
@@ -63,7 +63,7 @@ class SettingsState(Generic[ST]):
         base_dir: Path,
     ) -> None:
         self._cls = settings_cls
-        self._options = tuple(dict_utils.deep_options(settings_cls))
+        self._options = tuple(cls_utils.deep_options(settings_cls))
         self._optiosn_by_name = MappingProxyType({o.path: o for o in self._options})
         self._loaders = loaders
         self._processors = processors

@@ -28,7 +28,7 @@ import click
 from attr._make import _Nothing as NothingType
 from click.core import ParameterSource
 
-from . import _core, dict_utils
+from . import _core, cls_utils
 from .cli_utils import (
     DEFAULT_SENTINEL_NAME,
     NO_DEFAULT,
@@ -201,7 +201,7 @@ def click_options(
 
     converter = converter or default_converter()
     state = _core.SettingsState(settings_cls, loaders, processors, converter, base_dir)
-    grouped_options = dict_utils.group_options(state.settings_class, state.options)
+    grouped_options = cls_utils.group_options(state.settings_class, state.options)
     merged_settings = _core._load_settings(state)
     type_args_maker = type_args_maker or TypeArgsMaker(ClickHandler())
     decorator_factory = decorator_factory or ClickOptionFactory()
