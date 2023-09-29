@@ -8,7 +8,7 @@ Supported backends are:
 - `pydantic <https://docs.pydantic.dev>`_ (optional dependency)
 """
 from itertools import groupby
-from typing import Dict, List, Protocol, Tuple, cast
+from typing import Any, Dict, List, Protocol, Tuple, Type, cast
 
 from . import types
 
@@ -46,6 +46,13 @@ class ClsHandler(Protocol):
         This parent class is used to create CLI option groups.  Thus, if a field's
         type is another (nested) settings class, that class should be used.  Else,
         the class itself should be used.
+        """
+
+    @staticmethod
+    def asdict(inst: Any) -> types.SettingsDict:
+        """
+        Return the instances attributes as dict, recurse into nested classes of the
+        same kind.
         """
 
 
@@ -110,6 +117,12 @@ class Attrs:
             for field in attrs.fields(cls)
         }
 
+    @staticmethod
+    def asdict(inst: Any) -> types.SettingsDict:
+        import attrs
+
+        return attrs.asdict(inst)
+
 
 # def is_dataclass(cls: type) -> bool:
 #     """
@@ -118,9 +131,29 @@ class Attrs:
 #     return dataclasses.is_dataclass(cls)
 
 
-CLASS_HANDLERS: List[ClsHandler] = [
+CLASS_HANDLERS: List[Type[ClsHandler]] = [
     Attrs,
 ]
+
+
+def find_handler(cls: type) -> Type[ClsHandler]:
+    """
+    Return the proper class handler for *cls*.
+
+    Args:
+        cls: The settings class to find a handler for.
+
+    Return:
+        A :class:`ClsHandler` that works with *cls*.
+
+    Raise:
+        TypeError: If no class handler can be found for *cls*.
+    """
+    for cls_handler in CLASS_HANDLERS:
+        if cls_handler.check(cls):
+            return cls_handler
+
+    raise TypeError(f"Cannot handle type: {type(cls)}")
 
 
 def deep_options(cls: type) -> types.OptionList:
@@ -140,11 +173,8 @@ def deep_options(cls: type) -> types.OptionList:
         NameError: if the type annotations can not be resolved.  This is, e.g., the
         case when recursive classes are being used.
     """
-    for cls_handler in CLASS_HANDLERS:
-        if cls_handler.check(cls):
-            return cls_handler.iter_fields(cls)
-
-    raise TypeError(f"Cannot handle type: {type(cls)}")
+    cls_handler = find_handler(cls)
+    return cls_handler.iter_fields(cls)
 
 
 def group_options(
@@ -175,12 +205,8 @@ def group_options(
     Return:
         A list of tuples matching a grouper class to all settings within that group.
     """
-    for cls_handler in CLASS_HANDLERS:
-        if cls_handler.check(cls):
-            fields_to_parents = cls_handler.fields_to_parent_classes(cls)
-            break
-    else:
-        raise TypeError(f"Cannot handle type: {type(cls)}")
+    cls_handler = find_handler(cls)
+    fields_to_parents = cls_handler.fields_to_parent_classes(cls)
 
     def keyfn(o: types.OptionInfo) -> Tuple[str, type]:
         """

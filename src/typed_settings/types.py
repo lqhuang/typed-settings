@@ -15,12 +15,9 @@ from typing import (
     NamedTuple,
     Optional,
     Tuple,
-    Type,
     TypeVar,
     Union,
 )
-
-import attrs
 
 from ._compat import PY_39
 
@@ -56,9 +53,9 @@ SECRET_REPR: Final[str] = "*******"
 
 T = TypeVar("T")
 ET = TypeVar("ET", bound=Enum)  # Enum type
-ST = TypeVar("ST", bound=attrs.AttrsInstance)  # SettingsInstance
-SettingsClass = Type[attrs.AttrsInstance]
-SettingsInstance = attrs.AttrsInstance
+ST = TypeVar("ST")  # Type var for SettingsInstance
+SettingsClass = type
+SettingsInstance = Any
 OptionName = str
 OptionPath = str
 SettingsDict = Dict[OptionName, Union[Any, "SettingsDict"]]

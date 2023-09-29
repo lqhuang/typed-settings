@@ -19,8 +19,6 @@ from typing import (
     cast,
 )
 
-import attrs
-
 from ._compat import PY_311
 
 
@@ -29,6 +27,7 @@ if PY_311:
 else:
     import tomli as tomllib  # type: ignore[no-redef]
 
+from . import cls_utils
 from .dict_utils import set_path
 from .exceptions import (
     ConfigFileLoadError,
@@ -221,7 +220,8 @@ class InstanceLoader:
                 f'"self.instance" is not an instance of {settings_cls}: '
                 f"{type(self.instance)}"
             )
-        return LoadedSettings(attrs.asdict(self.instance), LoaderMeta(self))
+        cls_handler = cls_utils.find_handler(type(self.instance))
+        return LoadedSettings(cls_handler.asdict(self.instance), LoaderMeta(self))
 
 
 class EnvLoader:
