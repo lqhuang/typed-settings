@@ -32,9 +32,6 @@ else:
     from typing import Union as UnionType  # type: ignore
 
 import attrs
-import cattrs
-import cattrs._compat
-from cattrs._compat import is_frozenset, is_mutable_set, is_sequence, is_tuple
 
 from .types import ET, T
 
@@ -277,7 +274,7 @@ def get_default_structure_hooks(
     ]
 
 
-def register_attrs_hook_factory(converter: cattrs.Converter) -> None:
+def register_attrs_hook_factory(converter: "cattrs.Converter") -> None:
     """
     Register a hook factory that allows using instances of :program:`attrs` classes
     where :program:`cattrs` would normally expect a dictionary.
@@ -299,7 +296,7 @@ def register_attrs_hook_factory(converter: cattrs.Converter) -> None:
     converter.register_structure_hook_factory(attrs.has, allow_attrs_instances)
 
 
-def register_mappingproxy_hook(converter: cattrs.Converter) -> None:
+def register_mappingproxy_hook(converter: "cattrs.Converter") -> None:
     """
     Register a hook factory for converting data to :class:`types.MappingProxyType`
     instances.
@@ -320,7 +317,7 @@ def register_mappingproxy_hook(converter: cattrs.Converter) -> None:
 
 
 def register_strlist_hook(
-    converter: cattrs.Converter,
+    converter: "cattrs.Converter",
     sep: Optional[str] = None,
     fn: Optional[Callable[[str], list]] = None,
 ) -> None:
@@ -356,6 +353,8 @@ def register_strlist_hook(
         raise ValueError('You may either pass "sep" *or* "fn"')
     if sep is not None:
         fn = lambda v: v.split(sep)  # noqa
+
+    from cattrs._compat import is_frozenset, is_mutable_set, is_sequence, is_tuple
 
     collection_types = [
         # Order is important, tuple must be last!
