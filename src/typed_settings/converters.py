@@ -31,8 +31,6 @@ if PY_310:
 else:
     from typing import Union as UnionType  # type: ignore
 
-import attrs
-
 from .types import ET, T
 
 
@@ -292,6 +290,8 @@ def register_attrs_hook_factory(converter: "cattrs.Converter") -> None:
             return converter.structure_attrs_fromdict(val, typ)
 
         return structure_attrs
+
+    import attrs
 
     converter.register_structure_hook_factory(attrs.has, allow_attrs_instances)
 
@@ -594,12 +594,19 @@ class AttrsHookFactory:
 
     @staticmethod
     def match(cls: type, origin: Optional[Any], args: Tuple[Any, ...]) -> bool:
+        try:
+            import attrs
+        except ImportError:
+            return False
+
         return attrs.has(cls)
 
     @staticmethod
     def get_structure_hook(
         converter: Converter, cls: type, origin: Optional[Any], args: Tuple[Any, ...]
     ) -> Callable[[Union[dict, T], Type[T]], T]:
+        import attrs
+
         def convert(value: Union[dict, T], cls: Type[T]) -> T:
             if isinstance(value, cls):
                 return value
