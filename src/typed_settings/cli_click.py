@@ -25,7 +25,6 @@ from typing import (
 )
 
 import click
-from attr._make import _Nothing as NothingType
 from click.core import ParameterSource
 
 from . import _core, cls_utils
@@ -51,7 +50,6 @@ from .types import (
     OptionList,
     SecretStr,
     SettingsClass,
-    T,
 )
 
 
@@ -88,7 +86,6 @@ CTX_KEY = "settings"
 METADATA_KEY = "click"
 
 
-DefaultType = Union[None, NothingType, T]
 Callback = Callable[[click.Context, click.Option, Any], Any]
 # AnyFunc = Callable[..., Any]
 F = TypeVar("F", bound=Callable[..., Any])

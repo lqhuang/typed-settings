@@ -59,6 +59,17 @@ test:
     reports:
       junit: "report-*.xml"
 
+test-no-optionals:
+  stage: test
+  script:
+    - nox --forcecolor -s test_no_optionals -- --junit-xml=report-no-optionals.xml
+  artifacts:
+    paths:
+      - ".coverage"
+      - ".coverage.*"
+    reports:
+      junit: "report-*.xml"
+
 test-coverage:
   stage: post-test
   script:

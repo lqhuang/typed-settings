@@ -4,7 +4,6 @@ Shared fixtures for all tests.
 import sys
 from typing import Any, Callable, Dict, Optional
 
-import attrs
 import pytest
 
 from typed_settings import _onepassword
@@ -12,23 +11,29 @@ from typed_settings.cls_utils import deep_options
 from typed_settings.types import OptionList
 
 
-# Test with frozen settings.  If it works this way, it will also work with
-# mutable settings but not necessarily the other way around.
-@attrs.frozen
-class Host:
-    """Host settings."""
+try:
+    # TODO: Use dataclasses here, once we support them
+    import attrs
 
-    name: str
-    port: int = attrs.field(converter=int)
+    # Test with frozen settings.  If it works this way, it will also work with
+    # mutable settings but not necessarily the other way around.
+    @attrs.frozen
+    class Host:
+        """Host settings."""
 
+        name: str
+        port: int = attrs.field(converter=int)
 
-@attrs.frozen
-class Settings:
-    """Main settings."""
+    @attrs.frozen
+    class Settings:
+        """Main settings."""
 
-    host: Host
-    url: str
-    default: int = 3
+        host: Host
+        url: str
+        default: int = 3
+
+except ImportError:
+    pass
 
 
 @pytest.fixture
