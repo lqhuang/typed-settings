@@ -1,6 +1,7 @@
 """
 Converters and structure hooks for various data types.
 """
+import dataclasses
 from datetime import datetime
 from enum import Enum
 from pathlib import Path
@@ -116,6 +117,7 @@ class TSConverter:
             FrozenSetHookFactory,
             UnionHookFactory,
             AttrsHookFactory,
+            DataclassesHookFactory,
         ]
 
     def structure(self, value: Any, cls: Type[T]) -> T:
@@ -243,6 +245,7 @@ def get_default_cattrs_converter(resolve_paths: bool = True) -> "cattrs.Converte
     converter = cattrs.Converter()
     register_mappingproxy_hook(converter)
     register_attrs_hook_factory(converter)
+    register_dataclasses_hook_factory(converter)
     register_strlist_hook(converter, ":")
     for t, h in get_default_structure_hooks(resolve_paths=resolve_paths):
         converter.register_structure_hook(t, h)  # type: ignore
@@ -294,6 +297,30 @@ def register_attrs_hook_factory(converter: "cattrs.Converter") -> None:
     import attrs
 
     converter.register_structure_hook_factory(attrs.has, allow_attrs_instances)
+
+
+def register_dataclasses_hook_factory(converter: "cattrs.Converter") -> None:
+    """
+    Register a hook factory that allows using instances of :mod:`dataclasses` classes
+    where :program:`cattrs` would normally expect a dictionary.
+
+    These instances are then returned as-is and without further processing.
+
+    Args:
+        converter: The :class:`cattrs.Converter` to register the hook at.
+    """
+
+    def allow_dataclasses_instances(typ):  # type: ignore[no-untyped-def]
+        def structure_dataclasses(val, _):  # type: ignore[no-untyped-def]
+            if isinstance(val, typ):
+                return val
+            return converter.structure_attrs_fromdict(val, typ)
+
+        return structure_dataclasses
+
+    converter.register_structure_hook_factory(
+        dataclasses.is_dataclass, allow_dataclasses_instances
+    )
 
 
 def register_mappingproxy_hook(converter: "cattrs.Converter") -> None:
@@ -618,6 +645,43 @@ class AttrsHookFactory:
                 )
 
             fields = attrs.fields_dict(cls)  # type: ignore[arg-type]
+            values = {
+                n: converter.structure(v, fields[n].type)  # type: ignore[arg-type]
+                for n, v in value.items()
+            }
+            return cls(**values)
+
+        return convert
+
+
+class DataclassesHookFactory:
+    """
+    A :class:`HookFactory` that returns :mod:`dataclasses` from dicts.  Instances
+    are of the given class are accepted as well and returned as-is (without further
+    processing of their attributes).
+    """
+
+    @staticmethod
+    def match(cls: type, origin: Optional[Any], args: Tuple[Any, ...]) -> bool:
+        return dataclasses.is_dataclass(cls)
+
+    @staticmethod
+    def get_structure_hook(
+        converter: Converter, cls: type, origin: Optional[Any], args: Tuple[Any, ...]
+    ) -> Callable[[Union[dict, T], Type[T]], T]:
+        def convert(value: Union[dict, T], cls: Type[T]) -> T:
+            if isinstance(value, cls):
+                return value
+
+            if not isinstance(value, dict):
+                raise TypeError(
+                    f'Invalid type "{type(value).__name__}"; expected '
+                    f'"{cls.__name__}" or "dict".'
+                )
+
+            fields = {
+                f.name: f for f in dataclasses.fields(cls)  # type: ignore[arg-type]
+            }
             values = {
                 n: converter.structure(v, fields[n].type)  # type: ignore[arg-type]
                 for n, v in value.items()

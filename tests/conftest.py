@@ -1,8 +1,9 @@
 """
 Shared fixtures for all tests.
 """
+import dataclasses
 import sys
-from typing import Any, Callable, Dict, Optional
+from typing import Any, Callable, Dict, Optional, Type
 
 import pytest
 
@@ -11,33 +12,27 @@ from typed_settings.cls_utils import deep_options
 from typed_settings.types import OptionList
 
 
-try:
-    # TODO: Use dataclasses here, once we support them
-    import attrs
+# Test with frozen settings.  If it works this way, it will also work with
+# mutable settings but not necessarily the other way around.
+@dataclasses.dataclass(frozen=True)
+class Host:
+    """Host settings."""
 
-    # Test with frozen settings.  If it works this way, it will also work with
-    # mutable settings but not necessarily the other way around.
-    @attrs.frozen
-    class Host:
-        """Host settings."""
+    name: str
+    port: int
 
-        name: str
-        port: int = attrs.field(converter=int)
 
-    @attrs.frozen
-    class Settings:
-        """Main settings."""
+@dataclasses.dataclass(frozen=True)
+class Settings:
+    """Main settings."""
 
-        host: Host
-        url: str
-        default: int = 3
-
-except ImportError:
-    pass
+    host: Host
+    url: str
+    default: int = 3
 
 
 @pytest.fixture
-def settings_cls() -> type:
+def settings_cls() -> Type[Settings]:
     """
     Return an example settings class.
     """
@@ -45,7 +40,7 @@ def settings_cls() -> type:
 
 
 @pytest.fixture
-def options(settings_cls: type) -> OptionList:
+def options(settings_cls: Type[Settings]) -> OptionList:
     """
     Return the option list for the example settings class.
     """

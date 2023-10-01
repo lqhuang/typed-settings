@@ -57,8 +57,29 @@ class AttrsCls:
     p: str = secret()
 
 
+@dataclasses.dataclass
+class ChildDc:
+    """A simple nested class."""
+
+    x: int
+    y: Path
+
+
+@dataclasses.dataclass(frozen=True)
+class ParentDc:
+    """A rather complex class with various scalar and composite attribute types."""
+
+    child: ChildDc
+    a: float
+    c: LeEnum
+    d: datetime
+    e: List[ChildDc]
+    f: Set[datetime]
+    b: float = dataclasses.field(default=3.14)
+
+
 @attrs.frozen
-class Child:
+class ChildAttrs:
     """A simple nested class."""
 
     x: int
@@ -66,15 +87,15 @@ class Child:
 
 
 @attrs.frozen(kw_only=True)
-class Parent:
+class ParentAttrs:
     """A rather complex class with various scalar and composite attribute types."""
 
-    child: Child
+    child: ChildAttrs
     a: float
     b: float = attrs.field(default=3.14, validator=attrs.validators.le(2))
     c: LeEnum
     d: datetime
-    e: List[Child]
+    e: List[ChildAttrs]
     f: Set[datetime]
 
 
@@ -273,8 +294,8 @@ SUPPORTED_TYPES_DATA += SUPPORTED_FROZENSET
 SUPPORTED_UNION: Example4T = [
     ("Optional(None)", None, None, Optional[str]),
     ("Optional(int)", 1, "1", Optional[str]),
-    ("attrs|None(None)", None, None, Optional[AttrsCls]),
-    ("attrs|None(dict)", {"u": "u", "p": "p"}, AttrsCls("u", "p"), Optional[AttrsCls]),
+    ("dc|None(None)", None, None, Optional[DataCls]),
+    ("dc|None(dict)", {"u": "u", "p": "p"}, DataCls("u", "p"), Optional[DataCls]),
     ("enum|None", "spam", LeEnum.spam, Optional[LeEnum]),
     # ("Union(None)", None, None, Union[None, S, List[str]]),
     # (
@@ -308,22 +329,54 @@ SUPPORTED_ATTRSCLASSES: Example4T = [
             "f": ["2023-05-04T13:37:42+00:00", "2023-05-04T13:37:42+00:00"],
             "child": {"x": 3, "y": "c"},
         },
-        Parent(
+        ParentAttrs(
             a=3.14,
             b=1,
             c=LeEnum.eggs,
             d=datetime(2023, 5, 4, 13, 37, 42, tzinfo=timezone.utc),
             e=[
-                Child(0, Path.cwd().joinpath("a")),
-                Child(1, Path.cwd().joinpath("b")),
+                ChildAttrs(0, Path.cwd().joinpath("a")),
+                ChildAttrs(1, Path.cwd().joinpath("b")),
             ],
             f={datetime(2023, 5, 4, 13, 37, 42, tzinfo=timezone.utc)},
-            child=Child(3, Path.cwd().joinpath("c")),
+            child=ChildAttrs(3, Path.cwd().joinpath("c")),
         ),
-        Parent,
+        ParentAttrs,
     ),
 ]
 SUPPORTED_TYPES_DATA += SUPPORTED_ATTRSCLASSES
+
+# dataclasses
+SUPPORTED_DATACLASSES: Example4T = [
+    ("dc(dict)", {"u": "user", "p": "pwd"}, DataCls("user", "pwd"), DataCls),
+    ("dc(inst)", DataCls("user", "pwd"), DataCls("user", "pwd"), DataCls),
+    (
+        "dc(nested)",
+        {
+            "a": "3.14",
+            "b": 1,
+            "c": "eggs",
+            "d": "2023-05-04T13:37:42+00:00",
+            "e": [{"x": 0, "y": "a"}, {"x": 1, "y": "b"}],
+            "f": ["2023-05-04T13:37:42+00:00", "2023-05-04T13:37:42+00:00"],
+            "child": {"x": 3, "y": "c"},
+        },
+        ParentDc(
+            a=3.14,
+            b=1,
+            c=LeEnum.eggs,
+            d=datetime(2023, 5, 4, 13, 37, 42, tzinfo=timezone.utc),
+            e=[
+                ChildDc(0, Path.cwd().joinpath("a")),
+                ChildDc(1, Path.cwd().joinpath("b")),
+            ],
+            f={datetime(2023, 5, 4, 13, 37, 42, tzinfo=timezone.utc)},
+            child=ChildDc(3, Path.cwd().joinpath("c")),
+        ),
+        ParentDc,
+    ),
+]
+SUPPORTED_TYPES_DATA += list(SUPPORTED_DATACLASSES)
 
 
 @pytest.mark.parametrize(

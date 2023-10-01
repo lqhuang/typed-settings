@@ -1,6 +1,7 @@
 """
 Tests for "typed_settings.loaders".
 """
+import dataclasses
 import textwrap
 from itertools import product
 from pathlib import Path
@@ -9,7 +10,6 @@ from typing import Any, Dict, List, Optional
 import pytest
 from pytest import MonkeyPatch
 
-from typed_settings.cls_attrs import settings
 from typed_settings.cls_utils import deep_options
 from typed_settings.exceptions import (
     ConfigFileLoadError,
@@ -30,8 +30,10 @@ from typed_settings.loaders import (
 )
 from typed_settings.types import LoadedSettings, LoaderMeta, OptionList, SettingsDict
 
+from . import conftest
 
-@settings(frozen=True)
+
+@dataclasses.dataclass(frozen=True)
 class Host:
     """Host settings."""
 
@@ -39,7 +41,7 @@ class Host:
     port: int
 
 
-@settings(frozen=True)
+@dataclasses.dataclass(frozen=True)
 class Settings:
     """Main settings."""
 
@@ -56,11 +58,11 @@ class TestCleanSettings:
         Dashes in settings and section names are replaced with underscores.
         """
 
-        @settings(frozen=True)
+        @dataclasses.dataclass(frozen=True)
         class Sub:
             b_1: str
 
-        @settings(frozen=True)
+        @dataclasses.dataclass(frozen=True)
         class Settings:
             a_1: str
             a_2: str
@@ -87,7 +89,7 @@ class TestCleanSettings:
         See: https://gitlab.com/sscherfke/typed-settings/-/issues/3
         """
 
-        @settings(frozen=True)
+        @dataclasses.dataclass(frozen=True)
         class Settings:
             option_1: Dict[str, Any]
             option_2: Dict[str, Any]
@@ -121,11 +123,11 @@ class TestCleanSettings:
         Cleaning must also work if an options type is an unresolved string.
         """
 
-        @settings(frozen=True)
+        @dataclasses.dataclass(frozen=True)
         class Host:
             port: int
 
-        @settings(frozen=True)
+        @dataclasses.dataclass(frozen=True)
         class Settings:
             host: "Host"
 
@@ -140,7 +142,7 @@ class TestCleanSettings:
         check theses as option paths.
         """
 
-        @settings(frozen=True)
+        @dataclasses.dataclass(frozen=True)
         class Settings:
             option: Dict[str, Any]
 
@@ -435,7 +437,7 @@ class TestFileLoader:
         """
         )
 
-        @settings(frozen=True)
+        @dataclasses.dataclass(frozen=True)
         class Settings:
             le_option: str = ""
 
@@ -460,7 +462,7 @@ class TestFileLoader:
         """
         )
 
-        @settings(frozen=True)
+        @dataclasses.dataclass(frozen=True)
         class Settings:
             le_option: str = ""
 
@@ -497,7 +499,7 @@ class TestFileLoader:
         """
         )
 
-        @settings(frozen=True)
+        @dataclasses.dataclass(frozen=True)
         class Settings:
             le_spam: str = ""
             le_eggs: str = ""
@@ -598,7 +600,7 @@ class TestInstanceLoader:
         # "Host" has the same attributes as the "Host" from conftest.py,
         # so it works (but only b/c it is a nested attribute and mypy doesn't
         # know what we are doing 🙈)
-        inst = settings_cls(Host("spam", 42), "eggs", 23)
+        inst = conftest.Settings(conftest.Host("spam", 42), "eggs", 23)
         loader = InstanceLoader(inst)
         results = loader(settings_cls, options)
         assert results == LoadedSettings(
@@ -630,7 +632,7 @@ class TestOnePasswordLoader:
         Settings can be loaded from 1Password.
         """
 
-        @settings(frozen=True)
+        @dataclasses.dataclass(frozen=True)
         class Settings:
             username: str
             password: str

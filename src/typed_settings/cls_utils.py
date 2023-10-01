@@ -7,10 +7,12 @@ Supported backends are:
 - `attrs <https://attrs.org>`_ (optional dependency)
 - `pydantic <https://docs.pydantic.dev>`_ (optional dependency)
 """
+import dataclasses
 from itertools import groupby
-from typing import Any, Dict, List, Protocol, Tuple, Type, cast
+from typing import Any, Dict, List, Optional, Protocol, Tuple, Type, cast
 
 from . import types
+from ._compat import PY_39
 
 
 class ClsHandler(Protocol):
@@ -124,15 +126,124 @@ class Attrs:
         return attrs.asdict(inst)
 
 
-# def is_dataclass(cls: type) -> bool:
-#     """
-#     adsf.
-#     """
-#     return dataclasses.is_dataclass(cls)
+class Dataclasses:
+    """
+    Handler for :mod:`dataclasses` classes.
+    """
+
+    @staticmethod
+    def check(cls: type) -> bool:
+        return dataclasses.is_dataclass(cls)
+
+    @classmethod
+    def iter_fields(self, cls: type) -> types.OptionList:
+        cls = self.resolve_types(cls)  # type: ignore[type-var]
+        result: List[types.OptionInfo] = []
+
+        def iter_attribs(r_cls: type, prefix: str) -> None:
+            for field in dataclasses.fields(r_cls):
+                if field.init is False:
+                    continue
+                if field.type is not None and dataclasses.is_dataclass(field.type):
+                    iter_attribs(field.type, f"{prefix}{field.name}.")
+                else:
+                    is_nothing = field.default is dataclasses.MISSING
+                    is_factory = (
+                        is_nothing and field.default_factory is not dataclasses.MISSING
+                    )
+                    oinfo = types.OptionInfo(
+                        parent_cls=r_cls,
+                        path=f"{prefix}{field.name}",
+                        cls=field.type,
+                        is_secret=(
+                            isinstance(field.repr, types.SecretRepr)
+                            or (
+                                isinstance(field.type, type)
+                                and issubclass(field.type, types.SECRETS_TYPES)
+                            )
+                        ),
+                        default=field.default,
+                        has_no_default=is_nothing,
+                        default_is_factory=is_factory,
+                        converter=None,
+                        metadata=field.metadata.get(types.METADATA_KEY, {}),
+                    )
+                    result.append(oinfo)
+
+        iter_attribs(cls, "")
+        return tuple(result)
+
+    @staticmethod
+    def fields_to_parent_classes(cls: type) -> Dict[str, type]:
+        return {
+            field.name: (field.type if dataclasses.is_dataclass(field.type) else cls)
+            for field in dataclasses.fields(cls)
+        }
+
+    @staticmethod
+    def asdict(inst: Any) -> types.SettingsDict:
+        return dataclasses.asdict(inst)
+
+    @staticmethod
+    def resolve_types(
+        cls: Type[types.T],
+        globalns: Optional[Dict[str, Any]] = None,
+        localns: Optional[Dict[str, Any]] = None,
+        include_extras: bool = True,
+    ) -> Type[types.T]:
+        """
+        Resolve any strings and forward annotations in type annotations.
+
+        This is only required if you need concrete types in fields' *type* field. In
+        other words, you don't need to resolve your types if you only use them for
+        static type checking.
+
+        With no arguments, names will be looked up in the module in which the class was
+        created. If this is not what you want, e.g. if the name only exists inside
+        a method, you may pass *globalns* or *localns* to specify other dictionaries in
+        which to look up these names. See the docs of `typing.get_type_hints` for more
+        details.
+
+        Args:
+            cls: Class to resolve.
+            globalns: Dictionary containing global variables.
+            localns: Dictionary containing local variables.
+            include_extras: Resolve more accurately, if possible.
+                Pass ``include_extras`` to ``typing.get_hints``, if supported by the
+                typing module. On supported Python versions (3.9+), this resolves the
+                types more accurately.
+
+        Return:
+            *cls* so you can use this function also as a class decorator.
+            Please note that you have to apply it **after** `attrs.define`. That
+            means the decorator has to come in the line **before** `attrs.define`.
+        """
+        # Since calling get_type_hints is expensive we cache whether we've
+        # done it already.
+        if getattr(cls, "__dataclass_types_resolved__", None) != cls:
+            import typing
+
+            kwargs: Dict[str, Any] = {"globalns": globalns, "localns": localns}
+
+            if PY_39:
+                kwargs["include_extras"] = include_extras
+
+            hints = typing.get_type_hints(cls, **kwargs)
+            for field in dataclasses.fields(cls):  # type: ignore[arg-type]
+                if field.name in hints:
+                    # Since fields have been frozen we must work around it.
+                    object.__setattr__(field, "type", hints[field.name])
+            # We store the class we resolved so that subclasses know they haven't
+            # been resolved.
+            cls.__dataclass_types_resolved__ = cls  # type: ignore[attr-defined]
+
+        # Return the class so you can use it as a decorator too.
+        return cls
 
 
 CLASS_HANDLERS: List[Type[ClsHandler]] = [
     Attrs,
+    Dataclasses,
 ]
 
 
@@ -153,7 +264,7 @@ def find_handler(cls: type) -> Type[ClsHandler]:
         if cls_handler.check(cls):
             return cls_handler
 
-    raise TypeError(f"Cannot handle type: {type(cls)}")
+    raise TypeError(f"Cannot handle type: {cls}")
 
 
 def deep_options(cls: type) -> types.OptionList:
