@@ -59,6 +59,27 @@ except ImportError:
     # "attrs" is not available in the nox session "test_no_optionals"
     pass
 
+try:
+    import pydantic
+
+    class HostPydantic(pydantic.BaseModel):
+        """Host settings."""
+
+        name: str
+        port: int
+
+    class SettingsPydantic(pydantic.BaseModel):
+        """Main settings."""
+
+        host: HostPydantic
+        url: str
+        default: int = 3
+
+    SETTINGS_CLASSES["pydantic"] = (SettingsPydantic, HostPydantic)
+except ImportError:
+    # "pydantic" is not available in the nox session "test_no_optionals"
+    pass
+
 
 @pytest.fixture(params=list(SETTINGS_CLASSES))
 def settings_clss(request: pytest.FixtureRequest) -> SettingsClasses:

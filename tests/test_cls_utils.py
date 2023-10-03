@@ -5,6 +5,7 @@ import dataclasses
 from typing import Callable, Optional
 
 import attrs
+import pydantic
 import pytest
 
 from typed_settings import cls_utils, types
@@ -562,6 +563,165 @@ class TestDataclasses:
             d: int
 
         result = cls_utils.Dataclasses.fields_to_parent_classes(Parent)
+        assert result == {
+            "a": Parent,
+            "b": Child1,
+            "c": Child2,
+            "d": Parent,
+        }
+
+
+class TestPydantic:
+    """Tests for Pydantic classes."""
+
+    def test_check_true(self) -> None:
+        """
+        "check()" detects dataclasses.
+        """
+
+        class C(pydantic.BaseModel):
+            x: int
+
+        assert cls_utils.Pydantic.check(C)
+
+    def test_check_false(self) -> None:
+        """
+        "check()" only detects dataclasses.
+        """
+
+        class C:
+            x: int
+
+        assert not cls_utils.Pydantic.check(C)
+
+    def test_check_not_installed(self, unimport: Callable[[str], None]) -> None:
+        """
+        "check()" returns ``False`` if Pydantic is not installed.
+        """
+
+        class C(pydantic.BaseModel):
+            x: int
+
+        unimport("pydantic")
+
+        assert not cls_utils.Pydantic.check(C)
+
+    def test_iter_fields(self) -> None:
+        """
+        "iter_fields()" yields an option info for all options, including nested
+        classes.
+        """
+        from pydantic_core._pydantic_core import PydanticUndefined
+
+        class GrandChild(pydantic.BaseModel):
+            x: Optional[int] = None
+
+        class Child(pydantic.BaseModel):
+            x: "float"  # Test resolving types
+            y: GrandChild
+
+        class Parent(pydantic.BaseModel):
+            x: str
+            y: Child
+            z: str = "default"
+
+        option_infos = cls_utils.Pydantic.iter_fields(Parent)
+        assert option_infos == (
+            types.OptionInfo(
+                parent_cls=Parent,
+                path="x",
+                cls=str,
+                default=PydanticUndefined,
+                has_no_default=True,
+                default_is_factory=False,
+            ),
+            types.OptionInfo(
+                parent_cls=Child,
+                path="y.x",
+                cls=float,
+                default=PydanticUndefined,
+                has_no_default=True,
+                default_is_factory=False,
+            ),
+            types.OptionInfo(
+                parent_cls=GrandChild,
+                path="y.y.x",
+                cls=Optional[int],  # type: ignore[arg-type]
+                default=None,
+                has_no_default=False,
+                default_is_factory=False,
+            ),
+            types.OptionInfo(
+                parent_cls=Parent,
+                path="z",
+                cls=str,
+                default="default",
+                has_no_default=False,
+                default_is_factory=False,
+            ),
+        )
+
+    @pytest.mark.skip(reason="Types are not resolved for Pydantic")
+    def test_unresolved_types(self) -> None:  # pragma: no cover
+        """Raise a NameError when types cannot be resolved."""
+
+        class C(pydantic.BaseModel):
+            name: str
+            x: "X"  # type: ignore  # noqa: F821
+
+        with pytest.raises(NameError, match="name 'X' is not defined"):
+            cls_utils.Pydantic.iter_fields(C)
+
+    @pytest.mark.skip(reason="RecursionError")
+    def test_direct_recursion(self) -> None:  # pragma: no cover
+        """
+        We do not (and cannot easily) detect recursion.  A NameError is already
+        raised when we try to resolve all types.  This is good enough.
+        """
+
+        class Node(pydantic.BaseModel):
+            name: str
+            child: "Node"
+
+        with pytest.raises(NameError, match="name 'Node' is not defined"):
+            cls_utils.Pydantic.iter_fields(Node)
+
+    @pytest.mark.skip(reason="RecursionError")
+    def test_indirect_recursion(self) -> None:  # pragma: no cover
+        """
+        We cannot (easily) detect indirect recursion but it is an error
+        nonetheless.  This is not Dark!
+        """
+
+        class Child(pydantic.BaseModel):
+            name: str
+            parent: "Parent"
+
+        class Parent(pydantic.BaseModel):
+            name: str
+            child: "Child"
+
+        with pytest.raises(NameError, match="name 'Child' is not defined"):
+            cls_utils.Pydantic.iter_fields(Parent)
+
+    def test_fields_to_parent_classes(self) -> None:
+        """
+        If there are only scalar settings, create s single group.
+        """
+
+        class Child1(pydantic.BaseModel):
+            x: int
+
+        class Child2(pydantic.BaseModel):
+            x: float
+
+        class Parent(pydantic.BaseModel):
+            a: str
+            b: Child1
+            c: Child2
+            d: int
+
+        result = cls_utils.Pydantic.fields_to_parent_classes(Parent)
         assert result == {
             "a": Parent,
             "b": Child1,

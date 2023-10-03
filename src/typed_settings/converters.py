@@ -118,6 +118,7 @@ class TSConverter:
             UnionHookFactory,
             AttrsHookFactory,
             DataclassesHookFactory,
+            PydanticHookFactory,
         ]
 
     def structure(self, value: Any, cls: Type[T]) -> T:
@@ -246,6 +247,7 @@ def get_default_cattrs_converter(resolve_paths: bool = True) -> "cattrs.Converte
     register_mappingproxy_hook(converter)
     register_attrs_hook_factory(converter)
     register_dataclasses_hook_factory(converter)
+    register_pydantic_hook_factory(converter)
     register_strlist_hook(converter, ":")
     for t, h in get_default_structure_hooks(resolve_paths=resolve_paths):
         converter.register_structure_hook(t, h)  # type: ignore
@@ -321,6 +323,35 @@ def register_dataclasses_hook_factory(converter: "cattrs.Converter") -> None:
     converter.register_structure_hook_factory(
         dataclasses.is_dataclass, allow_dataclasses_instances
     )
+
+
+def register_pydantic_hook_factory(converter: "cattrs.Converter") -> None:
+    """
+    Register a hook factory that allows using instances of :mod:`dataclasses` classes
+    where :program:`cattrs` would normally expect a dictionary.
+
+    These instances are then returned as-is and without further processing.
+
+    Args:
+        converter: The :class:`cattrs.Converter` to register the hook at.
+    """
+    try:
+        import pydantic
+    except ImportError:  # pragma: no cover
+        return
+
+    def check(typ: type) -> bool:
+        return issubclass(typ, pydantic.BaseModel)
+
+    def to_pydantic(typ):  # type: ignore[no-untyped-def]
+        def structure_dataclasses(val, _):  # type: ignore[no-untyped-def]
+            if isinstance(val, typ):
+                return val
+            return typ(**val)
+
+        return structure_dataclasses
+
+    converter.register_structure_hook_factory(check, to_pydantic)
 
 
 def register_mappingproxy_hook(converter: "cattrs.Converter") -> None:
@@ -687,6 +718,40 @@ class DataclassesHookFactory:
                 for n, v in value.items()
             }
             return cls(**values)
+
+        return convert
+
+
+class PydanticHookFactory:
+    """
+    A :class:`HookFactory` that returns :mod:`dataclasses` from dicts.  Instances
+    are of the given class are accepted as well and returned as-is (without further
+    processing of their attributes).
+    """
+
+    @staticmethod
+    def match(cls: type, origin: Optional[Any], args: Tuple[Any, ...]) -> bool:
+        try:
+            import pydantic
+        except ImportError:
+            return False
+        return issubclass(cls, pydantic.BaseModel)
+
+    @staticmethod
+    def get_structure_hook(
+        converter: Converter, cls: type, origin: Optional[Any], args: Tuple[Any, ...]
+    ) -> Callable[[Union[dict, T], Type[T]], T]:
+        def convert(value: Union[dict, T], cls: Type[T]) -> T:
+            if isinstance(value, cls):
+                return value
+
+            if not isinstance(value, dict):
+                raise TypeError(
+                    f'Invalid type "{type(value).__name__}"; expected '
+                    f'"{cls.__name__}" or "dict".'
+                )
+
+            return cls(**value)
 
         return convert
 

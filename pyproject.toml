@@ -58,8 +58,11 @@ option-groups = [
 jinja = [
     "jinja2",
 ]
+pydantic = [
+    "pydantic>=2",
+]
 all = [  # All features
-    "typed-settings[attrs,cattrs,click,option-groups,jinja]",
+    "typed-settings[attrs,cattrs,click,option-groups,jinja,pydantic]",
 ]
 docs = [
     "typed-settings[all]",

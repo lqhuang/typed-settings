@@ -22,6 +22,7 @@ from typing import (
 
 import attrs
 import cattrs
+import pydantic
 import pytest
 
 from typed_settings import converters
@@ -43,7 +44,7 @@ class LeEnum(Enum):
 
 @dataclasses.dataclass
 class DataCls:
-    """A base "dataclass" for testing."""
+    """A basic "dataclass" for testing."""
 
     u: str
     p: str
@@ -51,10 +52,17 @@ class DataCls:
 
 @settings
 class AttrsCls:
-    """A base "attrs" class for testing."""
+    """A basic "attrs" class for testing."""
 
     u: str = option()
     p: str = secret()
+
+
+class PydanticCls(pydantic.BaseModel):
+    """A basic Pydantic class."""
+
+    u: str
+    p: str
 
 
 @dataclasses.dataclass
@@ -96,6 +104,25 @@ class ParentAttrs:
     c: LeEnum
     d: datetime
     e: List[ChildAttrs]
+    f: Set[datetime]
+
+
+class ChildPydantic(pydantic.BaseModel):
+    """A simple nested class."""
+
+    x: int
+    y: Path
+
+
+class ParentPydantic(pydantic.BaseModel):
+    """A rather complex class with various scalar and composite attribute types."""
+
+    child: ChildPydantic
+    a: float
+    b: float = pydantic.Field(default=3.14, le=2)
+    c: LeEnum
+    d: datetime
+    e: List[ChildPydantic]
     f: Set[datetime]
 
 
@@ -378,6 +405,48 @@ SUPPORTED_DATACLASSES: Example4T = [
 ]
 SUPPORTED_TYPES_DATA += list(SUPPORTED_DATACLASSES)
 
+# Pydantic classes
+SUPPORTED_PYDANTIC: Example4T = [
+    (
+        "pydantic(dict)",
+        {"u": "user", "p": "pwd"},
+        PydanticCls(u="user", p="pwd"),
+        PydanticCls,
+    ),
+    (
+        "pydantic(inst)",
+        PydanticCls(u="user", p="pwd"),
+        PydanticCls(u="user", p="pwd"),
+        PydanticCls,
+    ),
+    (
+        "pydantic(nested)",
+        {
+            "a": "3.14",
+            "b": 1,
+            "c": "Le Eggs",
+            "d": "2023-05-04T13:37:42+00:00",
+            "e": [{"x": 0, "y": "a"}, {"x": 1, "y": "b"}],
+            "f": ["2023-05-04T13:37:42+00:00", "2023-05-04T13:37:42+00:00"],
+            "child": {"x": 3, "y": "c"},
+        },
+        ParentPydantic(
+            a=3.14,
+            b=1,
+            c=LeEnum.eggs,
+            d=datetime(2023, 5, 4, 13, 37, 42, tzinfo=timezone.utc),
+            e=[
+                ChildPydantic(x=0, y=Path("a")),
+                ChildPydantic(x=1, y=Path("b")),
+            ],
+            f={datetime(2023, 5, 4, 13, 37, 42, tzinfo=timezone.utc)},
+            child=ChildPydantic(x=3, y=Path("c")),
+        ),
+        ParentPydantic,
+    ),
+]
+SUPPORTED_TYPES_DATA += list(SUPPORTED_PYDANTIC)
+
 
 @pytest.mark.parametrize(
     "converter",
@@ -448,6 +517,8 @@ def test_resolve_path(
         (AttrsCls, {"opt", "x"}),  # Invalid value
         (DataCls, {"foo": 3}),  # Invalid attribute
         (DataCls, {"opt", "x"}),  # Invalid value
+        (PydanticCls, {"foo": 3}),  # Invalid attribute
+        (PydanticCls, {"opt", "x"}),  # Invalid value
     ],
 )
 def test_unsupported_values(value: Any, cls: type) -> None:

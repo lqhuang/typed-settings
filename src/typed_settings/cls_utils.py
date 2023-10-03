@@ -241,9 +241,87 @@ class Dataclasses:
         return cls
 
 
+class Pydantic:
+    """
+    Handler for "Pydantic" classes.
+    """
+
+    @staticmethod
+    def check(cls: type) -> bool:
+        try:
+            import pydantic
+
+            return issubclass(cls, pydantic.BaseModel)
+        except ImportError:
+            return False
+
+    @staticmethod
+    def iter_fields(cls: type) -> types.OptionList:
+        import pydantic
+
+        result: List[types.OptionInfo] = []
+
+        def iter_attribs(r_cls: type, prefix: str) -> None:
+            for name, field in r_cls.model_fields.items():  # type: ignore[attr-defined]
+                if (
+                    field.annotation is not None
+                    and isinstance(field.annotation, type)
+                    and issubclass(field.annotation, pydantic.BaseModel)
+                ):
+                    iter_attribs(field.annotation, f"{prefix}{name}.")
+                else:
+                    json_schema_extra = field.json_schema_extra or {}
+                    metadata = json_schema_extra.get("metadata", {})
+                    oinfo = types.OptionInfo(
+                        parent_cls=r_cls,
+                        path=f"{prefix}{name}",
+                        cls=field.annotation,  # type: ignore[arg-type]
+                        is_secret=(
+                            isinstance(field.annotation, type)
+                            and (
+                                issubclass(
+                                    field.annotation,
+                                    (
+                                        pydantic.SecretBytes,
+                                        pydantic.SecretStr,
+                                        *types.SECRETS_TYPES,
+                                    ),
+                                )
+                            )
+                        ),
+                        default=field.default,
+                        has_no_default=field.is_required(),
+                        default_is_factory=False,
+                        converter=None,
+                        metadata=metadata.get(types.METADATA_KEY, {}),
+                    )
+                    result.append(oinfo)
+
+        iter_attribs(cls, "")
+        return tuple(result)
+
+    @staticmethod
+    def fields_to_parent_classes(cls: type) -> Dict[str, type]:
+        import pydantic
+
+        return {
+            name: (
+                field.annotation
+                if issubclass(field.annotation, pydantic.BaseModel)
+                else cls
+            )
+            for name, field in cls.model_fields.items()  # type: ignore[attr-defined]
+        }
+
+    @staticmethod
+    def asdict(inst: Any) -> types.SettingsDict:
+        return inst.dict()
+
+
 CLASS_HANDLERS: List[Type[ClsHandler]] = [
     Attrs,
     Dataclasses,
+    Pydantic,
 ]
 
 
