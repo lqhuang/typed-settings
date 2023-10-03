@@ -1,12 +1,13 @@
 """
 Tests for "typed_settings.cls_utils".
 """
-from typing import Callable
+import dataclasses
+from typing import Callable, Optional
 
 import attrs
 import pytest
 
-from typed_settings import cls_utils, option, settings, types
+from typed_settings import cls_utils, types
 
 
 @attrs.define
@@ -211,7 +212,7 @@ class TestAttrs:
 
     def test_check_false(self) -> None:
         """
-        "check()" detects "attrs" classes.
+        "check()" only detects "attrs" classes.
         """
 
         class C:
@@ -238,20 +239,23 @@ class TestAttrs:
         classes.
         """
 
+        def factory_fn() -> Optional[int]:
+            return None  # pragma: no cover
+
         @attrs.define
         class GrandChild:
-            x: int
+            x: Optional[int] = attrs.field(factory=factory_fn)
 
         @attrs.define
         class Child:
-            x: float
+            x: "float"  # Test resolving types
             y: GrandChild
 
         @attrs.define
         class Parent:
             x: str
             y: Child
-            z: str
+            z: str = "default"
 
         option_infos = cls_utils.Attrs.iter_fields(Parent)
         assert option_infos == (
@@ -274,17 +278,17 @@ class TestAttrs:
             types.OptionInfo(
                 parent_cls=GrandChild,
                 path="y.y.x",
-                cls=int,
-                default=attrs.NOTHING,
-                has_no_default=True,
-                default_is_factory=False,
+                cls=Optional[int],  # type: ignore[arg-type]
+                default=attrs.Factory(factory_fn),
+                has_no_default=False,
+                default_is_factory=True,
             ),
             types.OptionInfo(
                 parent_cls=Parent,
                 path="z",
                 cls=str,
-                default=attrs.NOTHING,
-                has_no_default=True,
+                default="default",
+                has_no_default=False,
                 default_is_factory=False,
             ),
         )
@@ -338,20 +342,20 @@ class TestAttrs:
         No option is generated for an attribute if "init=False".
         """
 
-        @settings
+        @attrs.frozen
         class Nested1:
             a: int = 0
-            nb1: int = option(init=False)
+            nb1: int = attrs.field(init=False)
 
-        @settings
+        @attrs.frozen
         class Nested2:
             a: int = 0
-            nb2: int = option(init=False)
+            nb2: int = attrs.field(init=False)
 
-        @settings
+        @attrs.frozen
         class Settings:
             a: int = 0
-            na: int = option(init=False)
+            na: int = attrs.field(init=False)
             n1: Nested1 = Nested1()
             n2: Nested2 = Nested2()
 
@@ -379,6 +383,185 @@ class TestAttrs:
             d: int
 
         result = cls_utils.Attrs.fields_to_parent_classes(Parent)
+        assert result == {
+            "a": Parent,
+            "b": Child1,
+            "c": Child2,
+            "d": Parent,
+        }
+
+
+class TestDataclasses:
+    """Tests for dataclasses."""
+
+    def test_check_true(self) -> None:
+        """
+        "check()" detects dataclasses.
+        """
+
+        @dataclasses.dataclass
+        class C:
+            x: int
+
+        assert cls_utils.Dataclasses.check(C)
+
+    def test_check_false(self) -> None:
+        """
+        "check()" only detects dataclasses.
+        """
+
+        class C:
+            x: int
+
+        assert not cls_utils.Dataclasses.check(C)
+
+    def test_iter_fields(self) -> None:
+        """
+        "iter_fields()" yields an option info for all options, including nested
+        classes.
+        """
+
+        @dataclasses.dataclass
+        class GrandChild:
+            x: Optional[int] = None
+
+        @dataclasses.dataclass
+        class Child:
+            x: "float"  # Test resolving types
+            y: GrandChild
+
+        @dataclasses.dataclass
+        class Parent:
+            x: str
+            y: Child
+            z: str = "default"
+
+        option_infos = cls_utils.Dataclasses.iter_fields(Parent)
+        assert option_infos == (
+            types.OptionInfo(
+                parent_cls=Parent,
+                path="x",
+                cls=str,
+                default=dataclasses.MISSING,
+                has_no_default=True,
+                default_is_factory=False,
+            ),
+            types.OptionInfo(
+                parent_cls=Child,
+                path="y.x",
+                cls=float,
+                default=dataclasses.MISSING,
+                has_no_default=True,
+                default_is_factory=False,
+            ),
+            types.OptionInfo(
+                parent_cls=GrandChild,
+                path="y.y.x",
+                cls=Optional[int],  # type: ignore[arg-type]
+                default=None,
+                has_no_default=False,
+                default_is_factory=False,
+            ),
+            types.OptionInfo(
+                parent_cls=Parent,
+                path="z",
+                cls=str,
+                default="default",
+                has_no_default=False,
+                default_is_factory=False,
+            ),
+        )
+
+    def test_unresolved_types(self) -> None:
+        """Raise a NameError when types cannot be resolved."""
+
+        @dataclasses.dataclass
+        class C:
+            name: str
+            x: "X"  # type: ignore  # noqa: F821
+
+        with pytest.raises(NameError, match="name 'X' is not defined"):
+            cls_utils.Dataclasses.iter_fields(C)
+
+    def test_direct_recursion(self) -> None:
+        """
+        We do not (and cannot easily) detect recursion.  A NameError is already
+        raised when we try to resolve all types.  This is good enough.
+        """
+
+        @dataclasses.dataclass
+        class Node:
+            name: str
+            child: "Node"
+
+        with pytest.raises(NameError, match="name 'Node' is not defined"):
+            cls_utils.Dataclasses.iter_fields(Node)
+
+    def test_indirect_recursion(self) -> None:
+        """
+        We cannot (easily) detect indirect recursion but it is an error
+        nonetheless.  This is not Dark!
+        """
+
+        @dataclasses.dataclass
+        class Child:
+            name: str
+            parent: "Parent"
+
+        @dataclasses.dataclass
+        class Parent:
+            name: str
+            child: "Child"
+
+        with pytest.raises(NameError, match="name 'Child' is not defined"):
+            cls_utils.Dataclasses.iter_fields(Parent)
+
+    def test_no_init_no_option(self) -> None:
+        """
+        No option is generated for an attribute if "init=False".
+        """
+
+        @dataclasses.dataclass(frozen=True)
+        class Nested1:
+            a: int = 0
+            nb1: int = dataclasses.field(default=0, init=False)
+
+        @dataclasses.dataclass(frozen=True)
+        class Nested2:
+            a: int = 0
+            nb2: int = dataclasses.field(default=0, init=False)
+
+        @dataclasses.dataclass
+        class Settings:
+            a: int = 0
+            na: int = dataclasses.field(init=False)
+            n1: Nested1 = Nested1()  # noqa: RUF009
+            n2: Nested2 = Nested2()  # noqa: RUF009
+
+        options = [o.path for o in cls_utils.Dataclasses.iter_fields(Settings)]
+        assert options == ["a", "n1.a", "n2.a"]
+
+    def test_fields_to_parent_classes(self) -> None:
+        """
+        If there are only scalar settings, create s single group.
+        """
+
+        @dataclasses.dataclass
+        class Child1:
+            x: int
+
+        @dataclasses.dataclass
+        class Child2:
+            x: float
+
+        @dataclasses.dataclass
+        class Parent:
+            a: str
+            b: Child1
+            c: Child2
+            d: int
+
+        result = cls_utils.Dataclasses.fields_to_parent_classes(Parent)
         assert result == {
             "a": Parent,
             "b": Child1,

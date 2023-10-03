@@ -446,6 +446,8 @@ def test_resolve_path(
         (Sequence, [0, 1]),  # Type not supported
         (AttrsCls, {"foo": 3}),  # Invalid attribute
         (AttrsCls, {"opt", "x"}),  # Invalid value
+        (DataCls, {"foo": 3}),  # Invalid attribute
+        (DataCls, {"opt", "x"}),  # Invalid value
     ],
 )
 def test_unsupported_values(value: Any, cls: type) -> None:
@@ -476,23 +478,26 @@ if PY_39:
     )
 
 
+@pytest.mark.parametrize("cls_decorator", [attrs.frozen, dataclasses.dataclass])
 @pytest.mark.parametrize(
     "input, kw", [("1:2:3", {"sep": ":"}), ("[1,2,3]", {"fn": json.loads})]
 )
 @pytest.mark.parametrize("typ, expected", STRLIST_TEST_DATA)
-def test_cattrs_strlist_hook(input: str, kw: dict, typ: type, expected: Any) -> None:
+def test_cattrs_strlist_hook(
+    cls_decorator: Callable, input: str, kw: dict, typ: type, expected: Any
+) -> None:
     """
     The strlist hook for can be configured with a separator string or a function.
     """
 
-    @attrs.frozen
+    @cls_decorator
     class Settings:
         a: typ  # type: ignore
 
     converter = converters.get_default_cattrs_converter()
     converters.register_strlist_hook(converter, **kw)
     result = converter.structure({"a": input}, Settings)
-    assert result == Settings(expected)
+    assert result == Settings(expected)  # type: ignore[call-arg]
 
 
 def test_cattrs_strlist_hook_either_arg() -> None:
@@ -506,25 +511,30 @@ def test_cattrs_strlist_hook_either_arg() -> None:
         )  # pragma: no cover
 
 
+@pytest.mark.parametrize("cls_decorator", [attrs.frozen, dataclasses.dataclass])
 @pytest.mark.parametrize(
     "input, sep", [("1:2:3", ":"), ("[1,2,3]", json.loads), ("123", None)]
 )
 @pytest.mark.parametrize("typ, expected", STRLIST_TEST_DATA)
 def test_ts_strlist_hook(
-    input: str, sep: Union[str, Callable], typ: type, expected: Any
+    cls_decorator: Callable,
+    input: str,
+    sep: Union[str, Callable],
+    typ: type,
+    expected: Any,
 ) -> None:
     """
     The TSConverter has a builtin strlist hook that takes a separator string or a
     function.  It can be disabled with ``None``.
     """
 
-    @attrs.frozen
+    @cls_decorator
     class Settings:
         a: typ  # type: ignore
 
     converter = converters.TSConverter(strlist_sep=sep)
     result = converter.structure({"a": input}, Settings)
-    assert result == Settings(expected)
+    assert result == Settings(expected)  # type: ignore[call-arg]
 
 
 def test_get_default_converter_cattrs_installed() -> None:

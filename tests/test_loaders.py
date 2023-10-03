@@ -5,8 +5,9 @@ import dataclasses
 import textwrap
 from itertools import product
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Union
 
+import attrs
 import pytest
 from pytest import MonkeyPatch
 
@@ -30,24 +31,7 @@ from typed_settings.loaders import (
 )
 from typed_settings.types import LoadedSettings, LoaderMeta, OptionList, SettingsDict
 
-from . import conftest
-
-
-@dataclasses.dataclass(frozen=True)
-class Host:
-    """Host settings."""
-
-    name: str
-    port: int
-
-
-@dataclasses.dataclass(frozen=True)
-class Settings:
-    """Main settings."""
-
-    host: Host
-    url: str
-    default: int = 3
+from .conftest import Host, Settings, SettingsClasses
 
 
 class TestCleanSettings:
@@ -117,24 +101,6 @@ class TestCleanSettings:
         with pytest.raises(InvalidOptionsError) as exc_info:
             clean_settings(s, deep_options(Settings), "t")
         assert str(exc_info.value) == ("Invalid options found in t: host.eggs, spam")
-
-    def test_clean_settings_unresolved_type(self) -> None:
-        """
-        Cleaning must also work if an options type is an unresolved string.
-        """
-
-        @dataclasses.dataclass(frozen=True)
-        class Host:
-            port: int
-
-        @dataclasses.dataclass(frozen=True)
-        class Settings:
-            host: "Host"
-
-        s: SettingsDict = {"host": {"port": 23, "eggs": 42}}
-        with pytest.raises(InvalidOptionsError) as exc_info:
-            clean_settings(s, deep_options(Settings), "t")
-        assert str(exc_info.value) == "Invalid options found in t: host.eggs"
 
     def test_clean_settings_dict_values(self) -> None:
         """
@@ -523,22 +489,21 @@ class TestFileLoader:
     )
     def test_mandatory_files(
         self,
-        is_mandatory,
-        is_path,
-        in_env,
-        exists,
-        tmp_path,
-        settings_cls: type,
-        monkeypatch,
+        is_mandatory: bool,
+        is_path: bool,
+        in_env: bool,
+        exists: bool,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
     ) -> None:
         """
         Paths with a "!" are mandatory and an error is raised if they don't
         exist.
         """
-        p = tmp_path.joinpath("s.toml")
+        path = tmp_path.joinpath("s.toml")
         if exists:
-            p.touch()
-        p = f"!{p}" if is_mandatory else str(p)
+            path.touch()
+        p: Union[Path, str] = f"!{path}" if is_mandatory else str(path)
         if is_path:
             p = Path(p)
         files = []
@@ -549,17 +514,15 @@ class TestFileLoader:
 
         loader = FileLoader({"*": TomlFormat("test")}, files, "TEST_SETTINGS")
         if is_mandatory and not exists:
-            pytest.raises(FileNotFoundError, loader, settings_cls, [])
+            pytest.raises(FileNotFoundError, loader, Settings, [])
         else:
-            loader(settings_cls, ())
+            loader(Settings, ())
 
 
 class TestEnvLoader:
     """Tests for EnvLoader."""
 
-    def test_from_env(
-        self, settings_cls: type, options: OptionList, monkeypatch: MonkeyPatch
-    ) -> None:
+    def test_from_env(self, monkeypatch: MonkeyPatch) -> None:
         """
         Load options from env vars, ignore env vars for which no settings
         exist.
@@ -568,22 +531,20 @@ class TestEnvLoader:
         monkeypatch.setenv("T_HOST", "spam")  # Haha! Just a deceit!
         monkeypatch.setenv("T_HOST_PORT", "25")
         loader = EnvLoader(prefix="T_")
-        results = loader(settings_cls, options)
+        results = loader(Settings, deep_options(Settings))
         assert results == LoadedSettings(
             {"url": "foo", "host": {"port": "25"}},
             LoaderMeta("EnvLoader"),
         )
 
-    def test_no_env_prefix(
-        self, settings_cls: type, options: OptionList, monkeypatch: MonkeyPatch
-    ) -> None:
+    def test_no_env_prefix(self, monkeypatch: MonkeyPatch) -> None:
         """
         It is okay to use an empty prefix.
         """
         monkeypatch.setenv("URL", "spam")
 
         loader = EnvLoader(prefix="")
-        results = loader(settings_cls, options)
+        results = loader(Settings, deep_options(Settings))
         assert results == LoadedSettings({"url": "spam"}, LoaderMeta("EnvLoader"))
 
 
@@ -591,18 +552,16 @@ class TestInstanceLoader:
     """Tests for InstanceLoader."""
 
     def test_from_inst(
-        self, settings_cls: type, options: OptionList, monkeypatch: MonkeyPatch
+        self, settings_clss: SettingsClasses, options: OptionList
     ) -> None:
         """
         Load options from env vars, ignore env vars for which no settings
         exist.
         """
-        # "Host" has the same attributes as the "Host" from conftest.py,
-        # so it works (but only b/c it is a nested attribute and mypy doesn't
-        # know what we are doing 🙈)
-        inst = conftest.Settings(conftest.Host("spam", 42), "eggs", 23)
+        Settings, Host = settings_clss
+        inst = Settings(host=Host(name="spam", port=42), url="eggs", default=23)
         loader = InstanceLoader(inst)
-        results = loader(settings_cls, options)
+        results = loader(Settings, deep_options(Settings))
         assert results == LoadedSettings(
             {
                 "default": 23,
@@ -612,16 +571,21 @@ class TestInstanceLoader:
             LoaderMeta("InstanceLoader"),
         )
 
-    def test_invalid_type(
-        self, settings_cls: type, options: OptionList, monkeypatch: MonkeyPatch
-    ) -> None:
+    def test_invalid_type(self) -> None:
         """
-        It is okay to use an empty prefix.
+        A ValueError is raised if the "instance" object is not an instances of the
+        correct settings class.
         """
-        # "Settings" is not the same as "settings_cls" from conftest.py
-        inst = Settings(Host("spam", 42), "eggs", 23)
+
+        @attrs.define
+        class SettingsNoDc:
+            host: Host
+            url: str
+            default: int
+
+        inst = SettingsNoDc(Host("spam", 42), "eggs", 23)
         loader = InstanceLoader(inst)
-        pytest.raises(ValueError, loader, settings_cls, options)
+        pytest.raises(ValueError, loader, Settings, deep_options(Settings))
 
 
 class TestOnePasswordLoader:

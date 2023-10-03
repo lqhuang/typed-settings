@@ -3,7 +3,7 @@ Shared fixtures for all tests.
 """
 import dataclasses
 import sys
-from typing import Any, Callable, Dict, Optional, Type
+from typing import Any, Callable, Dict, Optional, Tuple
 
 import pytest
 
@@ -31,20 +31,50 @@ class Settings:
     default: int = 3
 
 
-@pytest.fixture
-def settings_cls() -> Type[Settings]:
+SettingsClasses = Tuple[type, type]
+
+
+SETTINGS_CLASSES: Dict[str, SettingsClasses] = {"dataclasses": (Settings, Host)}
+
+try:
+    import attrs
+
+    @attrs.frozen
+    class HostAttrs:
+        """Host settings."""
+
+        name: str
+        port: int
+
+    @attrs.frozen
+    class SettingsAttrs:
+        """Main settings."""
+
+        host: HostAttrs
+        url: str
+        default: int = 3
+
+    SETTINGS_CLASSES["attrs"] = (SettingsAttrs, HostAttrs)
+except ImportError:
+    # "attrs" is not available in the nox session "test_no_optionals"
+    pass
+
+
+@pytest.fixture(params=list(SETTINGS_CLASSES))
+def settings_clss(request: pytest.FixtureRequest) -> SettingsClasses:
     """
     Return an example settings class.
     """
-    return Settings
+    return SETTINGS_CLASSES[request.param]
 
 
 @pytest.fixture
-def options(settings_cls: Type[Settings]) -> OptionList:
+def options(settings_clss: SettingsClasses) -> OptionList:
     """
     Return the option list for the example settings class.
     """
-    return deep_options(settings_cls)
+    main, _host = settings_clss
+    return deep_options(main)
 
 
 @pytest.fixture

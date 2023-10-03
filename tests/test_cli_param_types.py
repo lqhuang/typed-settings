@@ -284,11 +284,11 @@ class TestDateTimeParam(ParamBase):
 
     click_expected_help = [
         "  --a [%Y-%m-%d|%Y-%m-%dT%H:%M:%S|%Y-%m-%dT%H:%M:%S%z]",
-        "                                  [default: 1970-01-01T00:00:00+00:00]",  # noqa: E501
+        "                                  [default: 1970-01-01T00:00:00+00:00]",
         "  --b [%Y-%m-%d|%Y-%m-%dT%H:%M:%S|%Y-%m-%dT%H:%M:%S%z]",
-        "                                  [default: 1970-01-01T00:00:00+00:00]",  # noqa: E501
+        "                                  [default: 1970-01-01T00:00:00+00:00]",
         "  --c [%Y-%m-%d|%Y-%m-%dT%H:%M:%S|%Y-%m-%dT%H:%M:%S%z]",
-        "                                  [default: 1970-01-01T00:00:00+00:00]",  # noqa: E501
+        "                                  [default: 1970-01-01T00:00:00+00:00]",
         "  --d [%Y-%m-%d|%Y-%m-%dT%H:%M:%S|%Y-%m-%dT%H:%M:%S%z]",
     ]
     argparse_expected_help = [
@@ -308,11 +308,11 @@ class TestDateTimeParam(ParamBase):
     }
     click_expected_env_var_defaults = [
         "  --a [%Y-%m-%d|%Y-%m-%dT%H:%M:%S|%Y-%m-%dT%H:%M:%S%z]",
-        "                                  [default: 2021-05-04T13:37:00+00:00]",  # noqa: E501
+        "                                  [default: 2021-05-04T13:37:00+00:00]",
         "  --b [%Y-%m-%d|%Y-%m-%dT%H:%M:%S|%Y-%m-%dT%H:%M:%S%z]",
-        "                                  [default: 2021-05-04T13:37:00]",  # noqa: E501
+        "                                  [default: 2021-05-04T13:37:00]",
         "  --c [%Y-%m-%d|%Y-%m-%dT%H:%M:%S|%Y-%m-%dT%H:%M:%S%z]",
-        "                                  [default: 2021-05-04T00:00:00]",  # noqa: E501
+        "                                  [default: 2021-05-04T00:00:00]",
         "  --d [%Y-%m-%d|%Y-%m-%dT%H:%M:%S|%Y-%m-%dT%H:%M:%S%z]",
     ]
     argparse_expected_env_var_defaults = [

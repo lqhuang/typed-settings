@@ -2,7 +2,6 @@
 Test behavior when no optional dependencies are installed.
 """
 import sys
-from typing import Type
 
 import pytest
 
@@ -51,7 +50,7 @@ def test_attribute_not_found() -> None:
 
 
 def test_load(
-    settings_cls: Type[conftest.Settings], monkeypatch: pytest.MonkeyPatch
+    settings_clss: conftest.SettingsClasses, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """
     "load()" works with dataclasses when no optional dependencies are installed.
@@ -60,18 +59,18 @@ def test_load(
     monkeypatch.setenv("TEST_HOST_PORT", "1")
     monkeypatch.setenv("TEST_URL", "u")
     monkeypatch.setenv("TEST_DEFAULT", "2")
-    result = typed_settings.load(settings_cls, "test")
+    result: conftest.Settings = typed_settings.load(settings_clss[0], "test")
     assert result == conftest.Settings(conftest.Host("n", 1), "u", 2)
 
 
-def test_load_settings(settings_cls: Type[conftest.Settings]) -> None:
+def test_load_settings(settings_clss: conftest.SettingsClasses) -> None:
     """
     "load_settings()" and "default_converter()" work with dataclasses when no optional
     dependencies are installed.
     """
     default = conftest.Settings(conftest.Host("n", 1), "u", 2)
-    result = typed_settings.load_settings(
-        settings_cls,
+    result: conftest.Settings = typed_settings.load_settings(
+        settings_clss[0],
         loaders=[typed_settings.loaders.InstanceLoader(default)],
         converter=typed_settings.default_converter(),
     )

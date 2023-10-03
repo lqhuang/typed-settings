@@ -76,10 +76,10 @@ class Attrs:
     def iter_fields(cls: type) -> types.OptionList:
         import attrs
 
-        cls = attrs.resolve_types(cls)  # type: ignore[type-var]
         result: List[types.OptionInfo] = []
 
         def iter_attribs(r_cls: type, prefix: str) -> None:
+            r_cls = attrs.resolve_types(r_cls)  # type: ignore[type-var]
             for field in attrs.fields(r_cls):
                 if field.init is False:
                     continue
@@ -137,10 +137,10 @@ class Dataclasses:
 
     @classmethod
     def iter_fields(self, cls: type) -> types.OptionList:
-        cls = self.resolve_types(cls)  # type: ignore[type-var]
         result: List[types.OptionInfo] = []
 
         def iter_attribs(r_cls: type, prefix: str) -> None:
+            r_cls = self.resolve_types(r_cls)  # type: ignore[type-var]
             for field in dataclasses.fields(r_cls):
                 if field.init is False:
                     continue
@@ -230,7 +230,7 @@ class Dataclasses:
 
             hints = typing.get_type_hints(cls, **kwargs)
             for field in dataclasses.fields(cls):  # type: ignore[arg-type]
-                if field.name in hints:
+                if field.name in hints:  # pragma: no cover
                     # Since fields have been frozen we must work around it.
                     object.__setattr__(field, "type", hints[field.name])
             # We store the class we resolved so that subclasses know they haven't
