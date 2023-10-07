@@ -8,24 +8,23 @@ from pathlib import Path
 from types import MappingProxyType
 from typing import (
     Any,
+    Callable,
     Dict,
     Final,
     Generic,
     NamedTuple,
     Optional,
     Tuple,
-    Type,
     TypeVar,
     Union,
 )
-
-import attrs
 
 from ._compat import PY_39
 
 
 __all__ = [
     "AUTO",
+    "METADATA_KEY",
     "SECRET_REPR",
     "T",
     "ET",
@@ -48,14 +47,15 @@ __all__ = [
 ]
 
 
+METADATA_KEY: Final[str] = "typed_settings"
 SECRET_REPR: Final[str] = "*******"
 
 
 T = TypeVar("T")
 ET = TypeVar("ET", bound=Enum)  # Enum type
-ST = TypeVar("ST", bound=attrs.AttrsInstance)  # SettingsInstance
-SettingsClass = Type[attrs.AttrsInstance]
-SettingsInstance = attrs.AttrsInstance
+ST = TypeVar("ST")  # Type var for SettingsInstance
+SettingsClass = type
+SettingsInstance = Any
 OptionName = str
 OptionPath = str
 SettingsDict = Dict[OptionName, Union[Any, "SettingsDict"]]
@@ -102,21 +102,35 @@ class OptionInfo:
     Each instance represents a single attribute of an apps's settings class.
     """
 
+    parent_cls: type
+    """
+    The option's settings class.  This is either the root settings class or a nested
+    one.
+    """
+
     path: OptionPath
     """
     Dotted path to the option name relative to the root settings class.
     """
 
-    field: attrs.Attribute
-    """
-    :class:`attrs.Attribute` instance for the option.
-    """
+    name: str = dataclasses.field(init=False)
 
     cls: type
-    """
-    The option's settings class.  This is either the root settings class or a nested
-    one.
-    """
+    default: Any
+    has_no_default: bool
+    default_is_factory: bool
+
+    is_secret: bool = False
+    converter: Optional[Callable[[Any], Any]] = None
+    metadata: Dict[Any, Any] = dataclasses.field(default_factory=dict)
+
+    @property
+    def has_default(self) -> bool:
+        return not self.has_no_default
+
+    def __post_init__(self) -> None:
+        _prefix, _, name = self.path.rpartition(".")
+        object.__setattr__(self, "name", name)
 
 
 OptionList = Tuple[OptionInfo, ...]
@@ -308,6 +322,14 @@ class Secret(Generic[T]):
         Return the wrapped secret value.
         """
         return self._secret_value
+
+
+class SecretRepr:
+    def __call__(self, v: Any) -> str:
+        return repr(v if not v and isinstance(v, Collection) else SECRET_REPR)
+
+    def __repr__(self) -> str:
+        return "***"
 
 
 SECRETS_TYPES = (Secret, SecretStr)

@@ -1,7 +1,6 @@
 """
 Helpers for and additions to :mod:`attrs`.
 """
-from collections.abc import Collection
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -16,7 +15,7 @@ from typing import (
 import attr  # The old namespaces is needed in "combine()"
 import attrs
 
-from ..types import SECRET_REPR
+from . import cli_argparse, cli_click, types
 
 
 if TYPE_CHECKING:
@@ -30,7 +29,6 @@ if TYPE_CHECKING:
 
 
 __all__ = [
-    "METADATA_KEY",
     "SECRET",
     "evolve",
     "option",
@@ -38,20 +36,8 @@ __all__ = [
     "settings",
 ]
 
-METADATA_KEY = "typed_settings"
-CLICK_KEY = "click"
-ARGPARSE_KEY = "argparse"
 
-
-class _SecretRepr:
-    def __call__(self, v: Any) -> str:
-        return repr(v if not v and isinstance(v, Collection) else SECRET_REPR)
-
-    def __repr__(self) -> str:
-        return "***"
-
-
-SECRET = _SecretRepr()
+SECRET = types.SecretRepr()
 
 
 settings = attrs.define
@@ -194,7 +180,7 @@ def secret(
     *,
     default: None = ...,
     validator: None = ...,
-    repr: _SecretRepr = ...,
+    repr: types.SecretRepr = ...,
     hash: Optional[bool] = ...,
     init: bool = ...,
     metadata: Optional[Dict[Any, Any]] = ...,
@@ -218,7 +204,7 @@ def secret(
     *,
     default: None = ...,
     validator: "Optional[_ValidatorArgType[_T]]" = ...,
-    repr: _SecretRepr = ...,
+    repr: types.SecretRepr = ...,
     hash: Optional[bool] = ...,
     init: bool = ...,
     metadata: Optional[Dict[Any, Any]] = ...,
@@ -241,7 +227,7 @@ def secret(
     *,
     default: "_T",
     validator: "Optional[_ValidatorArgType[_T]]" = ...,
-    repr: _SecretRepr = ...,
+    repr: types.SecretRepr = ...,
     hash: Optional[bool] = ...,
     init: bool = ...,
     metadata: Optional[Dict[Any, Any]] = ...,
@@ -264,7 +250,7 @@ def secret(
     *,
     default: "Optional[_T]" = ...,
     validator: "Optional[_ValidatorArgType[_T]]" = ...,
-    repr: _SecretRepr = ...,
+    repr: types.SecretRepr = ...,
     hash: Optional[bool] = ...,
     init: bool = ...,
     metadata: Optional[Dict[Any, Any]] = ...,
@@ -354,10 +340,10 @@ def _get_metadata(
         argparse_config.update(argparse)
     if metadata is None:
         metadata = {}
-    ts_meta = metadata.setdefault(METADATA_KEY, {})
+    ts_meta = metadata.setdefault(types.METADATA_KEY, {})
     ts_meta["help"] = help
-    ts_meta[CLICK_KEY] = click_config
-    ts_meta[ARGPARSE_KEY] = argparse_config
+    ts_meta[cli_click.METADATA_KEY] = click_config
+    ts_meta[cli_argparse.METADATA_KEY] = argparse_config
     return metadata
 
 
@@ -401,7 +387,9 @@ def evolve(inst: attrs.AttrsInstance, **changes: Any) -> attrs.AttrsInstance:
             changes[init_name] = old_value
         elif attrs.has(old_value) and isinstance(changes[init_name], Mapping):
             # Evolve nested attrs classes
-            changes[init_name] = evolve(old_value, **changes[init_name])  # type: ignore[arg-type]  # noqa
+            changes[init_name] = evolve(
+                old_value, **changes[init_name]  # type: ignore[arg-type]
+            )
 
     return cls(**changes)
 

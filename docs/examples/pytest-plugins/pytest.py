@@ -3,7 +3,7 @@ from typing import Tuple
 import click
 
 import typed_settings as ts
-from typed_settings.click_utils import OptionGroupFactory
+from typed_settings.cli_click import OptionGroupFactory
 
 
 @ts.settings

@@ -1,5 +1,5 @@
 """
-Tests for "typed_settings.click_utils".
+Tests for "typed_settings.cli.click".
 """
 import unittest.mock as mock
 from pathlib import Path
@@ -10,17 +10,16 @@ import click
 import click.testing
 import pytest
 
+import typed_settings.cli_click as cli_click
 from typed_settings import (
     click_options,
-    click_utils,
     default_loaders,
     option,
     pass_settings,
     secret,
     settings,
 )
-from typed_settings.attrs import CLICK_KEY, METADATA_KEY
-from typed_settings.types import SecretStr
+from typed_settings.types import METADATA_KEY, SecretStr
 
 
 T = TypeVar("T")
@@ -99,12 +98,12 @@ def test_attrs_meta_not_modified() -> None:
 
     meta = attrs.fields(S).opt.metadata[METADATA_KEY]
 
-    assert meta[CLICK_KEY] == {"help": "spam", "callback": print}
+    assert meta[cli_click.METADATA_KEY] == {"help": "spam", "callback": print}
 
     click_options(S, "test")(lambda s: None)  # pragma: no cover
     click_options(S, "test")(lambda s: None)  # pragma: no cover
 
-    assert meta[CLICK_KEY] == {"help": "spam", "callback": print}
+    assert meta[cli_click.METADATA_KEY] == {"help": "spam", "callback": print}
 
 
 class TestDefaultsLoading:
@@ -768,7 +767,7 @@ class TestDecoratorFactory:
         @click_options(
             settings_cls,
             "t",
-            decorator_factory=click_utils.ClickOptionFactory(),
+            decorator_factory=cli_click.ClickOptionFactory(),
         )
         def cli2(settings: Any) -> None:
             ...
@@ -786,7 +785,7 @@ class TestDecoratorFactory:
         @click_options(
             settings_cls,
             "t",
-            decorator_factory=click_utils.OptionGroupFactory(),
+            decorator_factory=cli_click.OptionGroupFactory(),
         )
         def cli(settings: Any) -> None:
             ...
@@ -811,15 +810,15 @@ class TestDecoratorFactory:
         """
         unimport("click_option_group")
         with pytest.raises(ModuleNotFoundError):
-            click_utils.OptionGroupFactory()
+            cli_click.OptionGroupFactory()
 
 
 @pytest.mark.parametrize(
     "factory",
-    [None, click_utils.ClickOptionFactory(), click_utils.OptionGroupFactory()],
+    [None, cli_click.ClickOptionFactory(), cli_click.OptionGroupFactory()],
 )
 def test_show_envvar_in_help(
-    factory: Optional[click_utils.DecoratorFactory], invoke: Invoke
+    factory: Optional[cli_click.DecoratorFactory], invoke: Invoke
 ) -> None:
     """
     An option's help can optionally show the env var that will be loaded.
@@ -841,7 +840,7 @@ def test_show_envvar_in_help(
         ...
 
     result = invoke(cli, "--help")
-    if isinstance(factory, click_utils.OptionGroupFactory):
+    if isinstance(factory, cli_click.OptionGroupFactory):
         print(result.output)
         assert result.output == (
             "Usage: cli [OPTIONS]\n"
@@ -866,10 +865,10 @@ def test_show_envvar_in_help(
 
 @pytest.mark.parametrize(
     "factory",
-    [None, click_utils.ClickOptionFactory(), click_utils.OptionGroupFactory()],
+    [None, cli_click.ClickOptionFactory(), cli_click.OptionGroupFactory()],
 )
 def test_click_no_load_envvar(
-    factory: Optional[click_utils.DecoratorFactory],
+    factory: Optional[cli_click.DecoratorFactory],
     invoke: Invoke,
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,

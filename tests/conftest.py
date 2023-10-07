@@ -1,28 +1,28 @@
 """
 Shared fixtures for all tests.
 """
+import dataclasses
 import sys
-from typing import Any, Callable, Dict, Optional
+from typing import Any, Callable, Dict, Optional, Tuple
 
-import attrs
 import pytest
 
 from typed_settings import _onepassword
-from typed_settings.dict_utils import deep_options
+from typed_settings.cls_utils import deep_options
 from typed_settings.types import OptionList
 
 
 # Test with frozen settings.  If it works this way, it will also work with
 # mutable settings but not necessarily the other way around.
-@attrs.frozen
+@dataclasses.dataclass(frozen=True)
 class Host:
     """Host settings."""
 
     name: str
-    port: int = attrs.field(converter=int)
+    port: int
 
 
-@attrs.frozen
+@dataclasses.dataclass(frozen=True)
 class Settings:
     """Main settings."""
 
@@ -31,20 +31,71 @@ class Settings:
     default: int = 3
 
 
-@pytest.fixture
-def settings_cls() -> type:
+SettingsClasses = Tuple[type, type]
+
+
+SETTINGS_CLASSES: Dict[str, SettingsClasses] = {"dataclasses": (Settings, Host)}
+
+try:
+    import attrs
+
+    @attrs.frozen
+    class HostAttrs:
+        """Host settings."""
+
+        name: str
+        port: int
+
+    @attrs.frozen
+    class SettingsAttrs:
+        """Main settings."""
+
+        host: HostAttrs
+        url: str
+        default: int = 3
+
+    SETTINGS_CLASSES["attrs"] = (SettingsAttrs, HostAttrs)
+except ImportError:
+    # "attrs" is not available in the nox session "test_no_optionals"
+    pass
+
+try:
+    import pydantic
+
+    class HostPydantic(pydantic.BaseModel):
+        """Host settings."""
+
+        name: str
+        port: int
+
+    class SettingsPydantic(pydantic.BaseModel):
+        """Main settings."""
+
+        host: HostPydantic
+        url: str
+        default: int = 3
+
+    SETTINGS_CLASSES["pydantic"] = (SettingsPydantic, HostPydantic)
+except ImportError:
+    # "pydantic" is not available in the nox session "test_no_optionals"
+    pass
+
+
+@pytest.fixture(params=list(SETTINGS_CLASSES))
+def settings_clss(request: pytest.FixtureRequest) -> SettingsClasses:
     """
     Return an example settings class.
     """
-    return Settings
+    return SETTINGS_CLASSES[request.param]
 
 
 @pytest.fixture
-def options(settings_cls: type) -> OptionList:
+def options(settings_clss: SettingsClasses) -> OptionList:
     """
     Return the option list for the example settings class.
     """
-    return deep_options(settings_cls)
+    main, _host = settings_clss
+    return deep_options(main)
 
 
 @pytest.fixture

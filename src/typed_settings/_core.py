@@ -18,10 +18,7 @@ from typing import (
     Union,
 )
 
-import attrs
-
-from . import _core, dict_utils
-from .attrs import METADATA_KEY
+from . import cls_utils, dict_utils
 from .converters import Converter, default_converter
 from .exceptions import InvalidSettingsError
 from .loaders import EnvLoader, FileLoader, Loader, TomlFormat, _DefaultsLoader
@@ -49,7 +46,7 @@ __all__ = [
 ]
 
 
-LOGGER = logging.getLogger(METADATA_KEY)
+LOGGER = logging.getLogger("typed-settings")
 
 
 class SettingsState(Generic[ST]):
@@ -66,7 +63,7 @@ class SettingsState(Generic[ST]):
         base_dir: Path,
     ) -> None:
         self._cls = settings_cls
-        self._options = tuple(dict_utils.deep_options(settings_cls))
+        self._options = tuple(cls_utils.deep_options(settings_cls))
         self._optiosn_by_name = MappingProxyType({o.path: o for o in self._options})
         self._loaders = loaders
         self._processors = processors
@@ -339,7 +336,7 @@ def _load_settings(state: SettingsState) -> MergedSettings:
     return merged_settings
 
 
-def convert(merged_settings: MergedSettings, state: _core.SettingsState[ST]) -> ST:
+def convert(merged_settings: MergedSettings, state: SettingsState[ST]) -> ST:
     """
     Create an instance of *cls* from the settings in *merged_settings*.
 
@@ -359,14 +356,14 @@ def convert(merged_settings: MergedSettings, state: _core.SettingsState[ST]) -> 
     loaded_settings_paths: Set[str] = set()
     oi_by_path = state.options_by_path
     for path, (value, meta) in merged_settings.items():
-        field = oi_by_path[path].field
-        if field.type:
+        oinfo = oi_by_path[path]
+        if oinfo.cls:
             with _set_context(meta):
                 try:
-                    if field.converter:
-                        converted_value = field.converter(value)
+                    if oinfo.converter:
+                        converted_value = oinfo.converter(value)
                     else:
-                        converted_value = state.converter.structure(value, field.type)
+                        converted_value = state.converter.structure(value, oinfo.cls)
                 except Exception as e:
                     errors.append(
                         f"Could not convert value {value!r} for option "
@@ -381,7 +378,7 @@ def convert(merged_settings: MergedSettings, state: _core.SettingsState[ST]) -> 
     for option_info in state.options:
         if option_info.path in loaded_settings_paths:
             continue
-        if option_info.field.default is not attrs.NOTHING:
+        if option_info.has_default:
             continue
         errors.append(f"No value set for required option {option_info.path!r}")
 

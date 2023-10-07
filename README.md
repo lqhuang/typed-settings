@@ -1,6 +1,6 @@
 # Typed Settings
 
-Merge settings from multiple different sources and present them in a structured, typed, and validated way!
+Load and merge settings from multiple different sources and present them in a structured, typed, and validated way!
 
 ## Why?
 
@@ -37,9 +37,11 @@ You can use Typed Settings in any context, e.g.:
 - Settings are cleanly structured and typed.
   The type annotations are used to convert the loaded settings to the proper types.
   This also includes higher level structures like dates, paths and various collections (lists, dicts, …).
-  This is currently done with [attrs](https://www.attrs.org) classes (but we know people also love Pydantic or dataclasses).
+  You can use [attrs](https://www.attrs.org), [dataclasses](https://docs.python.org/3/library/dataclasses.html), or [Pydantic](https://docs.pydantic.dev/latest/) to write settings classes.
 
   Types Settings uses the powerful and fast [cattrs](https://cattrs.readthedocs.io)) by default and falls back to an internal converter if **cattrs** is not installed.
+
+- No mandatory requirements.  Typed Settings works out-of-the box with dataclasses, argparse and its own converter.
 
 The documentation contains a [full list](https://typed-settings.readthedocs.io/en/latest/why.html#comprehensive-list-of-features) of all features.
 
@@ -52,6 +54,7 @@ Install and update using [pip](https://pip.pypa.io/en/stable/quickstart/):
 $ python -m pip install typed-settings
 ```
 
+Typed Settings as **no required dependencies** (except for tomli on older Python versions).
 You can install dependencies for optional features via
 
 ```console
@@ -60,6 +63,8 @@ $ python -m pip install typed-settings[<feature>,...]
 
 Available features:
 
+- `typed-settings[attrs]`: Enable settings classes via **attrs**.
+- `typed-settings[pydantic]`: Enable settings classes via **Pydantic**.
 - `typed-settings[cattrs]`: Enable usage of the powerful and fast **cattrs** converter.
 - `typed-settings[click]`: Enable support for **Click** options.
 - `typed-settings[option-groups]`: Enable support for **Click** and **Click option groups**.
@@ -74,9 +79,10 @@ This is a very simple example that demonstrates how you can load settings from e
 
 ```python
 # example.py
+import attrs
 import typed_settings as ts
 
-@ts.settings
+@attrs.frozen
 class Settings:
     option: str
 
@@ -97,16 +103,17 @@ Config files define a different section for each class.
 
 ```python
 # example.py
+import attrs
 import click
 
 import typed_settings as ts
 
-@ts.settings
+@attrs.frozen
 class Host:
     name: str
     port: int
 
-@ts.settings(kw_only=True)
+@attrs.frozen
 class Settings:
     host: Host
     endpoint: str
@@ -141,9 +148,10 @@ However, Typed Settings lets you explicitly configure which loaders are used and
 
 ```python
 # example.py
+import attrs
 import typed_settings as ts
 
-@ts.settings
+@attrs.frozen
 class Settings:
     option: str
 
@@ -185,9 +193,10 @@ Typed Settings supports `argparse` and `click`.
 
 ```python
 # example.py
+import attrs
 import typed_settings as ts
 
-@ts.settings
+@attrs.frozen
 class Settings:
     a_str: str = ts.option(default="default", help="A string")
     an_int: int = ts.option(default=3, help="An int")
@@ -221,10 +230,11 @@ Settings(a_str='spam', an_int=1)
 
 ```python
 # example.py
+import attrs
 import click
 import typed_settings as ts
 
-@ts.settings
+@attrs.frozen
 class Settings:
     a_str: str = ts.option(default="default", help="A string")
     an_int: int = ts.option(default=3, help="An int")
@@ -250,49 +260,10 @@ $ python example.py --a-str=spam --an-int=1
 Settings(a_str='spam', an_int=1)
 ```
 
+## Project Links
 
-## Features
-
-- Settings are defined as type-hinted `attrs` classes.
-
-- Typed Settings’ `settings` decorator is an alias to `attrs.define` and can optionally make your settings frozen (immutable).
-
-- `option()` and `secret()` are wrappers around `attrs.field()` and add meta data handling for Click options.
-
-- `secret()` attributes have string representation that masks the actual value, so that you can safely print or log settings instances.
-
-- Settings can currently be loaded from:
-
-  - TOML files
-  - Python files
-  - Environment variables
-  - *Click* command line options
-
-- Settings are converted to their correct type using [cattrs](https://cattrs.readthedocs.io).
-
-  - Users can extend the default converter with hooks for custom types
-  - Lists can be loaded from strings from environment variables.
-    String-to-list conversion can be configured.
-    Strings can be JSON structues or simple comma (or colon) speparated lists (e.g., `"1,2,3"` or `"path1:path2"`).
-
-- Paths to settings files can be
-
-  - “hard-coded” into your code,
-  - dynamically searched from the CWD upwards via `find(filename)`, or
-  - specified via an environment variable.
-
-- Order of precedence:
-
-  - Default value from settings class
-  - First file from hard-coded config files list
-  - ...
-  - Last file from hard-coded config files list
-  - First file from config files env var
-  - ...
-  - Last file from config files env var
-  - Environment variable `{PREFIX}_{SETTING_NAME}`
-  - (Value passed to Click option)
-
-- Config files are “optional” by default – no error is raised if a specified file does not exist.
-
-- Config files can be marked as mandatory by prefixing them with an `!`.
+- [Changelog](https://typed-settings.readthedocs.io/en/latest/changelog.html)
+- [Documentation](https://typed-settings.readthedocs.io)
+- [GitLab](https://gitlab.com/sscherfke/typed-settings/)
+- [Issues and Bugs](https://gitlab.com/sscherfke/typed-settings/-/issues)
+- [PyPI](https://pypi.org/project/typed-settings/)

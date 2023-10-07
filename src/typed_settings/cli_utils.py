@@ -21,11 +21,7 @@ else:
 
 from typing import Any, Collection, Dict, List, Optional, Tuple, Union
 
-import attrs
-from attr._make import _Nothing as NothingType
-
-from .converters import Converter
-from .types import MergedSettings
+from . import converters, types
 
 
 __all__ = [
@@ -37,13 +33,33 @@ __all__ = [
 ]
 
 
+class NoDefaultType:
+    """
+    Sentinel class to indicate the lack of a default value for an optionwhen ``None``
+    is ambiguous.
+
+    ``NoDefaultType`` is a singleton. There is only ever one of it.
+    """
+
+    _singleton = None
+
+    def __new__(cls) -> "NoDefaultType":
+        if NoDefaultType._singleton is None:
+            NoDefaultType._singleton = super().__new__(cls)
+        return NoDefaultType._singleton
+
+    def __repr__(self) -> str:
+        return "NO_DEFAULT"
+
+
+NO_DEFAULT = NoDefaultType()
 DEFAULT_SENTINEL = object()
 DEFAULT_SENTINEL_NAME = "DEFAULT_SENTINEL"
 
 
+Default = Union[Any, None, NoDefaultType]
 NoneType = type(None)
 StrDict = Dict[str, Any]
-Default = Union[Any, None, NothingType]
 
 
 class TypeHandlerFunc(Protocol):
@@ -59,7 +75,7 @@ class TypeHandlerFunc(Protocol):
         Args:
             type: The type to create the option for.
             default: The default value for the option.  May be ``None`` or
-                :data:`attrs.NOTHING`.
+                :data:`NO_DEFAULT`.
             is_optional: Whether the original type was an
                 :class:`~typing.Optional`.
         """
@@ -91,7 +107,7 @@ class TypeHandler(Protocol):
                 kwargs = {
                     "type": MyCliType(...)
                 }
-                if default not in (None, attrs.NOTHING):
+                if default not in (None, NO_DEFAULT):
                     kwargs["default"] = default.stringify()
                 elif is_optional:
                     kwargs["default"] = None
@@ -113,7 +129,7 @@ class TypeHandler(Protocol):
             type: The type to create an option for.  Can be none if the option
                 is untyped.
             default: The default value for the option. My be ``None`` or
-                :data:`attrs.NOTHING`.
+                :data:`NO_DEFAULT`.
             is_optional: Whether or not the option type was marked as option
                 or not.
 
@@ -186,8 +202,7 @@ class TypeHandler(Protocol):
             type_args_maker: The :class:`TypeArgsMaker` that called this
                 function.
             types: The types of keys and values.
-            default: Either a mapping of default values, ``None`` or
-                :data:`attrs.NOTHING`.
+            default: Either a mapping of default values, ``None`` or :data:`NO_DEFAULT`.
             is_optional: Whether or not the option type was marked as option
                 or not.
 
@@ -201,7 +216,7 @@ class TypeHandler(Protocol):
 class TypeArgsMaker:
     """
     This class derives type information (in the form of keyword arguments)
-    for CLI options from an Attrs field's type.
+    for CLI options from attributes of a settings class.
 
     For example, it could return a dict ``{"type": int, "default": 3}`` for
     an option ``val: int = 3``.
@@ -259,11 +274,10 @@ class TypeArgsMaker:
 
         Args:
             otype: The option's type.  It can be None if the user uses an
-                untyped attrs class.
-            default: The default value for the option.  It can be anything,
-                but the values ``None`` (possible default for optional types)
-                and :data:`attrs.NOTHING` (no default set) should be handled
-                explicitly.
+                untyped class.
+            default: The default value for the option.  It can be anything, but the
+                values ``None`` (possible default for optional types) and
+                :data:`NO_DEFAULT` (no default set) should be handled explicitly.
 
         Return:
             A dictionary with keyword arguments for creating a CLI option in
@@ -381,11 +395,10 @@ class TypeArgsMaker:
 
 
 def get_default(
-    field: attrs.Attribute,
-    path: str,
-    settings: MergedSettings,
-    converter: Converter,
-) -> Default:
+    option_info: types.OptionInfo,
+    settings: types.MergedSettings,
+    converter: converters.Converter,
+) -> Any:
     """
     Return the proper default value for an attribute.
 
@@ -393,39 +406,39 @@ def get_default(
     field's default value.
 
     Args:
-        field: The attrs field description for the attribute.
-        path: The dotted path the the option in the settings dict.
+        option_info: The option description for the attribute.
         settings: A (nested) dict with the loaded settings.
         converter: The converter to be used.
 
     Return:
         The default value to be used for the option.  This can also be ``None``
-        or :data:`attrs.NOTHING`.
+        or a "nothing" value (e.g., :data:`attrs.NOTHING`).
     """
-    try:
+    if option_info.path in settings:
         # Use loaded settings value
-        default = settings[path].value
-    except KeyError:
-        default = field.default
-    else:
-        # If the default was found (no KeyError), convert the input value to
-        # the proper type.
+        default = settings[option_info.path].value
+
+        # and convert the input value to the proper type.
         # See: https://gitlab.com/sscherfke/typed-settings/-/issues/11
-        if field.type:
+        if option_info.cls:
             try:
-                default = converter.structure(default, field.type)
+                default = converter.structure(default, option_info.cls)
             except Exception as e:
                 raise ValueError(
-                    f"Invalid default for type {field.type}: {default}"
+                    f"Invalid default for type {option_info.cls}: {default}"
                 ) from e
 
-    if isinstance(default, attrs.Factory):  # type: ignore
+    elif option_info.default_is_factory:
         # Use a fake factory function to indicate a dynamic default value, that is only
         # computed when the CLI is invoked (and not when the options are generated).
         def default() -> object:
             return None
 
         default.__name__ = DEFAULT_SENTINEL_NAME
+    elif option_info.has_no_default:
+        default = NO_DEFAULT
+    else:
+        default = option_info.default
 
     return default
 
@@ -437,11 +450,10 @@ def check_if_optional(
     args: Tuple[Any, ...],
 ) -> Tuple[Optional[type], Any, Any, Tuple[Any, ...], bool]:
     """
-    Check if *otype* is optional and return the actual type for it and a flag
-    indicating the optionality.
+    Check if *otype* is an optional (``Optional[...]`` or ``Union[None, ...]``) and
+    return the actual type for it and a flag indicating the optionality.
 
-    If it is optional and the default value is :data:`attrs.NOTHING`, use
-    ``None`` as new default.
+    If it is optional and a default value is not set, use ``None`` as new default.
 
     Args:
         otype: The Python type of the option.
@@ -465,7 +477,7 @@ def check_if_optional(
     """
     is_optional = origin in (Union, UnionType) and len(args) == 2 and NoneType in args
     if is_optional:
-        if default is attrs.NOTHING:
+        if default is NO_DEFAULT:
             default = None
 
         # "idx" is the index of the not-NoneType:

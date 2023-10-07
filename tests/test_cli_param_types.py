@@ -30,7 +30,7 @@ import pytest
 
 from typed_settings import (
     SecretStr,
-    argparse_utils,
+    cli_argparse,
     click_options,
     default_loaders,
     option,
@@ -91,9 +91,9 @@ def make_argparser(settings_cls: Type[ST]) -> ArgParser:
     """
 
     def parse_args(*args: str) -> ST:
-        parser, ms = argparse_utils.make_parser(settings_cls, default_loaders("test"))
+        parser, ms = cli_argparse.make_parser(settings_cls, default_loaders("test"))
         namespace = parser.parse_args(args)
-        return argparse_utils.namespace2settings(
+        return cli_argparse.namespace2settings(
             settings_cls, namespace, merged_settings=ms
         )
 
@@ -284,11 +284,11 @@ class TestDateTimeParam(ParamBase):
 
     click_expected_help = [
         "  --a [%Y-%m-%d|%Y-%m-%dT%H:%M:%S|%Y-%m-%dT%H:%M:%S%z]",
-        "                                  [default: 1970-01-01T00:00:00+00:00]",  # noqa: E501
+        "                                  [default: 1970-01-01T00:00:00+00:00]",
         "  --b [%Y-%m-%d|%Y-%m-%dT%H:%M:%S|%Y-%m-%dT%H:%M:%S%z]",
-        "                                  [default: 1970-01-01T00:00:00+00:00]",  # noqa: E501
+        "                                  [default: 1970-01-01T00:00:00+00:00]",
         "  --c [%Y-%m-%d|%Y-%m-%dT%H:%M:%S|%Y-%m-%dT%H:%M:%S%z]",
-        "                                  [default: 1970-01-01T00:00:00+00:00]",  # noqa: E501
+        "                                  [default: 1970-01-01T00:00:00+00:00]",
         "  --d [%Y-%m-%d|%Y-%m-%dT%H:%M:%S|%Y-%m-%dT%H:%M:%S%z]",
     ]
     argparse_expected_help = [
@@ -308,11 +308,11 @@ class TestDateTimeParam(ParamBase):
     }
     click_expected_env_var_defaults = [
         "  --a [%Y-%m-%d|%Y-%m-%dT%H:%M:%S|%Y-%m-%dT%H:%M:%S%z]",
-        "                                  [default: 2021-05-04T13:37:00+00:00]",  # noqa: E501
+        "                                  [default: 2021-05-04T13:37:00+00:00]",
         "  --b [%Y-%m-%d|%Y-%m-%dT%H:%M:%S|%Y-%m-%dT%H:%M:%S%z]",
-        "                                  [default: 2021-05-04T13:37:00]",  # noqa: E501
+        "                                  [default: 2021-05-04T13:37:00]",
         "  --c [%Y-%m-%d|%Y-%m-%dT%H:%M:%S|%Y-%m-%dT%H:%M:%S%z]",
-        "                                  [default: 2021-05-04T00:00:00]",  # noqa: E501
+        "                                  [default: 2021-05-04T00:00:00]",
         "  --d [%Y-%m-%d|%Y-%m-%dT%H:%M:%S|%Y-%m-%dT%H:%M:%S%z]",
     ]
     argparse_expected_env_var_defaults = [

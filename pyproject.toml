@@ -38,11 +38,13 @@ classifiers = [
     "Topic :: Software Development :: Libraries :: Python Modules",
 ]
 dependencies = [
-    "attrs>=23.1",
     "tomli>=2; python_version<'3.11'",
 ]
 
 [project.optional-dependencies]
+attrs = [
+    "attrs>=23.1",
+]
 cattrs = [
     "cattrs>=22.2",
 ]
@@ -56,8 +58,11 @@ option-groups = [
 jinja = [
     "jinja2",
 ]
+pydantic = [
+    "pydantic>=2",
+]
 all = [  # All features
-    "typed-settings[cattrs,click,option-groups,jinja]",
+    "typed-settings[attrs,cattrs,click,option-groups,jinja,pydantic]",
 ]
 docs = [
     "typed-settings[all]",
@@ -136,7 +141,8 @@ line-length = 88
 [tool.coverage.paths]
 source = [
     "src",
-    ".nox/test-*/**/site-packages",
+    ".nox/test*/**/site-packages",
+    "tests",
 ]
 
 [tool.coverage.report]

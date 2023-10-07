@@ -3,11 +3,11 @@ Deprecated alias for :mod:`typed_settings.cli_utils`.
 """
 import warnings
 
-from .cli_click import *  # noqa
+from .cls_attrs import *  # noqa
 
 
 warnings.warn(
-    "This module has been renamed to 'typed_settings.cli_click'.",
+    "This module has been renamed to 'typed_settings.cls_attrs'.",
     DeprecationWarning,
     stacklevel=2,
 )

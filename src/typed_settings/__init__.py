@@ -5,34 +5,48 @@ from typing import Any, List
 
 from ._core import SettingsState, convert, default_loaders, load, load_settings
 from ._file_utils import find
-from .argparse_utils import cli
-from .attrs import combine, evolve, option, secret, settings
+from .cli_argparse import cli
 from .converters import default_converter, register_strlist_hook
 from .loaders import EnvLoader, FileLoader, TomlFormat
 from .types import Secret, SecretStr
 
 
+_attrs_imports = {"combine", "evolve", "option", "secret", "settings"}
+_click_imports = {"click_options", "pass_settings"}
+
 try:
-    from .click_utils import click_options, pass_settings
-except ImportError:  # pragma: no cover
+    from .cls_attrs import combine, evolve, option, secret, settings
+except ImportError:
+    pass
 
-    def __getattr__(name: str) -> Any:
-        """
-        Try to import optional features and return them.
+try:
+    from .cli_click import click_options, pass_settings
+except ImportError:
+    pass
 
-        Raise an :exc:`ImportError` if their dependencies are missing.
-        """
-        if name == "click_options":
-            from .click_utils import click_options
 
-            return click_options
+def __getattr__(name: str) -> Any:
+    """
+    Raise a helpful :exc:`ModuleNotFound` error when getting something that requires an
+    optional dependency that is not installed.
+    """
+    # This method is only invoked if either
+    # - attrs/click is not installed or
+    # - an attribute that actually doesn't exist
+    # is requested.
+    if name in _attrs_imports:
+        raise ModuleNotFoundError(
+            "Module 'attrs' not installed.  Please run "
+            "'python -m pip install -U typed-settings[attrs]'"
+        )
 
-        if name == "pass_settings":
-            from .click_utils import pass_settings
+    if name in _click_imports:
+        raise ModuleNotFoundError(
+            "Module 'click' not installed.  Please run "
+            "'python -m pip install -U typed-settings[click]'"
+        )
 
-            return pass_settings
-
-        raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
 
 
 __all__ = [
@@ -51,18 +65,18 @@ __all__ = [
     "EnvLoader",
     "FileLoader",
     "TomlFormat",
-    # Attrs helpers
-    "combine",
-    "evolve",
-    "option",
-    "secret",
-    "settings",
     # Cattrs converters/helpers
     "default_converter",
     "register_strlist_hook",
     # Argparse utils
     "cli",
-    # Click utils
+    # Optional: attrs
+    "combine",
+    "evolve",
+    "option",
+    "secret",
+    "settings",
+    # Optional: click
     "click_options",
     "pass_settings",
 ]

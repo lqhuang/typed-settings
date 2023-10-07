@@ -22,11 +22,12 @@ from typing import (
 
 import attrs
 import cattrs
+import pydantic
 import pytest
 
 from typed_settings import converters
 from typed_settings._compat import PY_39, PY_310
-from typed_settings.attrs import option, secret, settings
+from typed_settings.cls_attrs import option, secret, settings
 
 
 def custom_converter(v: Union[str, Path]) -> Path:
@@ -43,7 +44,7 @@ class LeEnum(Enum):
 
 @dataclasses.dataclass
 class DataCls:
-    """A base "dataclass" for testing."""
+    """A basic "dataclass" for testing."""
 
     u: str
     p: str
@@ -51,14 +52,42 @@ class DataCls:
 
 @settings
 class AttrsCls:
-    """A base "attrs" class for testing."""
+    """A basic "attrs" class for testing."""
 
     u: str = option()
     p: str = secret()
 
 
+class PydanticCls(pydantic.BaseModel):
+    """A basic Pydantic class."""
+
+    u: str
+    p: str
+
+
+@dataclasses.dataclass
+class ChildDc:
+    """A simple nested class."""
+
+    x: int
+    y: Path
+
+
+@dataclasses.dataclass(frozen=True)
+class ParentDc:
+    """A rather complex class with various scalar and composite attribute types."""
+
+    child: ChildDc
+    a: float
+    c: LeEnum
+    d: datetime
+    e: List[ChildDc]
+    f: Set[datetime]
+    b: float = dataclasses.field(default=3.14)
+
+
 @attrs.frozen
-class Child:
+class ChildAttrs:
     """A simple nested class."""
 
     x: int
@@ -66,15 +95,34 @@ class Child:
 
 
 @attrs.frozen(kw_only=True)
-class Parent:
+class ParentAttrs:
     """A rather complex class with various scalar and composite attribute types."""
 
-    child: Child
+    child: ChildAttrs
     a: float
     b: float = attrs.field(default=3.14, validator=attrs.validators.le(2))
     c: LeEnum
     d: datetime
-    e: List[Child]
+    e: List[ChildAttrs]
+    f: Set[datetime]
+
+
+class ChildPydantic(pydantic.BaseModel):
+    """A simple nested class."""
+
+    x: int
+    y: Path
+
+
+class ParentPydantic(pydantic.BaseModel):
+    """A rather complex class with various scalar and composite attribute types."""
+
+    child: ChildPydantic
+    a: float
+    b: float = pydantic.Field(default=3.14, le=2)
+    c: LeEnum
+    d: datetime
+    e: List[ChildPydantic]
     f: Set[datetime]
 
 
@@ -273,8 +321,8 @@ SUPPORTED_TYPES_DATA += SUPPORTED_FROZENSET
 SUPPORTED_UNION: Example4T = [
     ("Optional(None)", None, None, Optional[str]),
     ("Optional(int)", 1, "1", Optional[str]),
-    ("attrs|None(None)", None, None, Optional[AttrsCls]),
-    ("attrs|None(dict)", {"u": "u", "p": "p"}, AttrsCls("u", "p"), Optional[AttrsCls]),
+    ("dc|None(None)", None, None, Optional[DataCls]),
+    ("dc|None(dict)", {"u": "u", "p": "p"}, DataCls("u", "p"), Optional[DataCls]),
     ("enum|None", "spam", LeEnum.spam, Optional[LeEnum]),
     # ("Union(None)", None, None, Union[None, S, List[str]]),
     # (
@@ -308,22 +356,96 @@ SUPPORTED_ATTRSCLASSES: Example4T = [
             "f": ["2023-05-04T13:37:42+00:00", "2023-05-04T13:37:42+00:00"],
             "child": {"x": 3, "y": "c"},
         },
-        Parent(
+        ParentAttrs(
             a=3.14,
             b=1,
             c=LeEnum.eggs,
             d=datetime(2023, 5, 4, 13, 37, 42, tzinfo=timezone.utc),
             e=[
-                Child(0, Path.cwd().joinpath("a")),
-                Child(1, Path.cwd().joinpath("b")),
+                ChildAttrs(0, Path.cwd().joinpath("a")),
+                ChildAttrs(1, Path.cwd().joinpath("b")),
             ],
             f={datetime(2023, 5, 4, 13, 37, 42, tzinfo=timezone.utc)},
-            child=Child(3, Path.cwd().joinpath("c")),
+            child=ChildAttrs(3, Path.cwd().joinpath("c")),
         ),
-        Parent,
+        ParentAttrs,
     ),
 ]
 SUPPORTED_TYPES_DATA += SUPPORTED_ATTRSCLASSES
+
+# dataclasses
+SUPPORTED_DATACLASSES: Example4T = [
+    ("dc(dict)", {"u": "user", "p": "pwd"}, DataCls("user", "pwd"), DataCls),
+    ("dc(inst)", DataCls("user", "pwd"), DataCls("user", "pwd"), DataCls),
+    (
+        "dc(nested)",
+        {
+            "a": "3.14",
+            "b": 1,
+            "c": "eggs",
+            "d": "2023-05-04T13:37:42+00:00",
+            "e": [{"x": 0, "y": "a"}, {"x": 1, "y": "b"}],
+            "f": ["2023-05-04T13:37:42+00:00", "2023-05-04T13:37:42+00:00"],
+            "child": {"x": 3, "y": "c"},
+        },
+        ParentDc(
+            a=3.14,
+            b=1,
+            c=LeEnum.eggs,
+            d=datetime(2023, 5, 4, 13, 37, 42, tzinfo=timezone.utc),
+            e=[
+                ChildDc(0, Path.cwd().joinpath("a")),
+                ChildDc(1, Path.cwd().joinpath("b")),
+            ],
+            f={datetime(2023, 5, 4, 13, 37, 42, tzinfo=timezone.utc)},
+            child=ChildDc(3, Path.cwd().joinpath("c")),
+        ),
+        ParentDc,
+    ),
+]
+SUPPORTED_TYPES_DATA += list(SUPPORTED_DATACLASSES)
+
+# Pydantic classes
+SUPPORTED_PYDANTIC: Example4T = [
+    (
+        "pydantic(dict)",
+        {"u": "user", "p": "pwd"},
+        PydanticCls(u="user", p="pwd"),
+        PydanticCls,
+    ),
+    (
+        "pydantic(inst)",
+        PydanticCls(u="user", p="pwd"),
+        PydanticCls(u="user", p="pwd"),
+        PydanticCls,
+    ),
+    (
+        "pydantic(nested)",
+        {
+            "a": "3.14",
+            "b": 1,
+            "c": "Le Eggs",
+            "d": "2023-05-04T13:37:42+00:00",
+            "e": [{"x": 0, "y": "a"}, {"x": 1, "y": "b"}],
+            "f": ["2023-05-04T13:37:42+00:00", "2023-05-04T13:37:42+00:00"],
+            "child": {"x": 3, "y": "c"},
+        },
+        ParentPydantic(
+            a=3.14,
+            b=1,
+            c=LeEnum.eggs,
+            d=datetime(2023, 5, 4, 13, 37, 42, tzinfo=timezone.utc),
+            e=[
+                ChildPydantic(x=0, y=Path("a")),
+                ChildPydantic(x=1, y=Path("b")),
+            ],
+            f={datetime(2023, 5, 4, 13, 37, 42, tzinfo=timezone.utc)},
+            child=ChildPydantic(x=3, y=Path("c")),
+        ),
+        ParentPydantic,
+    ),
+]
+SUPPORTED_TYPES_DATA += list(SUPPORTED_PYDANTIC)
 
 
 @pytest.mark.parametrize(
@@ -393,6 +515,10 @@ def test_resolve_path(
         (Sequence, [0, 1]),  # Type not supported
         (AttrsCls, {"foo": 3}),  # Invalid attribute
         (AttrsCls, {"opt", "x"}),  # Invalid value
+        (DataCls, {"foo": 3}),  # Invalid attribute
+        (DataCls, {"opt", "x"}),  # Invalid value
+        (PydanticCls, {"foo": 3}),  # Invalid attribute
+        (PydanticCls, {"opt", "x"}),  # Invalid value
     ],
 )
 def test_unsupported_values(value: Any, cls: type) -> None:
@@ -423,23 +549,26 @@ if PY_39:
     )
 
 
+@pytest.mark.parametrize("cls_decorator", [attrs.frozen, dataclasses.dataclass])
 @pytest.mark.parametrize(
     "input, kw", [("1:2:3", {"sep": ":"}), ("[1,2,3]", {"fn": json.loads})]
 )
 @pytest.mark.parametrize("typ, expected", STRLIST_TEST_DATA)
-def test_cattrs_strlist_hook(input: str, kw: dict, typ: type, expected: Any) -> None:
+def test_cattrs_strlist_hook(
+    cls_decorator: Callable, input: str, kw: dict, typ: type, expected: Any
+) -> None:
     """
     The strlist hook for can be configured with a separator string or a function.
     """
 
-    @attrs.frozen
+    @cls_decorator
     class Settings:
         a: typ  # type: ignore
 
     converter = converters.get_default_cattrs_converter()
     converters.register_strlist_hook(converter, **kw)
     result = converter.structure({"a": input}, Settings)
-    assert result == Settings(expected)
+    assert result == Settings(expected)  # type: ignore[call-arg]
 
 
 def test_cattrs_strlist_hook_either_arg() -> None:
@@ -453,25 +582,30 @@ def test_cattrs_strlist_hook_either_arg() -> None:
         )  # pragma: no cover
 
 
+@pytest.mark.parametrize("cls_decorator", [attrs.frozen, dataclasses.dataclass])
 @pytest.mark.parametrize(
     "input, sep", [("1:2:3", ":"), ("[1,2,3]", json.loads), ("123", None)]
 )
 @pytest.mark.parametrize("typ, expected", STRLIST_TEST_DATA)
 def test_ts_strlist_hook(
-    input: str, sep: Union[str, Callable], typ: type, expected: Any
+    cls_decorator: Callable,
+    input: str,
+    sep: Union[str, Callable],
+    typ: type,
+    expected: Any,
 ) -> None:
     """
     The TSConverter has a builtin strlist hook that takes a separator string or a
     function.  It can be disabled with ``None``.
     """
 
-    @attrs.frozen
+    @cls_decorator
     class Settings:
         a: typ  # type: ignore
 
     converter = converters.TSConverter(strlist_sep=sep)
     result = converter.structure({"a": input}, Settings)
-    assert result == Settings(expected)
+    assert result == Settings(expected)  # type: ignore[call-arg]
 
 
 def test_get_default_converter_cattrs_installed() -> None:

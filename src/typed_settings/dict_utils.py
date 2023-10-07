@@ -1,25 +1,18 @@
 """
 Utility functions for working settings dicts and serilizing nested settings.
 """
-from itertools import groupby
-from typing import Any, Generator, List, Sequence, Tuple, Type
-
-import attrs
+from typing import Any, Generator, Sequence, Tuple
 
 from .types import (
-    ST,
     LoadedSettings,
     LoadedValue,
     MergedSettings,
-    OptionInfo,
     OptionList,
     SettingsDict,
 )
 
 
 __all__ = [
-    "deep_options",
-    "group_options",
     "iter_settings",
     "get_path",
     "set_path",
@@ -27,84 +20,6 @@ __all__ = [
     "update_settings",
     "flat2nested",
 ]
-
-
-def deep_options(cls: Type[ST]) -> OptionList:
-    """
-    Recursively iterates *cls* and nested attrs classes and returns a flat
-    list of *(path, Attribute, type)* tuples.
-
-    Args:
-        cls: The class whose attributes will be listed.
-
-    Returns:
-        The flat list of attributes of *cls* and possibly nested attrs classes.
-        *path* is a dot (``.``) separted path to the attribute, e.g.
-        ``"parent_attr.child_attr.grand_child_attr``.
-
-    Raises:
-        NameError: if the type annotations can not be resolved.  This is, e.g.,
-          the case when recursive classes are being used.
-    """
-    cls = attrs.resolve_types(cls)  # type: ignore[type-var]
-    result = []
-
-    def iter_attribs(r_cls: type, prefix: str) -> None:
-        for field in attrs.fields(r_cls):
-            if field.init is False:
-                continue
-            if field.type is not None and attrs.has(field.type):
-                iter_attribs(field.type, f"{prefix}{field.name}.")
-            else:
-                result.append(OptionInfo(f"{prefix}{field.name}", field, r_cls))
-
-    iter_attribs(cls, "")
-    return tuple(result)
-
-
-def group_options(cls: type, options: OptionList) -> List[Tuple[type, OptionList]]:
-    """
-    Group (nested) options by parent class.
-
-    If *cls* does not contain nested settings classes, return a single
-    group for *cls* with all its options.
-
-    If *cls* only contains nested subclasses, return one group per class
-    containing all of that classes (posibly nested) options.
-
-    If *cls* has multiple attributtes with the same nested settings class,
-    create one group per attribute.
-
-    If *cls* contains a mix of scalar options and nested options, return a
-    mix of both.  Scalar options schould be grouped (on top or bottom) or else
-    multiple groups for the main settings class will be created.
-
-    See the tests for details.
-
-    Args:
-        cls: The settings class
-        options: The list of all options of the settings class.
-
-    Return:
-        A list of tuples matching a grouper class to all settings within that
-        group.
-    """
-    group_classes = {
-        field.name: (field.type if attrs.has(field.type) else cls)
-        for field in attrs.fields(cls)
-    }
-
-    def keyfn(o: OptionInfo) -> Tuple[str, type]:
-        """
-        Group by prefix and also return the corresponding group class.
-        """
-        base, *remainder = o.path.split(".")
-        prefix = base if remainder else ""
-        return prefix, group_classes[base]
-
-    grouper = groupby(options, key=keyfn)
-    grouped_options = [(g_cls[1], tuple(g_opts)) for g_cls, g_opts in grouper]
-    return grouped_options
 
 
 def iter_settings(

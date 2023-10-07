@@ -9,14 +9,14 @@ import attrs
 import pytest
 
 from typed_settings import (
-    argparse_utils,
+    cli_argparse,
     cli_utils,
     default_converter,
     default_loaders,
     option,
     settings,
+    types,
 )
-from typed_settings.attrs import ARGPARSE_KEY, METADATA_KEY
 
 
 T = TypeVar("T")
@@ -50,7 +50,7 @@ def test_cli(invoke: Invoke) -> None:
     Basic test "cli()" - simple CLI for a simple settings class.
     """
 
-    @argparse_utils.cli(Settings, "test")
+    @cli_argparse.cli(Settings, "test")
     def cli(settings: Settings) -> None:
         assert settings == Settings(3)
 
@@ -63,9 +63,9 @@ def test_cli_explicit_config(invoke: Invoke) -> None:
     """
     loaders = default_loaders("test")
     converter = default_converter()
-    tam = cli_utils.TypeArgsMaker(argparse_utils.ArgparseHandler())
+    tam = cli_utils.TypeArgsMaker(cli_argparse.ArgparseHandler())
 
-    @argparse_utils.cli(
+    @cli_argparse.cli(
         Settings,
         loaders=loaders,
         converter=converter,
@@ -82,7 +82,7 @@ def test_cli_desc_from_func(invoke: Invoke, capsys: pytest.CaptureFixture) -> No
     The CLI function's docstring is used as argparse CLI description.
     """
 
-    @argparse_utils.cli(Settings, "test")
+    @cli_argparse.cli(Settings, "test")
     def cli(settings: Settings) -> None:
         """
         Le description.
@@ -101,7 +101,7 @@ def test_cli_desc_from_kwarg(invoke: Invoke, capsys: pytest.CaptureFixture) -> N
     The argparse CLI description can be explicitly configured with a keyword arg.
     """
 
-    @argparse_utils.cli(Settings, "test", description="Le description")
+    @cli_argparse.cli(Settings, "test", description="Le description")
     def cli(settings: Settings) -> None:
         """
         spam spam spam.
@@ -119,9 +119,9 @@ def test_manual_parser() -> None:
     """
     Basic test for "make_parser()" and "namespace2settings"().
     """
-    parser, merged_settings = argparse_utils.make_parser(Settings, "test")
+    parser, merged_settings = cli_argparse.make_parser(Settings, "test")
     namespace = parser.parse_args(["--o", "3"])
-    result = argparse_utils.namespace2settings(
+    result = cli_argparse.namespace2settings(
         Settings, namespace, merged_settings=merged_settings
     )
     assert result == Settings(3)
@@ -134,15 +134,15 @@ def test_manual_parser_explicit_config() -> None:
     """
     loaders = default_loaders("test")
     converter = default_converter()
-    tam = cli_utils.TypeArgsMaker(argparse_utils.ArgparseHandler())
-    parser, merged_settings = argparse_utils.make_parser(
+    tam = cli_utils.TypeArgsMaker(cli_argparse.ArgparseHandler())
+    parser, merged_settings = cli_argparse.make_parser(
         Settings,
         loaders=loaders,
         converter=converter,
         type_args_maker=tam,
     )
     namespace = parser.parse_args(["--o", "3"])
-    result = argparse_utils.namespace2settings(
+    result = cli_argparse.namespace2settings(
         Settings,
         namespace,
         merged_settings=merged_settings,
@@ -161,7 +161,7 @@ def test_invalid_bool_flag() -> None:
         flag: bool = option(argparse={"param_decls": ("-f")})
 
     with pytest.raises(ValueError, match="boolean flags.*--.*supported"):
-        argparse_utils.make_parser(Settings, "test")
+        cli_argparse.make_parser(Settings, "test")
 
 
 def test_attrs_meta_not_modified() -> None:
@@ -175,14 +175,14 @@ def test_attrs_meta_not_modified() -> None:
     class S:
         opt: int = option(help="spam", argparse={"param_decls": "-o"})
 
-    meta = attrs.fields(S).opt.metadata[METADATA_KEY]
+    meta = attrs.fields(S).opt.metadata[types.METADATA_KEY]
 
-    assert meta[ARGPARSE_KEY] == {"help": "spam", "param_decls": "-o"}
+    assert meta[cli_argparse.METADATA_KEY] == {"help": "spam", "param_decls": "-o"}
 
-    argparse_utils.make_parser(S, "test")
-    argparse_utils.make_parser(S, "test")
+    cli_argparse.make_parser(S, "test")
+    cli_argparse.make_parser(S, "test")
 
-    assert meta[ARGPARSE_KEY] == {"help": "spam", "param_decls": "-o"}
+    assert meta[cli_argparse.METADATA_KEY] == {"help": "spam", "param_decls": "-o"}
 
 
 def test_resolve_paths(
@@ -210,7 +210,7 @@ def test_resolve_paths(
 
     result = Settings()  # Will be update by the CLI
 
-    @argparse_utils.cli(Settings, default_loaders("test", [spath]))
+    @cli_argparse.cli(Settings, default_loaders("test", [spath]))
     def cli(settings: Settings) -> Settings:
         return settings
 
@@ -234,7 +234,7 @@ def test_multiple_invocations(invoke: Invoke) -> None:
 
     loaded_settings: List[S] = []
 
-    @argparse_utils.cli(S, "example")
+    @cli_argparse.cli(S, "example")
     def cli(settings: S) -> None:
         loaded_settings.append(settings)
 
@@ -256,7 +256,7 @@ def test_default_factory_multiple_invocations(invoke: Invoke) -> None:
 
     loaded_settings: List[S] = []
 
-    @argparse_utils.cli(S, "example")
+    @cli_argparse.cli(S, "example")
     def cli(settings: S) -> None:
         loaded_settings.append(settings)
 

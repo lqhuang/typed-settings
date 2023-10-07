@@ -119,6 +119,16 @@ def test(session: nox.Session, deps_min_version: bool, pkg_format: str) -> None:
     session.run("coverage", "run", "-m", "pytest", "src")
 
 
+@nox.session(tags=["test"])
+def test_no_optionals(session: nox.Session) -> None:
+    """
+    Run tests with no optional dependencies installed.
+    """
+    pkgs = glob.glob("dist/*.whl")
+    session.install(pkgs[0], "coverage", "pytest", "sybil")
+    session.run("coverage", "run", "-m", "pytest", "tests/test_no_optionals.py")
+
+
 @nox.session(name="coverage-report", tags=["test"])
 def coverage_report(session: nox.Session) -> None:
     """

@@ -35,11 +35,33 @@
 - 💥 **BREAKING:** The deprecated `typed_settings.attrs.hooks` module
   has been removed.
 
+
+- 🗑 The modules `typed_settings.argparse_utils`,
+  `typed_settings.ckick_utils`, and `typed_settings.attrs` are
+  deprecated and are now aliases of the renamed
+  `typed_settings.cli_argparse`, `typed_settings.cli_click`, and
+  `typed_settings.cls_attrs`.  They will be removed in the next release.
+
+- 🗑 The module `typed_settings.attrs` is deprecated and is now an alias
+  for `typed_settings.cls_attrs`.  It will be removed in the next
+  release.
+
+- ✨ Added support **dataclasses** and **Pydantic** models as
+  alternative to `attrs` (which is still the recommended backend).
+
+- ✨ `attrs` is now an optional (but recommended) dependency.  You can
+  install it with `python -m pip install -U typed-settings[attrs]`.
+
 - ✨ Added a built-in `TSConverter` as an alternative for `cattrs`
   (which is still supported and recommended).
 
 - ✨ `cattrs` is now an optional dependency.  You can install it with
   `python -m pip install -U typed-settings[cattrs]`.
+
+- ✨ Typed Settings now has no mandatory dependencies on Python >= 3.11.
+  On older versions, `tomli` is the only requirement.  There is also an
+  official way to to [vendor] Typed Settings (i.e., to bundle it with
+  your application).
 
 - ✨ Added a dictionary loader.  This is useful for testing purposes.
 
@@ -50,6 +72,7 @@
 [#41]: https://gitlab.com/sscherfke/typed-settings/-/issues/41
 [pip-audit]: https://pypi.org/project/pip-audit
 [safety]: https://pypi.org/project/safety
+[vendor]: https://gitlab.com/sscherfke/typed-settings-vendoring
 
 
 ## 23.0.1 (2023-05-23)

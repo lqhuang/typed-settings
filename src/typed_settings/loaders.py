@@ -19,8 +19,6 @@ from typing import (
     cast,
 )
 
-import attrs
-
 from ._compat import PY_311
 
 
@@ -29,6 +27,7 @@ if PY_311:
 else:
     import tomli as tomllib  # type: ignore[no-redef]
 
+from . import cls_utils
 from .dict_utils import set_path
 from .exceptions import (
     ConfigFileLoadError,
@@ -147,14 +146,14 @@ class _DefaultsLoader:
         # Populate dict with default settings.  This avoids problems with nested
         # settings classes for which no settings are loaded.
         for opt in options:
-            if opt.field.default is attrs.NOTHING:
+            if opt.has_no_default:
                 continue
-            if isinstance(opt.field.default, attrs.Factory):  # type: ignore
+            if opt.default_is_factory:
                 # Do not invoke default factories yet.  This should be done as late as
                 # possible.  This is especially required for CLIs if you want to invoke
                 # the same instance multiple times (e.g., in tests).
                 continue
-            set_path(settings, opt.path, opt.field.default)
+            set_path(settings, opt.path, opt.default)
 
         return LoadedSettings(settings, LoaderMeta(self, base_dir=self.base_dir))
 
@@ -221,7 +220,8 @@ class InstanceLoader:
                 f'"self.instance" is not an instance of {settings_cls}: '
                 f"{type(self.instance)}"
             )
-        return LoadedSettings(attrs.asdict(self.instance), LoaderMeta(self))
+        cls_handler = cls_utils.find_handler(type(self.instance))
+        return LoadedSettings(cls_handler.asdict(self.instance), LoaderMeta(self))
 
 
 class EnvLoader:
