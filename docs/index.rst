@@ -11,57 +11,40 @@ Typed Settings
 
 ----
 
-Typed Settings allows you to cleanly structure and validate your settings with `attrs <https://www.attrs.org>`_ classes.
-Type annotations will be used to automatically convert values to the proper type (using `cattrs <https://cattrs.readthedocs.io>`_).
-You can currently load settings from these sources:
-
-- TOML files (multiple, if you want to).  Paths can be statically specified or dynamically set via an environment variable.
-- Environment variables
-- `click <https://click.palletsprojects.com>`_ command line options
-
-You can use Typed settings, e.g., for
+Typed Settings is a settings loading library.
+You can use it, e.g., for:
 
 - server processes
 - containerized apps
 - command line applications
 
+Typed Settings allows you to load settings from various sources (e.g., config files, environment variables or secret vaults) and merge them.
+You can even generate CLI options for your settings for `argparse <https://docs.python.org/3/library/argparse.html>`_ and `Click <https://click.palletsprojects.com>`_ apps.
+Loaded settings can be post processed, e.g., to interpolated values from other loaded settings.
 
-Installation
-============
+Settings are converted to instances of typed classes.
+You can use `attrs <https://www.attrs.org>`_, `dataclasses <https://docs.python.org/3/library/dataclasses.html>`_, or `Pydantic <https://docs.pydantic.dev/latest/>`_.
+You have the choice between a built-in converter and the powerful `cattrs <https://cattrs.readthedocs.io>`_.
 
-.. skip: start
+Typed Settings provides good defaults for the common case and is also highly customizable and extendable.
+It has no mandatory requirements so that it is lightweight by default.
+You can also `vendor <https://gitlab.com/sscherfke/typed-settings-vendoring>`_ it with your application.
 
-Install and update using `pip <https://pip.pypa.io/en/stable/quickstart/>`_:
-
-.. code-block:: console
-
-   $ python -m pip install typed-settings
-
-You can install install dependencies for optional features via
-
-.. code-block:: console
-
-   $ python -m pip install typed-settings[<feature>]
-
-Available features:
-
-- ``typed-settings[click]``: Enable support for Click options
-- ``typed-settings[option-groups]``: Enable support for Click and Click option groups
-
-.. skip: end
+See :doc:`why` for details.
 
 
 Example
 =======
 
-This is a very simple example that demonstrates how you can load settings from environment variables.
+This is a very simple example that demonstrates how you can load settings from a config file and environment variables.
 
 .. code-block:: python
    :caption: example.py
 
+   import attrs
    import typed_settings as ts
 
-   @ts.settings
+   @attrs.frozen
    class Settings:
        option_one: str
        option_two: int
@@ -69,7 +52,7 @@ This is a very simple example that demonstrates how you can load settings from e
    settings = ts.load(
        cls=Settings,
        appname="example",
-       config_files=(ts.find("settings.toml"),),  # Paths can also be set via env var
+       config_files=[ts.find("settings.toml")],
    )
    print(settings)
 
@@ -83,6 +66,37 @@ This is a very simple example that demonstrates how you can load settings from e
 
    $ EXAMPLE_OPTION_TWO=2 python example.py
    Settings(option_one='value', option_two=2)
+
+
+Installation
+============
+
+.. skip: start
+
+Install and update using `pip <https://pip.pypa.io/en/stable/quickstart/>`_:
+
+.. code-block:: console
+
+   $ python -m pip install typed-settings
+
+Typed Settings as **no required dependencies** (except for tomli on older Python versions).
+You can install dependencies for optional features via
+
+.. code-block:: console
+
+   $ python -m pip install typed-settings[<feature>]
+
+Available features:
+
+- ``typed-settings[attrs]``: Enable settings classes via **attrs**.
+- ``typed-settings[pydantic]``: Enable settings classes via **Pydantic**.
+- ``typed-settings[cattrs]``: Enable usage of the powerful and fast **cattrs** converter.
+- ``typed-settings[click]``: Enable support for **Click** options.
+- ``typed-settings[option-groups]``: Enable support for **Click** and **Click option groups**.
+- ``typed-settings[jinja]``: Enable support for value interpolation with **Jinja** templates.
+- ``typed-settings[all]``: Install all optional requirements.
+
+.. skip: end
 
 
 Documentation

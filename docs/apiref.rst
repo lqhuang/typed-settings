@@ -36,23 +36,23 @@ Aliases
 
 .. function:: settings()
 
-   Alias for :func:`typed_settings.attrs.settings()`
+   Alias for :func:`typed_settings.cls_attrs.settings()`
 
 .. function:: option()
 
-   Alias for :func:`typed_settings.attrs.option()`
+   Alias for :func:`typed_settings.cls_attrs.option()`
 
 .. function:: secret()
 
-   Alias for :func:`typed_settings.attrs.secret()`
+   Alias for :func:`typed_settings.cls_attrs.secret()`
 
 .. function:: evolve()
 
-   Alias for :func:`typed_settings.attrs.evolve()`
+   Alias for :func:`typed_settings.cls_attrs.evolve()`
 
 .. function:: combine()
 
-   Alias for :func:`typed_settings.attrs.combine()`
+   Alias for :func:`typed_settings.cls_attrs.combine()`
 
 .. function:: default_converter()
 
@@ -121,7 +121,7 @@ Classes and Fields
 Helpers for creating ``attrs`` classes and fields with sensible details for Typed Settings.
 They are all also available directly from the :mod:`typed_settings` module.
 
-.. currentmodule:: typed_settings.attrs
+.. currentmodule:: typed_settings.cls_attrs
 
 .. _func-settings:
 

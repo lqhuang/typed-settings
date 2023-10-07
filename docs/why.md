@@ -2,7 +2,7 @@
 
 This page introduces you to similar libraries and shows why Typed Settings might be the better choice for you.
 
-
+(list-of-features)=
 ## Comprehensive List of Features
 
 - Your app defines the structure of your settings as typed classes with defaults.

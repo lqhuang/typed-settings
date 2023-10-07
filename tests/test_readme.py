@@ -50,6 +50,8 @@ def load_readme() -> List[Tuple[str, List[str]]]:
         if example_title:
             examples[example_title].append(line)
 
+    # If there's another section after the examples (which there is),
+    # we should not be able to get here.
     raise AssertionError("We should not have gotten here")  # pragma: no cover
 
 
