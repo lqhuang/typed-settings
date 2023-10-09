@@ -1,5 +1,3 @@
-# pypirc.toml
-
 [distutils]
 index-servers = ["pypi", "test"]
 
