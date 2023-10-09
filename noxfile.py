@@ -32,7 +32,7 @@ MYPY_PATHS = [
 ]
 LINT_PATHS = [p for paths in MYPY_PATHS for p in paths]
 # Dependencies for which to test against multiple versions
-PYTHON_VERSIONS = ["3.8", "3.9", "3.10", "3.11"]
+PYTHON_VERSIONS = ["3.8", "3.9", "3.10", "3.11", "3.12"]
 LATEST_STABLE_PYTHON = PYTHON_VERSIONS[-1]
 DEPS_MATRIX = {
     "attrs",

@@ -65,6 +65,8 @@
 
 - ✨ Added a dictionary loader.  This is useful for testing purposes.
 
+- ✨ Officially support Python 3.12.
+
 - 📦 Switched from [safety] to [pip-audit].
 
 [#20]: https://gitlab.com/sscherfke/typed-settings/-/issues/20

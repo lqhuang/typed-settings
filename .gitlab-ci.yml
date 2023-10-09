@@ -43,7 +43,7 @@ test:
   stage: test
   parallel:
     matrix:
-      - PY: ["3.8", "3.9", "3.10", "3.11"]
+      - PY: ["3.8", "3.9", "3.10", "3.11", "3.12"]
         DEPS_VERSION: ["min_deps_version", "latest_deps_version"]
         PKG_FORMAT: ["src", "whl"]
   image: python:$PY
