@@ -14,50 +14,86 @@ import pytest
 from sybil import Document, Example, Region, Sybil
 from sybil.evaluators.python import PythonEvaluator, pad
 from sybil.parsers.abstract.lexers import BlockLexer
+from sybil.parsers.myst.lexers import (
+    CODEBLOCK_END_TEMPLATE as MYST_CODEBLOCK_END_TEMPLATE,
+)
 from sybil.parsers.rest import DocTestParser, SkipParser
-from sybil.parsers.rest.lexers import DirectiveInCommentLexer
+from sybil.parsers.rest.lexers import (
+    END_PATTERN_TEMPLATE as REST_END_PATTERN_TEMPLATE,
+)
+from sybil.parsers.rest.lexers import (
+    DirectiveInCommentLexer,
+)
 from sybil.region import LexedRegion
 from sybil.typing import Evaluator, Lexer
 
 
-START_PATTERN_TEMPLATE = (
-    r"^(?P<prefix>[ \t]*)\.\.\s*(?P<directive>{directive})"
-    r"{delimiter}\s*"
+REST_START_PATTERN = (
+    r"^(?P<prefix>[ \t]*)\.\.\s*(?P<directive>code-block::\s*)"
     r"(?P<arguments>[\w-]+\b)?"
     r"(?P<options>(?:\s*\:[\w-]+\:.*\n)*)"
     r"(?:\s*\n)*\n"
 )
 
-END_PATTERN_TEMPLATE = "(\n\\Z|\n[ \t]{{0,{len_prefix}}}(?=\\S))"
+MYST_START_PATTENR = (
+    r"^(?P<prefix>[ \t]*)"
+    r"```\{(?P<directive>code-block)}\s*"
+    r"(?P<arguments>[\w-]+\b)$\n"
+    r"(?:(?P<options>(?:\s*\:[\w-]+\:.*\n)*)"
+    r"(?:\s*\n)*\n)?"
+)
 
 
-class DirectiveLexer(BlockLexer):
+class MystCodeBlockLexer(BlockLexer):
     """
-    A lexer for ReST directives.
+    A lexer for MyST code-block directives.
+    Both ``directive`` and ``arguments`` are regex patterns.
+
+    Copied and adjusted from Sybil.
+
+    .. code-block:: markdown
+
+        ```{code-block} language
+        key1: val1
+        key2: val2
+
+        This is
+        directive content
+    """
+
+    def __init__(self) -> None:
+        super().__init__(
+            start_pattern=re.compile(MYST_START_PATTENR, re.MULTILINE),
+            end_pattern_template=MYST_CODEBLOCK_END_TEMPLATE,
+        )
+
+    def __call__(self, document: Document) -> Iterable[LexedRegion]:
+        for region in super().__call__(document):
+            if isinstance(region, LexedRegion):
+                # 'or ""' also handles "get()" returning None:
+                options_str = region.lexemes.get("options", "") or ""
+                option_lines = options_str.splitlines()
+                options: Dict[str, str] = {}
+                for option_str in option_lines:
+                    optname, _, optval = option_str.strip().partition(" ")
+                    optname = optname[1:-1]
+                    options[optname] = optval
+                region.lexemes["options"] = options
+            yield region
+
+
+class RestCodeBlockLexer(BlockLexer):
+    """
+    A lexer for ReST code-block directives.
     Both ``directive`` and ``arguments`` are regex patterns.
 
     Copied and adjusted from Sybil.
     """
 
-    delimiter = "::"
-
-    def __init__(
-        self,
-        directive: str,
-        arguments: str = "",
-        mapping: Optional[Dict[str, str]] = None,
-    ):
+    def __init__(self):
         super().__init__(
-            start_pattern=re.compile(
-                START_PATTERN_TEMPLATE.format(
-                    directive=directive,
-                    delimiter=self.delimiter,
-                    arguments=arguments,
-                ),
-                re.MULTILINE,
-            ),
-            end_pattern_template=END_PATTERN_TEMPLATE,
-            mapping=mapping,
+            start_pattern=re.compile(REST_START_PATTERN, re.MULTILINE),
+            end_pattern_template=REST_END_PATTERN_TEMPLATE,
         )
 
     def __call__(self, document: Document) -> Iterable[LexedRegion]:
@@ -77,7 +113,7 @@ class AbstractCodeBlockParser:
     """
     Abstract base class for code block parsers.
 
-    Copied and adjusted from Sybil.
+    Copied from Sybil and adjusted to extract directive options, too.
     """
 
     language: str
@@ -123,8 +159,10 @@ class CodeBlockParser(AbstractCodeBlockParser):
     ):
         super().__init__(
             [
-                DirectiveLexer(directive=r"code-block"),
+                MystCodeBlockLexer(),
+                RestCodeBlockLexer(),
                 DirectiveInCommentLexer(directive=r"(invisible-)?code(-block)?"),
+                # DirectiveInPercentCommentLexer(directive=...)
             ],
             language,
             evaluator,

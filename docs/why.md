@@ -10,14 +10,14 @@ This page introduces you to similar libraries and shows why Typed Settings might
   Each source may override parts of the settings loaded by previous sources.
 - The loaded settings can optionally be post-processed.
 - The loaded and processed values are converted to an instance of your settings class.
-- Alternatively, CLI options are generated for all options
-  and the loaded settings servce as default values.
+- Additionally, CLI options can be generated for all options and
+  the loaded settings serve as default values.
 - The user invokes the CLI and an updated instance of the settings instance is passed to your CLI function.
 
 
 ### Settings Layout and Structure
 
-- Settings are defined as [attrs] classes with type hints and, optionally, validators.
+- Settings are defined as [attrs], [dataclasses], or [Pydantic] classes with type hints and, optionally, validators.
 
   - Options can be marked/typed as secrets and are hidden when a settings instance is printed.
 
@@ -25,14 +25,11 @@ This page introduces you to similar libraries and shows why Typed Settings might
 
 - If it is installed, [cattrs] is used for converting the loaded values to the proper types.
   Typed Settings has a built-in converter that is used as a fallback.
-  It is not as powerful and fast as {program}`cattrs` but reduces the number of dependencies.
+  You can extend the existing converters or drop in your own.
 
-  - By default, all basic data types (bool, int, float, str) are supported, as well as enums, paths and datetimes
-    Most built-in collection types are supported and optional values, too.
+  - By default, all basic data types (bool, int, float, str) are supported, as well as enums, paths and datetimes.
+    Most built-in collection types are supported, as well as optional values.
   - You can extend the converter to support additional types.
-
-- Other libraries (like dataclasses or Pydantic) are not yet supported.
-  This may change in the future.
 
 
 ### Loading Settings
@@ -59,7 +56,9 @@ This page introduces you to similar libraries and shows why Typed Settings might
   - Environment variables.
     Their prefix (e.g., `MYAPP_`) can be customized.
 
-  - 1Password.
+  - Existing settings instances and plain dicts.
+
+  - [1Password].
 
 
 ### Post Processing
@@ -100,7 +99,7 @@ This page introduces you to similar libraries and shows why Typed Settings might
 
 - Most aspects of Typed Settings can be customized or extended.
 
-- Many dependencies are optional.  We work towards having no mandatory dependencies.
+- All dependencies (except for [tomli] for Python <= 3.10) are optional.  We work towards having no mandatory dependencies.
 
 - Extensive documentation
 
@@ -156,13 +155,16 @@ Option values are automatically converted and can easily be validated.
 
 Settings can only be loaded from environment variables (and {file}`.env` files), though.
 
+
+[1password]: https://developer.1password.com/docs/cli/
 [ansible variables]: https://docs.ansible.com/ansible/latest/playbook_guide/playbooks_variables.html#referencing-simple-variables
 [argparse]: https://docs.python.org/3/library/argparse.html
 [attrs]: https://attrs.readthedocs.io
 [cattrs]: https://cattrs.readthedocs.io
-[click]: https://click.palletsprojects.com
 [click-option-group]: https://click-option-group.readthedocs.io
+[click]: https://click.palletsprojects.com
 [configparser]: https://docs.python.org/3/library/configparser.html#interpolation-of-values
+[dataclasses]: https://docs.python.org/3/library/dataclasses.html
 [dynaconf]: https://www.dynaconf.com
 [environ-config]: https://github.com/hynek/environ-config
 [jinja]: https://jinja.palletsprojects.com
@@ -170,3 +172,4 @@ Settings can only be loaded from environment variables (and {file}`.env` files),
 [planned]: https://gitlab.com/sscherfke/typed-settings/-/issues/2
 [pydantic]: https://pydantic-docs.helpmanual.io/
 [rich-click]: https://github.com/ewels/rich-click
+[tomli]: https://github.com/hukkin/tomli
