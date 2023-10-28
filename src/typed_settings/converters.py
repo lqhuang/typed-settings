@@ -223,7 +223,7 @@ def get_default_ts_converter(resolve_paths: bool = True) -> "TSConverter":
 
 def get_default_cattrs_converter(resolve_paths: bool = True) -> "cattrs.Converter":
     """
-    Return a :class:`cattrs.Converter()` with default settings
+    Return a :class:`cattrs.Converter` with default settings
     (see :func:`default_converter()` for argument and return value description).
 
     Args:
@@ -266,7 +266,7 @@ def get_default_structure_hooks(
 
     Return:
         A list of tuples that can be used as args for
-        :meth:`cattrs.Converter.register_structure_hook()`.
+        :meth:`cattrs.BaseConverter.register_structure_hook()`.
     """
     path_hook = to_resolved_path if resolve_paths else to_path
     return [
@@ -565,14 +565,14 @@ def to_path(value: Union[Path, str], _cls: type) -> Path:
 
 def to_resolved_path(value: Union[Path, str], _cls: type) -> Path:
     """
-    Convert *value* to :class:`.Path` and resolve it.
+    Convert *value* to :class:`~pathlib.Path` and resolve it.
 
     Args:
         value: The input data
         _cls: (ignored)
 
     Return:
-        A resolved instance of :class:`.Path`
+        A resolved instance of :class:`~pathlib.Path`
 
     Raise:
         TypeError: If *value* cannot be converted to a path.

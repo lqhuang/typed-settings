@@ -208,7 +208,7 @@ We use {func}`~typed_settings.cls_attrs.combine()` for that which is a convenien
 
 Now that we have a class that contains Pytests own settings as well as the settings of all plugins,
 we can create a command line application.
-We create option groups by passing {class}`~typed_settings.click_utils.OptionGroupFactory` to {func}`.click_options()`.
+We create option groups by passing {class}`~typed_settings.cli_click.OptionGroupFactory` to {func}`.click_options()`.
 
 ```{literalinclude} examples/pytest-plugins/pytest.py
 ```

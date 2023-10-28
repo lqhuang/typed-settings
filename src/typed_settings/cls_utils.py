@@ -80,7 +80,7 @@ class Attrs:
 
         def iter_attribs(r_cls: type, prefix: str) -> None:
             r_cls = attrs.resolve_types(r_cls)  # type: ignore[type-var]
-            for field in attrs.fields(r_cls):
+            for field in attrs.fields(r_cls):  # type: ignore[misc]
                 if field.init is False:
                     continue
                 if field.type is not None and attrs.has(field.type):
@@ -116,7 +116,7 @@ class Attrs:
 
         return {
             field.name: (field.type if attrs.has(field.type) else cls)
-            for field in attrs.fields(cls)
+            for field in attrs.fields(cls)  # type: ignore[misc]
         }
 
     @staticmethod

@@ -64,7 +64,7 @@ class SettingsState(Generic[ST]):
     ) -> None:
         self._cls = settings_cls
         self._options = tuple(cls_utils.deep_options(settings_cls))
-        self._optiosn_by_name = MappingProxyType({o.path: o for o in self._options})
+        self._options_by_name = MappingProxyType({o.path: o for o in self._options})
         self._loaders = loaders
         self._processors = processors
         self._converter = converter
@@ -72,30 +72,52 @@ class SettingsState(Generic[ST]):
 
     @property
     def settings_class(self) -> Type[ST]:
+        """
+        The user's settings class.
+        """
         return self._cls
 
     @property
     def options(self) -> OptionList:
+        """
+        All options the settings class (and nested sub classes) define.
+        """
         return self._options
 
     @property
     def options_by_path(self) -> OptionDict:
-        return self._optiosn_by_name
+        """
+        All options the settings class (and nested sub classes) define, mapped by
+        their dotted path (e.g., `nested_cls.option_name`).
+        """
+        return self._options_by_name
 
     @property
     def loaders(self) -> List[Loader]:
+        """
+        A copy of the list of all configured settings loaders.
+        """
         return list(self._loaders)
 
     @property
     def processors(self) -> List[Processor]:
+        """
+        A copy of the list of all configured post processors.
+        """
         return list(self._processors)
 
     @property
     def converter(self) -> Converter:
+        """
+        The configured converter.
+        """
         return self._converter
 
     @property
     def cwd(self) -> Path:
+        """
+        The current working directory.
+        """
         return self._base_dir
 
 

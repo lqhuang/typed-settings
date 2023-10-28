@@ -306,7 +306,9 @@ class TestCombine:
             {"n1": Nested1(), "n2": Nested2()},
         )
         assert Composed.__name__ == "Composed"
-        assert [(f.name, f.type, f.default) for f in attrs.fields(Composed)] == [
+        assert [
+            (f.name, f.type, f.default) for f in attrs.fields(Composed)  # type: ignore
+        ] == [
             ("a", str, ""),
             ("n1", Nested1, Nested1()),
             ("n2", Nested2, Nested2()),

@@ -25,6 +25,8 @@ from . import converters, types
 
 
 __all__ = [
+    "NO_DEFAULT",
+    "NoDefaultType",
     "TypeHandlerFunc",
     "TypeHandler",
     "TypeArgsMaker",
@@ -35,7 +37,7 @@ __all__ = [
 
 class NoDefaultType:
     """
-    Sentinel class to indicate the lack of a default value for an optionwhen ``None``
+    Sentinel class to indicate the lack of a default value for an option when ``None``
     is ambiguous.
 
     ``NoDefaultType`` is a singleton. There is only ever one of it.
@@ -53,6 +55,10 @@ class NoDefaultType:
 
 
 NO_DEFAULT = NoDefaultType()
+"""
+Sentinel that indicates the lack of a default value for an option.
+"""
+
 DEFAULT_SENTINEL = object()
 DEFAULT_SENTINEL_NAME = "DEFAULT_SENTINEL"
 

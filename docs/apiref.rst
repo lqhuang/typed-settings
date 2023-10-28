@@ -1,4 +1,4 @@
-:tocdepth: 4
+:tocdepth: 2
 
 =============
 API Reference
@@ -12,19 +12,27 @@ This is the full list of all public classes and functions.
 Core
 ====
 
-Core Functions
---------------
-
 .. automodule:: typed_settings
+
+Functions
+---------
+
 .. autofunction:: load
 .. autofunction:: load_settings
 .. autofunction:: default_loaders
 .. autofunction:: find
 .. autofunction:: convert
 
+Classes
+-------
+
+.. autoclass:: SettingsState
+
 
 Aliases
 -------
+
+Aliases for more convenient imports.
 
 .. class:: Secret
 
@@ -64,26 +72,33 @@ Aliases
 
 .. function:: cli()
 
-   Alias for :func:`typed_settings.argparse_utils.cli()`.
+   Alias for :func:`typed_settings.cli_argparse.cli()`.
 
 .. function:: click_options()
 
-   Alias for :func:`typed_settings.click_utils.click_options()`.
+   Alias for :func:`typed_settings.cli_click.click_options()`.
 
 .. function:: pass_settings()
 
-   Alias for :func:`typed_settings.click_utils.pass_settings()`.
+   Alias for :func:`typed_settings.cli_click.pass_settings()`.
+
+
+Dict Utils
+==========
+
+.. automodule:: typed_settings.dict_utils
+   :members:
 
 
 Exceptions
-----------
+==========
 
 .. automodule:: typed_settings.exceptions
    :members:
 
 
 Loaders
--------
+=======
 
 .. automodule:: typed_settings.loaders
    :members:
@@ -91,88 +106,77 @@ Loaders
 
 
 Processors
-----------
+==========
 
 .. automodule:: typed_settings.processors
    :members:
    :special-members: __call__
 
 
+Converters
+==========
+
+.. automodule:: typed_settings.converters
+   :members:
+
+
 Types
------
+=====
 
 .. automodule:: typed_settings.types
    :members:
 
 
-Dict Utils
-----------
+Settings Classes: attrs
+=======================
 
-.. automodule:: typed_settings.dict_utils
-   :members:
-
-
-attrs & cattrs
-==============
+.. automodule:: typed_settings.cls_attrs
 
 Classes and Fields
 ------------------
 
-Helpers for creating ``attrs`` classes and fields with sensible details for Typed Settings.
+Helpers for creating ``attrs`` classes and fields with sensible defaults for Typed Settings.
 They are all also available directly from the :mod:`typed_settings` module.
 
 .. currentmodule:: typed_settings.cls_attrs
 
 .. _func-settings:
 
-.. function:: settings(maybe_cls=None, *, these=None, repr=None, hash=None, init=None, slots=True, frozen=True, weakref_slot=True, str=False, auto_attribs=None, kw_only=False, cache_hash=False, auto_exc=True, eq=None, order=False, auto_detect=True, getstate_setstate=None, on_setattr=None, field_transformer=<function auto_convert>)
+.. function:: settings(maybe_cls=None, *, these=None, repr=None, unsafe_hash=None, hash=None, init=None, slots=True, frozen=False, weakref_slot=True, str=False, auto_attribs=None, kw_only=False, cache_hash=False, auto_exc=True, eq=None, order=False, auto_detect=True, getstate_setstate=None, on_setattr=None, field_transformer=None, match_args=True)
 
-    An alias to :func:`attrs.define()`,
-    configured with a *field_transformer* that automatically adds converters to all fields based on their annotated type.
+    An alias to :func:`attrs.define()`.
 
-    Supported concrete types:
-        - :class:`bool` (from various strings used in env. vars., see
-          :func:`.to_bool()`)
-        - :class:`datetime.datetime`, (ISO format with support for ``Z`` suffix,
-          see :func:`.to_dt()`).
-        - Attrs/Settings classes
-        - All other types use the *type* object itself as converter, this includes
-          :class:`int`, :class:`float`, :class:`str`, and
-          :class:`~enum.Enum`, :class:`pathlib.Path`, ….
-        - ``typing.Any`` (no conversion is performed)
+.. function:: option(*, default=NOTHING, validator=None, repr=True, hash=None, init=True, metadata=None, converter=None, factory=None, kw_only=False, eq=None, order=None, on_setattr=None, help=None, click=None, argparse=None)
 
-    Supported generic types:
-        - ``typing.List[T]``, ``typing.Sequence[T]``, ``typing.MutableSequence[T]`` (converts to :class:`list`)
-        - ``typing.Tuple[T, ...]`` (converts to :class:`tuple`)
-        - ``typing.Tuple[X, Y, Z]`` (converts to :class:`tuple`)
-        - ``typing.Dict[K, V]``, ``typing.Mapping[K, V]``, ``typing.MutableMapping[K, V]`` (converts to :class:`dict`)
-        - ``typing.Optional[T]``, ``typing.Union[X, Y, Z]`` (converts to first matching type)
-
-
-.. function:: option(*, default=NOTHING, validator=None, repr=True, hash=None, init=True, metadata=None, converter=None, factory=None, kw_only=False, eq=None, order=None, on_setattr=None, help=None, click=None)
-
-    An alias to :func:`attrs.field()`
+    A wrapper for :func:`attrs.field()` that makes it easier to pass Typed Settings specific metadata to it.
 
     Additional Parameters:
-      - **help** (str_): The help string for Click options
+      - **help** (str_ | None_): The help string for Click or argparse options.
 
-      - **click** (dict_): Additional keyword arguments to pass to :func:`click.option()`.
+      - **click** (dict_ | None_): Additional keyword arguments to pass to :func:`click.option()`.
         They can override *everything* that Typed Settings automatically generated for you.
         If that dict contains a ``help``, it overrides the value of the *help* argument.
         In addition, it can contain the key ``param_decls: str | Sequence(str)`` to override the automatically generated ones.
 
+      - **argparse** (dict_ | None_): Additional keyword arguments to pass to :meth:`~argparse.ArgumentParser.add_argument()`.
+        They can override *everything* that Typed Settings automatically generated for you.
+        If that dict contains a ``help``, it overrides the value of the *help* argument.
+        In addition, it can contain the key ``param_decls: str | Sequence(str)`` to override the automatically generated ones.
+
+    .. _none: https://docs.python.org/3/library/constants.html#None
     .. _dict: https://docs.python.org/3/library/functions.html#dict
     .. _str: https://docs.python.org/3/library/functions.html#str
 
 
-.. function:: secret(*, default=NOTHING, validator=None, repr=***, hash=None, init=True, metadata=None, converter=None, factory=None, kw_only=False, eq=None, order=None, on_setattr=None, help=None, click=None)
+.. function:: secret(*, default=NOTHING, validator=None, repr=True, hash=None, init=True, metadata=None, converter=None, factory=None, kw_only=False, eq=None, order=None, on_setattr=None, help=None, click=None, argparse=None)
 
-    An alias to :func:`option()` but with a default repr that hides screts.
+
+    An alias to :func:`option()` but with a default repr that hides secrets.
 
     When printing a settings instances, secret settings will represented with
-    `***` istead of their actual value.
+    `*******` instead of their actual value.
 
-    See :func:`option()` for help on the addional parameters.
+    See :func:`option()` for help on the additional parameters.
 
     Example:
 
@@ -193,27 +197,17 @@ Helpers
 
 .. autofunction:: evolve
 
+Settings Classes: Utils
+=======================
 
-Converters
-----------
-
-
-.. automodule:: typed_settings.converters
+.. automodule:: typed_settings.cls_utils
    :members:
 
 
-CLI Utils
-=========
+CLI: Argparse
+=============
 
-.. automodule:: typed_settings.cli_utils
-   :members:
-   :special-members: __call__
-
-
-Argparse Options
-================
-
-.. automodule:: typed_settings.argparse_utils
+.. automodule:: typed_settings.cli_argparse
 
 Decorators and Functions
 ------------------------
@@ -239,10 +233,10 @@ Argparse type handling for the
 .. autoclass:: ArgparseHandler
 
 
-Click Options
-=============
+CLI: Click
+==========
 
-.. automodule:: typed_settings.click_utils
+.. automodule:: typed_settings.cli_click
 
 Decorators
 ----------
@@ -279,6 +273,14 @@ Click type handling for the
 .. autofunction:: handle_enum
 .. autodata:: DEFAULT_TYPES
 .. autoclass:: ClickHandler
+
+
+CLI: Utils
+==========
+
+.. automodule:: typed_settings.cli_utils
+   :members:
+   :special-members: __call__
 
 
 MyPy

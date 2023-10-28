@@ -8,43 +8,64 @@ from doctest import ELLIPSIS
 from itertools import chain
 from pathlib import Path
 from textwrap import dedent
-from typing import Dict, Iterable, Iterator, List, Optional, Sequence, Tuple
+from typing import Dict, Iterable, Iterator, Optional, Sequence, Tuple, Union
 
 import pytest
-from sybil import Document, Example, Region, Sybil
-from sybil.evaluators.python import PythonEvaluator, pad
-from sybil.parsers.abstract.lexers import BlockLexer
-from sybil.parsers.myst.lexers import (
-    CODEBLOCK_END_TEMPLATE as MYST_CODEBLOCK_END_TEMPLATE,
-)
-from sybil.parsers.rest import DocTestParser, SkipParser
-from sybil.parsers.rest.lexers import (
-    END_PATTERN_TEMPLATE as REST_END_PATTERN_TEMPLATE,
-)
-from sybil.parsers.rest.lexers import (
-    DirectiveInCommentLexer,
-)
-from sybil.region import LexedRegion
-from sybil.typing import Evaluator, Lexer
+import sybil
+import sybil.evaluators.doctest
+import sybil.evaluators.python
+import sybil.parsers.abstract
+import sybil.parsers.abstract.lexers
+import sybil.parsers.myst
+import sybil.parsers.myst.lexers
+import sybil.parsers.rest
+import sybil.parsers.rest.lexers
+import sybil.region
+import sybil.typing
 
 
 REST_START_PATTERN = (
     r"^(?P<prefix>[ \t]*)\.\.\s*(?P<directive>code-block::\s*)"
-    r"(?P<arguments>[\w-]+\b)?"
+    r"(?P<language>[\w-]+\b)?"
     r"(?P<options>(?:\s*\:[\w-]+\:.*\n)*)"
     r"(?:\s*\n)*\n"
 )
 
-MYST_START_PATTENR = (
+MYST_START_PATTERN = (
     r"^(?P<prefix>[ \t]*)"
     r"```\{(?P<directive>code-block)}\s*"
     r"(?P<arguments>[\w-]+\b)$\n"
-    r"(?:(?P<options>(?:\s*\:[\w-]+\:.*\n)*)"
-    r"(?:\s*\n)*\n)?"
+    r"(?P<options>(?:\s*\:[\w-]+\:.*\n)*)?"
 )
 
 
-class MystCodeBlockLexer(BlockLexer):
+class ParametrizedCodeBlockLexer(sybil.parsers.abstract.lexers.BlockLexer):
+    """
+    Base class for configurable code-block lexers.
+    """
+
+    def __init__(self, start_pattern_template: str, end_pattern_template: str) -> None:
+        super().__init__(
+            start_pattern=re.compile(start_pattern_template, re.MULTILINE),
+            end_pattern_template=end_pattern_template,
+        )
+
+    def __call__(self, document: sybil.Document) -> Iterable[sybil.region.LexedRegion]:
+        for region in super().__call__(document):
+            if isinstance(region, sybil.region.LexedRegion):
+                # 'or ""' also handles "get()" returning None:
+                options_str = region.lexemes.get("options", "") or ""
+                option_lines = options_str.splitlines()
+                options: Dict[str, str] = {}
+                for option_str in option_lines:
+                    optname, _, optval = option_str.strip().partition(" ")
+                    optname = optname[1:-1]
+                    options[optname] = optval.strip()
+                region.lexemes["options"] = options
+            yield region
+
+
+class MystCodeBlockLexer(ParametrizedCodeBlockLexer):
     """
     A lexer for MyST code-block directives.
     Both ``directive`` and ``arguments`` are regex patterns.
@@ -54,8 +75,8 @@ class MystCodeBlockLexer(BlockLexer):
     .. code-block:: markdown
 
         ```{code-block} language
-        key1: val1
-        key2: val2
+        :key1: val1
+        :key2: val2
 
         This is
         directive content
@@ -63,50 +84,23 @@ class MystCodeBlockLexer(BlockLexer):
 
     def __init__(self) -> None:
         super().__init__(
-            start_pattern=re.compile(MYST_START_PATTENR, re.MULTILINE),
-            end_pattern_template=MYST_CODEBLOCK_END_TEMPLATE,
+            start_pattern_template=MYST_START_PATTERN,
+            end_pattern_template=sybil.parsers.myst.lexers.CODEBLOCK_END_TEMPLATE,
         )
 
-    def __call__(self, document: Document) -> Iterable[LexedRegion]:
-        for region in super().__call__(document):
-            if isinstance(region, LexedRegion):
-                # 'or ""' also handles "get()" returning None:
-                options_str = region.lexemes.get("options", "") or ""
-                option_lines = options_str.splitlines()
-                options: Dict[str, str] = {}
-                for option_str in option_lines:
-                    optname, _, optval = option_str.strip().partition(" ")
-                    optname = optname[1:-1]
-                    options[optname] = optval
-                region.lexemes["options"] = options
-            yield region
 
-
-class RestCodeBlockLexer(BlockLexer):
+class RestCodeBlockLexer(ParametrizedCodeBlockLexer):
     """
     A lexer for ReST code-block directives.
-    Both ``directive`` and ``arguments`` are regex patterns.
 
     Copied and adjusted from Sybil.
     """
 
     def __init__(self):
         super().__init__(
-            start_pattern=re.compile(REST_START_PATTERN, re.MULTILINE),
-            end_pattern_template=REST_END_PATTERN_TEMPLATE,
+            start_pattern_template=REST_START_PATTERN,
+            end_pattern_template=sybil.parsers.rest.lexers.END_PATTERN_TEMPLATE,
         )
-
-    def __call__(self, document: Document) -> Iterable[LexedRegion]:
-        for region in super().__call__(document):
-            if isinstance(region, LexedRegion):
-                option_strs = region.lexemes.get("options", "").splitlines()
-                options: Dict[str, str] = {}
-                for option_str in option_strs:
-                    optname, _, optval = option_str.strip().partition(" ")
-                    optname = optname[1:-1]
-                    options[optname] = optval
-                region.lexemes["options"] = options
-            yield region
 
 
 class AbstractCodeBlockParser:
@@ -120,9 +114,9 @@ class AbstractCodeBlockParser:
 
     def __init__(
         self,
-        lexers: Sequence[Lexer],
+        lexers: Sequence[sybil.typing.Lexer],
         language: Optional[str] = None,
-        evaluator: Evaluator = None,
+        evaluator: sybil.typing.Evaluator = None,
     ):
         self.lexers = lexers
         if language is not None:
@@ -131,13 +125,13 @@ class AbstractCodeBlockParser:
         if evaluator is not None:
             self.evaluate = evaluator  # type: ignore[assignment]
 
-    def evaluate(self, example: Example) -> Optional[str]:
+    def evaluate(self, example: sybil.Example) -> Optional[str]:
         raise NotImplementedError
 
-    def __call__(self, document: Document) -> Iterable[Region]:
+    def __call__(self, document: sybil.Document) -> Iterable[sybil.Region]:
         for lexed in chain(*(lexer(document) for lexer in self.lexers)):
             if lexed.lexemes["arguments"] == self.language:
-                r = Region(
+                r = sybil.Region(
                     lexed.start,
                     lexed.end,
                     lexed.lexemes["source"],
@@ -155,20 +149,26 @@ class CodeBlockParser(AbstractCodeBlockParser):
     def __init__(
         self,
         language: Optional[str] = None,
-        evaluator: Optional[Evaluator] = None,
+        evaluator: Optional[sybil.typing.Evaluator] = None,
     ):
         super().__init__(
             [
+                sybil.parsers.myst.lexers.FencedCodeBlockLexer(
+                    language=r".+",
+                    mapping={"language": "arguments", "source": "source"},
+                ),
                 MystCodeBlockLexer(),
                 RestCodeBlockLexer(),
-                DirectiveInCommentLexer(directive=r"(invisible-)?code(-block)?"),
-                # DirectiveInPercentCommentLexer(directive=...)
+                sybil.parsers.rest.lexers.DirectiveInCommentLexer(
+                    directive=r"(invisible-)?code(-block)?"
+                ),
+                # sybil.parser.myst.lexers.DirectiveInPercentCommentLexer(directive=...)
             ],
             language,
             evaluator,
         )
 
-    pad = staticmethod(pad)
+    pad = staticmethod(sybil.evaluators.python.pad)
 
 
 class CodeFileParser(CodeBlockParser):
@@ -183,16 +183,33 @@ class CodeFileParser(CodeBlockParser):
         language: Optional[str] = None,
         *,
         ext: Optional[str] = None,
-        fallback_evaluator: Evaluator = None,
+        fallback_evaluator: sybil.typing.Evaluator = None,
+        doctest_optionflags: int = 0,
     ) -> None:
         super().__init__(language=language)  # type: ignore[arg-type]
         if ext is not None:
             self.ext = ext
         if self.ext is None:
             raise ValueError('"ext" must be specified!')
+        if language == "python":
+            self.doctest_parser = sybil.parsers.abstract.DocTestStringParser(
+                sybil.evaluators.doctest.DocTestEvaluator(doctest_optionflags)
+            )
+        else:
+            self.doctest_parser = None
         self.evaluator = fallback_evaluator
 
-    def evaluate(self, example: Example) -> None:
+    def __call__(self, document: sybil.Document) -> Iterable[sybil.Region]:
+        for region in super().__call__(document):
+            source = region.parsed
+            if region.parsed.startswith(">>>"):
+                for doctest_region in self.doctest_parser(source, document.path):
+                    doctest_region.adjust(region, source)
+                    yield doctest_region
+            else:
+                yield region
+
+    def evaluate(self, example: sybil.Example) -> None:
         caption = example.region.options.get("caption")
         if caption and caption.endswith(self.ext):
             raw_text = dedent(example.parsed)
@@ -201,7 +218,7 @@ class CodeFileParser(CodeBlockParser):
             self.evaluator(example)
 
 
-class ConsoleCodeBlockParser(CodeBlockParser):
+class ConsoleCodeBlockParser(sybil.parsers.myst.CodeBlockParser):
     """
     Code block parser for Console sessions.
 
@@ -210,35 +227,55 @@ class ConsoleCodeBlockParser(CodeBlockParser):
 
     language = "console"
 
-    def evaluate(self, example: Example) -> None:
-        cmds = self._get_commands(example)
+    def evaluate(self, example: sybil.Example) -> None:
+        cmds, output = self._get_commands(example)
 
-        for cmd, expected in cmds:
-            result = subprocess.run(
-                cmd,
-                shell=True,  # noqa: S602
-                # cwd=str(tmp_path),
-                capture_output=True,
-                text=True,
-                check=False,
-            )
-            assert result.stderr == ""
-            assert result.stdout == expected
-            assert result.returncode == 0
+        expected: Union[str, re.Pattern]
+        if "..." in output:
+            output = re.escape(output).replace("\\.\\.\\.", ".*")
+            expected = re.compile(f"^{output}$", flags=re.DOTALL)
+        else:
+            expected = output
+        proc = subprocess.Popen(
+            ["bash"],  # noqa: S603, S607
+            stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            text=True,
+        )
+        stdout, _stderr = proc.communicate(cmds)
+        # Remove trailing spaces in output:
+        stdout = "".join(f"{line.rstrip()}\n" for line in stdout.splitlines())
+        if isinstance(expected, str):
+            assert stdout == expected
+        else:
+            assert expected.match(stdout)
 
-    def _get_commands(self, example: Example) -> List[Tuple[str, str]]:
-        code_lines = dedent(example.parsed).strip().split("\n")
+    def _get_commands(self, example: sybil.Example) -> Tuple[str, str]:
+        """
+        Return commands and outputs.
+        """
+        # Until version 23.0.1 this function returned a list of (cmd, output) tuples and
+        # each cmd was invoked individually.
+        # This prevented the use of "export VAR=val" because the env was not carried
+        # over to the next command.
+        #
+        # Now we just concatenate all commands and run them as a single script and
+        # compare the output of all commands at once.  It's not very easy to simulate an
+        # interactive Bash session in Python and this is good enough for the doctests.
+        code_lines = dedent(example.parsed).strip().splitlines()
 
-        cmds: List[Tuple[str, List[str]]] = []
-        current_cmd: str
+        cmds, output = [], []
         for line in code_lines:
             if line.startswith("$"):
                 _, _, current_cmd = line.partition(" ")
-                cmds.append((current_cmd, []))
+                cmds.append(current_cmd)
             else:
-                cmds[-1][-1].append(line)
+                output.append(line)
 
-        return [(cmd, "".join(f"{x}\n" for x in lines)) for cmd, lines in cmds]
+        cmds.append("exit")
+
+        return "".join(f"{c}\n" for c in cmds), "".join(f"{o}\n" for o in output)
 
 
 @pytest.fixture(scope="module")
@@ -286,15 +323,29 @@ def env() -> Iterator[Env]:
         e.undo()
 
 
-pytest_collect_file = Sybil(
+markdown_examples = sybil.Sybil(
     parsers=[
-        SkipParser(),
-        DocTestParser(optionflags=ELLIPSIS),
-        CodeFileParser("python", ext=".py", fallback_evaluator=PythonEvaluator()),
+        CodeFileParser(
+            "python",
+            ext=".py",
+            fallback_evaluator=sybil.evaluators.python.PythonEvaluator(),
+        ),
+        CodeFileParser("json", ext=".json"),
         CodeFileParser("toml", ext=".toml"),
         ConsoleCodeBlockParser(),
+        sybil.parsers.myst.DocTestDirectiveParser(optionflags=ELLIPSIS),
+        # sybil.parsers.myst.PythonCodeBlockParser(doctest_optionflags=ELLIPSIS),
+        sybil.parsers.myst.SkipParser(),
     ],
-    # patterns=["*.md", "*.rst", "*.py"],
-    patterns=["docs/*.md", "docs/*.rst"],
-    fixtures=["tempdir", "env"],
-).pytest()
+    patterns=["*.md"],
+    fixtures=["tempdir", "env", "tmp_path"],
+)
+rest_examples = sybil.Sybil(
+    parsers=[
+        sybil.parsers.rest.SkipParser(),
+        sybil.parsers.rest.DocTestParser(optionflags=ELLIPSIS),
+    ],
+    patterns=["*.rst", "*.py"],
+    fixtures=["tempdir", "env", "tmp_path"],
+)
+pytest_collect_file = (markdown_examples + rest_examples).pytest()

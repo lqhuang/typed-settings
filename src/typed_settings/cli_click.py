@@ -79,6 +79,7 @@ __all__ = [
     "DEFAULT_TYPES",
     "METADATA_KEY",
     "ClickHandler",
+    "F",
 ]
 
 
@@ -87,9 +88,8 @@ METADATA_KEY = "click"
 
 
 Callback = Callable[[click.Context, click.Option, Any], Any]
-# AnyFunc = Callable[..., Any]
 F = TypeVar("F", bound=Callable[..., Any])
-# FC = TypeVar("FC", bound=Union[t.Callable[..., Any], Command])
+"""TypeVar for arbitrary functions."""
 Decorator = Callable[[F], F]
 
 

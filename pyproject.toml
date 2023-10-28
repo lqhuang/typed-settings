@@ -178,8 +178,7 @@ module = "typed_settings.*"
 disallow_untyped_defs = true
 
 [tool.pytest.ini_options]
-addopts = "--doctest-glob='*.md' --doctest-glob='*.rst' --doctest-modules --ignore=docs/_build"
-# addopts = "-p no:doctest"
+addopts = "--ignore=README.md --ignore=docs/_build"
 
 [tool.ruff]
 select = [  # see: https://beta.ruff.rs/docs/rules/

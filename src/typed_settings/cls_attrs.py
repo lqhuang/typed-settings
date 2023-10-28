@@ -375,7 +375,7 @@ def evolve(inst: attrs.AttrsInstance, **changes: Any) -> attrs.AttrsInstance:
     ..  versionadded:: 1.0.0
     """
     cls = inst.__class__
-    attribs = attrs.fields(cls)
+    attribs = attrs.fields(cls)  # type: ignore[misc]
     for a in attribs:
         if not a.init:
             continue
@@ -474,7 +474,7 @@ def combine(
             order=a.order,
             on_setattr=a.on_setattr,
         )
-        for a in attr.fields(base_cls)
+        for a in attr.fields(base_cls)  # type: ignore[misc]
     }
     for aname, default in nested.items():
         if aname in attribs:

@@ -51,14 +51,23 @@ METADATA_KEY: Final[str] = "typed_settings"
 SECRET_REPR: Final[str] = "*******"
 
 
+#: A generic TypeVar
 T = TypeVar("T")
+#: A TypeVar for :class:`~enum.Enum` types
 ET = TypeVar("ET", bound=Enum)  # Enum type
+#: A TypeVar for settings instances
 ST = TypeVar("ST")  # Type var for SettingsInstance
+
 SettingsClass = type
 SettingsInstance = Any
 OptionName = str
 OptionPath = str
 SettingsDict = Dict[OptionName, Union[Any, "SettingsDict"]]
+"""
+A dictionary with all loaded settings.
+
+Values are not converted to their final type yet.
+"""
 
 
 class _Auto:

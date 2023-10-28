@@ -61,10 +61,31 @@ copybutton_prompt_is_regexp = True
 intersphinx_mapping = {
     "python": ("https://docs.python.org/3/", None),
     "attrs": ("https://www.attrs.org/en/stable/", None),
-    "cattrs": ("https://cattrs.readthedocs.io/en/latest/", None),
+    "cattrs": ("https://catt.rs/en/latest/", None),
     "click": ("https://click.palletsprojects.com/en/latest/", None),
     "click-option-group": (
         "https://click-option-group.readthedocs.io/en/latest/",
         None,
     ),
 }
+
+
+# Workaround for https://github.com/sphinx-doc/sphinx/issues/10785
+# (Type aliases are not properly resolved, change "py:class" to "py:data")
+TYPE_ALIASES = ["SettingsDict"]
+
+
+def resolve_type_aliases(app, env, node, contnode):
+    """Resolve :class: references to our type aliases as :attr: instead."""
+    if (
+        node["refdomain"] == "py"
+        and node["reftype"] == "class"
+        and node["reftarget"] in TYPE_ALIASES
+    ):
+        return app.env.get_domain("py").resolve_xref(
+            env, node["refdoc"], app.builder, "data", node["reftarget"], node, contnode
+        )
+
+
+def setup(app):  # noqa: D103
+    app.connect("missing-reference", resolve_type_aliases)

@@ -67,13 +67,20 @@
 
 - ✨ Officially support Python 3.12.
 
+- 📝 Split guides into smaller pages
+
+- 📝 Converted docs from ReST to Markdown/[MyST] and use [Sybil] to test
+  all examples.
+
 - 📦 Switched from [safety] to [pip-audit].
 
 [#20]: https://gitlab.com/sscherfke/typed-settings/-/issues/20
 [#30]: https://gitlab.com/sscherfke/typed-settings/-/issues/30
 [#41]: https://gitlab.com/sscherfke/typed-settings/-/issues/41
+[myst]: https://myst-parser.readthedocs.io/en/latest/
 [pip-audit]: https://pypi.org/project/pip-audit
 [safety]: https://pypi.org/project/safety
+[sybil]: https://sybil.readthedocs.io/en/latest/
 [vendor]: https://gitlab.com/sscherfke/typed-settings-vendoring
 
 

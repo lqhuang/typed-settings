@@ -84,12 +84,12 @@ $ python -m pip install typed-settings[<feature>]
 
 Available features:
 
-- `typed-settings[attrs]`: Enable settings classes via **attrs**.
-- `typed-settings[pydantic]`: Enable settings classes via **Pydantic**.
-- `typed-settings[cattrs]`: Enable usage of the powerful and fast **cattrs** converter.
-- `typed-settings[click]`: Enable support for **Click** options.
-- `typed-settings[option-groups]`: Enable support for **Click** and **Click option groups**.
-- `typed-settings[jinja]`: Enable support for value interpolation with **Jinja** templates.
+- `typed-settings[attrs]`: Enable settings classes via {program}`attrs`.
+- `typed-settings[pydantic]`: Enable settings classes via {program}`Pydantic`.
+- `typed-settings[cattrs]`: Enable usage of the powerful and fast {program}`cattrs` converter.
+- `typed-settings[click]`: Enable support for {program}`Click` options.
+- `typed-settings[option-groups]`: Enable support for {program}`Click** and **Click option groups`.
+- `typed-settings[jinja]`: Enable support for value interpolation with {program}`Jinja` templates.
 - `typed-settings[all]`: Install all optional requirements.
 
 % skip: end
