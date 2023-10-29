@@ -26,15 +26,15 @@ def mock_op_cli(
     if request.param:
         request.getfixturevalue("mock_op")
     else:
-        try:
+        try:  # pragma: no cover
             has_op = op.run("account", "list") != ""
-        except ValueError:
+        except ValueError:  # pragma: no cover
             has_op = False
 
         in_ci = "CI" in os.environ
         on_feature_branch = os.getenv("CI_COMMIT_BRANCH", "") not in {"main", ""}
 
-        if (not has_op) or (in_ci and on_feature_branch):
+        if (not has_op) or (in_ci and on_feature_branch):  # pragma: no cover
             pytest.skip(reason="OP not installed or credentials not accessible")
 
 

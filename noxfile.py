@@ -40,13 +40,17 @@ DEPS_MATRIX = {
 }
 
 IN_CI = "CI" in os.environ
+OMMIT_IN_REPORT = [
+    "src/typed_settings/argparse_utils.py",
+    "src/typed_settings/attrs.py",
+    "src/typed_settings/click_utils.py",
+    "src/typed_settings/mypy.py",
+]
 if IN_CI:
-    OMMIT_IN_REPORT = [
+    OMMIT_IN_REPORT += [
         "src/typed_settings/_onepassword.py",
         "tests/test_onepassword.py",
     ]
-else:
-    OMMIT_IN_REPORT = []
 
 
 @nox.session
