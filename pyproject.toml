@@ -212,6 +212,7 @@ target-version = "py38"
 "docs/examples/*" = ["D100", "D101", "D103", "D415"]
 "examples/*" = ["D101"]
 "tests/*" = ["RUF012"]
+"tests/op" = ["D100"]
 "tests/test_cli_param_types.py" = ["D106"]
 
 [tool.ruff.isort]

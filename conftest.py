@@ -283,11 +283,18 @@ def tempdir(tmp_path_factory: pytest.TempPathFactory) -> Iterator[Path]:
     """
     Create a a "doctests" diretory in "tmp_path" and make that dir the CWD.
     """
+    tests_dir = Path(__file__).parent.joinpath("tests")
+    assert tests_dir.is_dir()
+    path = os.getenv("PATH")
+    path = f"{tests_dir}:{path}"
+
     tmp_path = tmp_path_factory.mktemp("doctests")
     old_cwd = os.getcwd()
     os.chdir(tmp_path)
     try:
-        yield tmp_path
+        with pytest.MonkeyPatch.context() as monkeypatch:
+            monkeypatch.setitem(os.environ, "PATH", path)
+            yield tmp_path
     finally:
         os.chdir(old_cwd)
 
@@ -334,7 +341,6 @@ markdown_examples = sybil.Sybil(
         CodeFileParser("toml", ext=".toml"),
         ConsoleCodeBlockParser(),
         sybil.parsers.myst.DocTestDirectiveParser(optionflags=ELLIPSIS),
-        # sybil.parsers.myst.PythonCodeBlockParser(doctest_optionflags=ELLIPSIS),
         sybil.parsers.myst.SkipParser(),
     ],
     patterns=["*.md"],
@@ -345,7 +351,6 @@ rest_examples = sybil.Sybil(
         sybil.parsers.rest.SkipParser(),
         sybil.parsers.rest.DocTestParser(optionflags=ELLIPSIS),
     ],
-    patterns=["*.rst", "*.py"],
-    fixtures=["tempdir", "env", "tmp_path"],
+    patterns=["*.py"],
 )
 pytest_collect_file = (markdown_examples + rest_examples).pytest()

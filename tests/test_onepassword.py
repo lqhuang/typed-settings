@@ -3,6 +3,7 @@ Tests for "typed_settings.onepasword".
 """
 import os
 import subprocess
+from pathlib import Path
 from typing import Any, Optional, Tuple
 
 import pytest
@@ -11,17 +12,30 @@ from packaging.version import Version
 from typed_settings import _onepassword as op
 
 
-try:
-    HAS_OP = op.run("account", "list") != ""
-except ValueError:
-    HAS_OP = False
-IN_CI = "CI" in os.environ
-ON_FEATURE_BRANCH = os.getenv("CI_COMMIT_BRANCH", "") not in {"main", ""}
+HERE = Path(__file__).parent
 
-pytestmark = pytest.mark.skipif(
-    (not HAS_OP) or (IN_CI and ON_FEATURE_BRANCH),
-    reason="OP not installed or credentials not accessible",
-)
+
+@pytest.fixture(autouse=True, params=[False, True])
+def mock_op_cli(
+    request: pytest.FixtureRequest, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """
+    Generate two test runs for each test: One with the real "op" ClI and one with a
+    mock.
+    """
+    if request.param:
+        request.getfixturevalue("mock_op")
+    else:
+        try:
+            has_op = op.run("account", "list") != ""
+        except ValueError:
+            has_op = False
+
+        in_ci = "CI" in os.environ
+        on_feature_branch = os.getenv("CI_COMMIT_BRANCH", "") not in {"main", ""}
+
+        if (not has_op) or (in_ci and on_feature_branch):
+            pytest.skip(reason="OP not installed or credentials not accessible")
 
 
 def test_op_run() -> None:
@@ -55,7 +69,7 @@ def test_op_error() -> None:
     """
     An error is raised if the "op" invocation fails.
     """
-    msg = '"op" error:.*unknown command.*'
+    msg = '"op" error:.*(unknown command)|(No such command).*'
     with pytest.raises(ValueError, match=msg):
         op.run("spam", "eggs")
 

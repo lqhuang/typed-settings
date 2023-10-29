@@ -1,0 +1,100 @@
+#!/usr/bin/env python
+import json
+from typing import Any, Dict, Optional
+
+import click
+
+
+VAULT_DATA: Dict[Optional[str], Dict[str, Dict[str, str]]] = {
+    "Test": {
+        "Test": {
+            "username": "spam",
+            "password": "eggs",
+        },
+        "api-a": {
+            "hostname": "https://api-a.example.com",
+            "username": "user",
+            "credential": "key",
+        },
+        "api-b": {
+            "hostname": "https://api-b.example.com",
+            "username": "user",
+            "credential": "key",
+        },
+    },
+}
+VAULT_DATA[""] = VAULT_DATA["Test"]
+VAULT_DATA[None] = VAULT_DATA["Test"]
+
+
+def print_version(ctx: click.Context, param: click.Parameter, value: Any) -> None:
+    """
+    Print the version and exit.
+    """
+    if not value or ctx.resilient_parsing:
+        return
+    click.echo("1.0")
+    ctx.exit()
+
+
+@click.group()
+@click.option(
+    "--version", is_flag=True, callback=print_version, expose_value=False, is_eager=True
+)
+def cli() -> None:
+    """
+    A simple mock for the 1Password CLI.
+    """
+
+
+@cli.command()
+@click.argument("verb")
+@click.argument("item")
+@click.option("--format")
+@click.option("--vault", default=None)
+@click.pass_context
+def item(
+    ctx: click.Context, verb: str, format: str, item: str, vault: Optional[str]
+) -> None:
+    """
+    Return ITEM from VAULT as json.
+    """
+    assert verb == "get"
+    assert format == "json"
+    try:
+        data = VAULT_DATA[vault][item]
+    except KeyError:
+        click.echo(f'[ERROR] YYYY/MM/DD HH:MM:SS "{item}" isn\'t an item', err=True)
+        ctx.exit(1)
+
+    result = {
+        "fields": [{"label": k, "value": v} for k, v in data.items()],
+    }
+    click.echo(json.dumps(result))
+
+
+@cli.command()
+@click.argument("resource")
+@click.pass_context
+def read(ctx: click.Context, resource: str) -> None:
+    """
+    Return RESOURCE.
+    """
+    try:
+        _schema, _, vault, item, field = resource.split("/")
+        data = VAULT_DATA[vault][item][field]
+    except (KeyError, ValueError):
+        click.echo(
+            (
+                f"[ERROR] YYYY/MM/DD HH:MM:SS could not read secret {resource}: "
+                f"invalid secret reference"
+            ),
+            err=True,
+        )
+        ctx.exit(1)
+
+    click.echo(data)
+
+
+if __name__ == "__main__":
+    cli()

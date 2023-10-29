@@ -2,12 +2,13 @@
 Shared fixtures for all tests.
 """
 import dataclasses
+import os
 import sys
-from typing import Any, Callable, Dict, Optional, Tuple
+from pathlib import Path
+from typing import Callable, Dict, Tuple
 
 import pytest
 
-from typed_settings import _onepassword
 from typed_settings.cls_utils import deep_options
 from typed_settings.types import OptionList
 
@@ -101,21 +102,12 @@ def options(settings_clss: SettingsClasses) -> OptionList:
 @pytest.fixture
 def mock_op(monkeypatch: pytest.MonkeyPatch) -> None:
     """
-    Mock one password and return example data.
+    Update ``PATH`` in ``os.environ`` to point to a mocked 1Password CLI.
     """
-
-    def get_item(item: str, vault: Optional[str] = None) -> Dict[str, Any]:
-        if item == "Test" and vault in {"Test", "", None}:
-            return {"username": "spam", "password": "eggs"}
-        raise ValueError("op error")  # pragma: no cover
-
-    def get_resource(resource: str) -> str:
-        if resource == "op://Test/Test/password":
-            return "eggs"
-        raise ValueError("op error")  # pragma: no cover
-
-    monkeypatch.setattr(_onepassword, "get_item", get_item)
-    monkeypatch.setattr(_onepassword, "get_resource", get_resource)
+    here = Path(__file__).parent
+    path = os.getenv("PATH")
+    path = f"{here}:{path}"
+    monkeypatch.setitem(os.environ, "PATH", path)
 
 
 @pytest.fixture
