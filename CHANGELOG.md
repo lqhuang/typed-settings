@@ -65,6 +65,8 @@
 
 - ✨ Added a dictionary loader.  This is useful for testing purposes.
 
+- ✨ Added `start_dir` parameter to `find()`.
+
 - ✨ Officially support Python 3.12.
 
 - 📝 Split guides into smaller pages

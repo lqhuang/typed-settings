@@ -74,12 +74,20 @@ from typed_settings import _file_utils as fu
         ),
     ],
 )
+@pytest.mark.parametrize(
+    "monkeypatch_cwd",
+    [
+        pytest.param(True, id="monkeypatch_cwd"),
+        pytest.param(False, id="use_cwd_argument"),
+    ],
+)
 def test_find(
     args: List[str],
     start: str,
     expected: str,
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
+    monkeypatch_cwd: bool,
 ) -> None:
     """find() always returns a path, never raises something."""
     for p in [".git", "src/a/x", "src/a/y"]:
@@ -87,8 +95,18 @@ def test_find(
     for p in ["pyproject.toml", "s.toml", "src/stop"]:
         tmp_path.joinpath(p).touch()
 
-    monkeypatch.chdir(tmp_path.joinpath(start))
+    # We need a deepcopy here as we modify the args below
+    args = deepcopy(args)
     if len(args) > 1:
+    if len(args) > 1:
+        args = list(args)
         args[1] = tmp_path.joinpath(args[1])  # type: ignore[call-overload]
-    result = fu.find(*args)
+
+    start_dir = tmp_path.joinpath(start)
+
+    if monkeypatch_cwd:
+        monkeypatch.chdir(start_dir)
+        result = fu.find(*args)
+    else:
+        result = fu.find(*args, start_dir=start_dir)
     assert result == tmp_path.joinpath(expected)
