@@ -399,7 +399,7 @@ class PythonFormat:
 
     def __init__(
         self,
-        cls_name: str,
+        cls_name: Optional[str],
         key_transformer: Callable[[str], str] = lambda k: k,
         flat: bool = False,
     ) -> None:
@@ -423,7 +423,8 @@ class PythonFormat:
         Args:
             path: The path to the config file.
             options: The list of available settings.
-            settings_cls: The base settings class for all options.
+            settings_cls: The base settings class for all options.  If ``None``, load
+                directly from the module instead.
 
         Return:
             A dict with the loaded settings.
@@ -434,23 +435,26 @@ class PythonFormat:
         """
         module = self._import_module(path)
 
-        def cls2dict(cls: type) -> SettingsDict:
-            d = dict(cls.__dict__)
+        def namespace2dict(namespace: object) -> SettingsDict:
+            d = dict(namespace.__dict__)
             result = {}
             for k, v in d.items():
                 if k.startswith("_"):
                     continue
                 k = self.key_transformer(k)
                 if isinstance(v, type):
-                    v = cls2dict(v)
+                    v = namespace2dict(v)
                 result[k] = v
             return result
 
-        try:
-            cls = getattr(module, self.cls_name)
-        except AttributeError:
-            return {}
-        settings = cls2dict(cls)
+        if self.cls_name is None:
+            namespace = module
+        else:
+            try:
+                namespace = getattr(module, self.cls_name)
+            except AttributeError:
+                return {}
+        settings = namespace2dict(namespace)
         if self.flat:
             for o in options:
                 key = f"{o.path.replace('.', '_')}"
@@ -480,7 +484,7 @@ class TomlFormat:
         section: The config file section to load settings from.
     """
 
-    def __init__(self, section: str) -> None:
+    def __init__(self, section: Optional[str]) -> None:
         self.section = section
 
     def __call__(
@@ -492,7 +496,8 @@ class TomlFormat:
         Args:
             path: The path to the config file.
             options: The list of available settings.
-            settings_cls: The base settings class for all options.
+            settings_cls: The base settings class for all options.  If ``None``, load
+                top level settings.
 
         Return:
             A dict with the loaded settings.
@@ -501,7 +506,6 @@ class TomlFormat:
             ConfigFileNotFoundError: If *path* does not exist.
             ConfigFileLoadError: If *path* cannot be read/loaded/decoded.
         """
-        sections = self.section.split(".")
         try:
             with path.open("rb") as f:
                 settings = tomllib.load(f)
@@ -509,11 +513,13 @@ class TomlFormat:
             raise ConfigFileNotFoundError(str(e)) from e
         except (PermissionError, tomllib.TOMLDecodeError) as e:
             raise ConfigFileLoadError(str(e)) from e
-        for s in sections:
-            try:
-                settings = settings[s]
-            except KeyError:
-                return {}
+        if self.section is not None:
+            sections = self.section.split(".")
+            for s in sections:
+                try:
+                    settings = settings[s]
+                except KeyError:
+                    return {}
         return cast(SettingsDict, settings)
 
 
