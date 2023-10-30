@@ -96,8 +96,6 @@ def test_find(
         tmp_path.joinpath(p).touch()
 
     # We need a deepcopy here as we modify the args below
-    args = deepcopy(args)
-    if len(args) > 1:
     if len(args) > 1:
         args = list(args)
         args[1] = tmp_path.joinpath(args[1])  # type: ignore[call-overload]
