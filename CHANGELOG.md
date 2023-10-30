@@ -1,6 +1,6 @@
 # Changelog
 
-## 23.1.0 (unreleased)
+## 23.1.0 (2023-10-30)
 
 ### Changed
 
@@ -10,6 +10,7 @@
 
   This will affect you if you have created a custom loader or processor,
   or if you rely on internal functionality.
+  Otherwise, you should be fine.
 
   Every loader now stores some meta data with the settings it loaded.
   This meta data can, for example, be used to resolve relative paths in

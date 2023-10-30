@@ -6,7 +6,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "typed-settings"
-version = "23.0.1"
+version = "23.1.0"
 description = "Typed settings based on attrs classes"
 readme = "README.md"
 license = "MIT"
