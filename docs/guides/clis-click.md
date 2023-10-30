@@ -627,16 +627,14 @@ Using optional options (with type {samp}`Optional[{T}]` or {samp}`{T} | None`) i
 ```{code-block} python
 :caption: example.py
 
-from typing import List, Optional
-
 import click
 import typed_settings as ts
 
 
 @ts.settings
 class Settings:
-    a: Optional[int]
-    b: Optional[List[int]]
+    a: int | None
+    b: list[int] | None
 
 
 @click.command()
@@ -670,8 +668,6 @@ However, optional nested settings do not work:
 ```{code-block} python
 :caption: example.py
 
-from typing import List, Optional
-
 import click
 import typed_settings as ts
 
@@ -679,13 +675,13 @@ import typed_settings as ts
 @ts.settings
 class Nested:
    a: int
-   b: Optional[int]
+   b: int | None
 
 
 @ts.settings
 class Settings:
     n: Nested
-    o: Optional[Nested]
+    o: Nested | None
 
 
 @click.command()

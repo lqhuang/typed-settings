@@ -18,18 +18,17 @@ You can activate the plugin via your :file:`pyproject.toml` or
     plugins=typed_settings.mypy
 """
 
-try:  # pragma: no cover
+try:
     from typing import Type
 
     from mypy.plugin import Plugin
     from mypy.plugins.attrs import attr_attrib_makers, attr_dataclass_makers
 except ImportError:
     pass
-else:  # pragma: no cover
+else:
     # These work just like `attr.dataclass`.
     attr_dataclass_makers.add("attr.frozen")
     attr_dataclass_makers.add("typed_settings.cls_attrs.settings")
-    attr_dataclass_makers.add("tests.test_hooks.auto_converter")
 
     # These are our `attr.ib` makers.
     attr_attrib_makers.add("attr.field")
