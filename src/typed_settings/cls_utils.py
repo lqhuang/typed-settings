@@ -11,7 +11,7 @@ import dataclasses
 from itertools import groupby
 from typing import Any, Dict, List, Optional, Protocol, Tuple, Type, cast
 
-from . import types
+from . import constants, types
 from ._compat import PY_39
 
 
@@ -103,7 +103,7 @@ class Attrs:
                         has_no_default=is_nothing,
                         default_is_factory=is_factory,
                         converter=field.converter,
-                        metadata=field.metadata.get(types.METADATA_KEY, {}),
+                        metadata=field.metadata.get(constants.METADATA_KEY, {}),
                     )
                     result.append(oinfo)
 
@@ -166,7 +166,7 @@ class Dataclasses:
                         has_no_default=is_nothing,
                         default_is_factory=is_factory,
                         converter=None,
-                        metadata=field.metadata.get(types.METADATA_KEY, {}),
+                        metadata=field.metadata.get(constants.METADATA_KEY, {}),
                     )
                     result.append(oinfo)
 
@@ -293,7 +293,7 @@ class Pydantic:
                         has_no_default=field.is_required(),
                         default_is_factory=False,
                         converter=None,
-                        metadata=metadata.get(types.METADATA_KEY, {}),
+                        metadata=metadata.get(constants.METADATA_KEY, {}),
                     )
                     result.append(oinfo)
 

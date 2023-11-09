@@ -39,6 +39,7 @@ from .cli_utils import (
     TypeHandlerFunc,
     get_default,
 )
+from .constants import ARGPARSE_METADATA_KEY as METADATA_KEY
 from .converters import Converter, default_converter
 from .loaders import Loader
 from .processors import Processor
@@ -59,16 +60,12 @@ __all__ = [
     "handle_datetime",
     "handle_enum",
     "handle_path",
-    "METADATA_KEY",
     "DEFAULT_TYPES",
     "ArgparseHandler",
     "BooleanOptionalAction",
     "ListAction",
     "DictItemAction",
 ]
-
-
-METADATA_KEY = "argparse"
 
 
 WrapppedFunc = Callable[[ST], Any]

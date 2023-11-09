@@ -6,7 +6,7 @@ import typing as t
 import attrs
 import pytest
 
-from typed_settings import cli_argparse, cli_click, types
+from typed_settings import cli_argparse, cli_click, constants
 from typed_settings.cls_attrs import (
     SECRET,
     combine,
@@ -75,7 +75,7 @@ class TestFieldExtensions:
 
         field = attrs.fields(S).o
         assert field.metadata == {
-            types.METADATA_KEY: {
+            constants.METADATA_KEY: {
                 "help": None,
                 cli_click.METADATA_KEY: {"help": None},
                 cli_argparse.METADATA_KEY: {"help": None},
@@ -93,7 +93,7 @@ class TestFieldExtensions:
 
         field = attrs.fields(S).o
         assert field.metadata == {
-            types.METADATA_KEY: {
+            constants.METADATA_KEY: {
                 "help": "spam",
                 cli_click.METADATA_KEY: {"help": "spam"},
                 cli_argparse.METADATA_KEY: {"help": "spam"},
@@ -107,7 +107,7 @@ class TestFieldExtensions:
 
         field = attrs.fields(S).o
         assert field.metadata == {
-            types.METADATA_KEY: {
+            constants.METADATA_KEY: {
                 "help": "spam",
                 cli_click.METADATA_KEY: {"help": "eggs"},
                 cli_argparse.METADATA_KEY: {"help": "spam"},
@@ -125,7 +125,7 @@ class TestFieldExtensions:
 
         field = attrs.fields(S).o
         assert field.metadata == {
-            types.METADATA_KEY: {
+            constants.METADATA_KEY: {
                 "help": None,
                 cli_click.METADATA_KEY: {"help": None, "param_decls": ("-o",)},
                 cli_argparse.METADATA_KEY: {"help": None},
@@ -148,7 +148,7 @@ class TestFieldExtensions:
         field = attrs.fields(S).o
         assert field.metadata == {
             "spam": "eggs",
-            types.METADATA_KEY: {
+            constants.METADATA_KEY: {
                 "help": "halp!",
                 cli_click.METADATA_KEY: {"help": "halp!", "param_decls": ("-o",)},
                 cli_argparse.METADATA_KEY: {"help": "halp!"},

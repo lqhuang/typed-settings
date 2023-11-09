@@ -11,11 +11,11 @@ import pytest
 from typed_settings import (
     cli_argparse,
     cli_utils,
+    constants,
     default_converter,
     default_loaders,
     option,
     settings,
-    types,
 )
 
 
@@ -175,7 +175,7 @@ def test_attrs_meta_not_modified() -> None:
     class S:
         opt: int = option(help="spam", argparse={"param_decls": "-o"})
 
-    meta = attrs.fields(S).opt.metadata[types.METADATA_KEY]
+    meta = attrs.fields(S).opt.metadata[constants.METADATA_KEY]
 
     assert meta[cli_argparse.METADATA_KEY] == {"help": "spam", "param_decls": "-o"}
 

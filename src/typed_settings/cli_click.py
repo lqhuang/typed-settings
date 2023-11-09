@@ -37,6 +37,7 @@ from .cli_utils import (
     TypeHandlerFunc,
     get_default,
 )
+from .constants import CLICK_METADATA_KEY as METADATA_KEY
 from .converters import Converter, default_converter
 from .loaders import EnvLoader, Loader
 from .processors import Processor
@@ -53,21 +54,6 @@ from .types import (
 )
 
 
-# if TYPE_CHECKING:
-#     from typing import TypeVar
-#
-#     if PY_310:
-#         from typing import Concatenate, ParamSpec
-#     else:
-#         from typing_extensions import (  # type: ignore[assignment]
-#             Concatenate,
-#             ParamSpec,
-#         )
-#
-#     P = ParamSpec("P")
-#     R = TypeVar("R")
-
-
 __all__ = [
     "click_options",
     "pass_settings",
@@ -77,14 +63,12 @@ __all__ = [
     "handle_datetime",
     "handle_enum",
     "DEFAULT_TYPES",
-    "METADATA_KEY",
     "ClickHandler",
     "F",
 ]
 
 
 CTX_KEY = "settings"
-METADATA_KEY = "click"
 
 
 Callback = Callable[[click.Context, click.Option, Any], Any]

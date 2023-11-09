@@ -120,6 +120,13 @@ Converters
    :members:
 
 
+Constants
+=========
+
+.. automodule:: typed_settings.constants
+   :members:
+
+
 Types
 =====
 

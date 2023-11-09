@@ -15,7 +15,7 @@ from typing import (
 import attr  # The old namespaces is needed in "combine()"
 import attrs
 
-from . import cli_argparse, cli_click, types
+from . import constants, types
 
 
 if TYPE_CHECKING:
@@ -340,10 +340,10 @@ def _get_metadata(
         argparse_config.update(argparse)
     if metadata is None:
         metadata = {}
-    ts_meta = metadata.setdefault(types.METADATA_KEY, {})
+    ts_meta = metadata.setdefault(constants.METADATA_KEY, {})
     ts_meta["help"] = help
-    ts_meta[cli_click.METADATA_KEY] = click_config
-    ts_meta[cli_argparse.METADATA_KEY] = argparse_config
+    ts_meta[constants.CLICK_METADATA_KEY] = click_config
+    ts_meta[constants.ARGPARSE_METADATA_KEY] = argparse_config
     return metadata
 
 

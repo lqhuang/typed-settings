@@ -19,7 +19,8 @@ from typed_settings import (
     secret,
     settings,
 )
-from typed_settings.types import METADATA_KEY, SecretStr
+from typed_settings.constants import METADATA_KEY
+from typed_settings.types import SecretStr
 
 
 T = TypeVar("T")

@@ -10,7 +10,6 @@ from typing import (
     Any,
     Callable,
     Dict,
-    Final,
     Generic,
     NamedTuple,
     Optional,
@@ -20,11 +19,11 @@ from typing import (
 )
 
 from ._compat import PY_39
+from .constants import SECRET_REPR
 
 
 __all__ = [
     "AUTO",
-    "METADATA_KEY",
     "SECRET_REPR",
     "T",
     "ET",
@@ -45,10 +44,6 @@ __all__ = [
     "SecretStr",
     "SECRETS_TYPES",
 ]
-
-
-METADATA_KEY: Final[str] = "typed_settings"
-SECRET_REPR: Final[str] = "*******"
 
 
 #: A generic TypeVar

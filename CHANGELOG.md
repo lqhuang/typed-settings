@@ -1,5 +1,12 @@
 # Changelog
 
+## 23.1.1 (unreleased)
+
+- 🐛 Don't require `click` when `typed_settings.secret()` is used ([#44])
+
+[#44]: https://gitlab.com/sscherfke/typed-settings/-/issues/44
+
+
 ## 23.1.0 (2023-10-30)
 
 ### Changed
@@ -83,7 +90,6 @@
 [myst]: https://myst-parser.readthedocs.io/en/latest/
 [pip-audit]: https://pypi.org/project/pip-audit
 [safety]: https://pypi.org/project/safety
-[sybil]: https://sybil.readthedocs.io/en/latest/
 [vendor]: https://gitlab.com/sscherfke/typed-settings-vendoring
 
 
@@ -91,7 +97,7 @@
 
 ### Changed
 
-- Fixed typing issues with Pylance/Pyright and attrs decorators
+- 🐛 Fixed typing issues with Pylance/Pyright and attrs decorators
   (see [#40])
 
 [#40]: https://gitlab.com/sscherfke/typed-settings/-/issues/40
