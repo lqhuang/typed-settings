@@ -1,6 +1,6 @@
 # Changelog
 
-## 23.1.1 (unreleased)
+## 23.1.1 (2023-11-10)
 
 - 🐛 Don't require `click` when `typed_settings.secret()` is used ([#44])
 
