@@ -258,7 +258,7 @@ def _get_wrapper(  # noqa: C901
                 default = get_default(oinfo, merged_settings, state.converter)
                 envvar = env_loader.get_envvar(oinfo) if env_loader else None
                 option = _mk_option(
-                    option_decorator,
+                    option_decorator,  # type: ignore[arg-type]
                     oinfo,
                     default,
                     type_args_maker,
