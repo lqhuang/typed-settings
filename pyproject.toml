@@ -85,7 +85,7 @@ test = [
     "pytest-cov",
     "pytest>=7.2.0",
     "rich-click>=1.6",
-    "sybil",
+    "sybil>=6",
     "typing-extensions",
 ]
 dev = [  # Everything needed for development

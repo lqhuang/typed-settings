@@ -5,10 +5,9 @@ import os
 import re
 import subprocess
 from doctest import ELLIPSIS
-from itertools import chain
 from pathlib import Path
 from textwrap import dedent
-from typing import Dict, Iterable, Iterator, Optional, Sequence, Tuple, Union
+from typing import Iterable, Iterator, Optional, Tuple, Union
 
 import pytest
 import sybil
@@ -24,154 +23,7 @@ import sybil.region
 import sybil.typing
 
 
-REST_START_PATTERN = (
-    r"^(?P<prefix>[ \t]*)\.\.\s*(?P<directive>code-block::\s*)"
-    r"(?P<language>[\w-]+\b)?"
-    r"(?P<options>(?:\s*\:[\w-]+\:.*\n)*)"
-    r"(?:\s*\n)*\n"
-)
-
-MYST_START_PATTERN = (
-    r"^(?P<prefix>[ \t]*)"
-    r"```\{(?P<directive>code-block)}\s*"
-    r"(?P<arguments>[\w-]+\b)$\n"
-    r"(?P<options>(?:\s*\:[\w-]+\:.*\n)*)?"
-)
-
-
-class ParametrizedCodeBlockLexer(sybil.parsers.abstract.lexers.BlockLexer):
-    """
-    Base class for configurable code-block lexers.
-    """
-
-    def __init__(self, start_pattern_template: str, end_pattern_template: str) -> None:
-        super().__init__(
-            start_pattern=re.compile(start_pattern_template, re.MULTILINE),
-            end_pattern_template=end_pattern_template,
-        )
-
-    def __call__(self, document: sybil.Document) -> Iterable[sybil.region.LexedRegion]:
-        for region in super().__call__(document):
-            if isinstance(region, sybil.region.LexedRegion):
-                # 'or ""' also handles "get()" returning None:
-                options_str = region.lexemes.get("options", "") or ""
-                option_lines = options_str.splitlines()
-                options: Dict[str, str] = {}
-                for option_str in option_lines:
-                    optname, _, optval = option_str.strip().partition(" ")
-                    optname = optname[1:-1]
-                    options[optname] = optval.strip()
-                region.lexemes["options"] = options
-            yield region
-
-
-class MystCodeBlockLexer(ParametrizedCodeBlockLexer):
-    """
-    A lexer for MyST code-block directives.
-    Both ``directive`` and ``arguments`` are regex patterns.
-
-    Copied and adjusted from Sybil.
-
-    .. code-block:: markdown
-
-        ```{code-block} language
-        :key1: val1
-        :key2: val2
-
-        This is
-        directive content
-    """
-
-    def __init__(self) -> None:
-        super().__init__(
-            start_pattern_template=MYST_START_PATTERN,
-            end_pattern_template=sybil.parsers.myst.lexers.CODEBLOCK_END_TEMPLATE,
-        )
-
-
-class RestCodeBlockLexer(ParametrizedCodeBlockLexer):
-    """
-    A lexer for ReST code-block directives.
-
-    Copied and adjusted from Sybil.
-    """
-
-    def __init__(self):
-        super().__init__(
-            start_pattern_template=REST_START_PATTERN,
-            end_pattern_template=sybil.parsers.rest.lexers.END_PATTERN_TEMPLATE,
-        )
-
-
-class AbstractCodeBlockParser:
-    """
-    Abstract base class for code block parsers.
-
-    Copied from Sybil and adjusted to extract directive options, too.
-    """
-
-    language: str
-
-    def __init__(
-        self,
-        lexers: Sequence[sybil.typing.Lexer],
-        language: Optional[str] = None,
-        evaluator: sybil.typing.Evaluator = None,
-    ):
-        self.lexers = lexers
-        if language is not None:
-            self.language = language
-        assert self.language, "language must be specified!"
-        if evaluator is not None:
-            self.evaluate = evaluator  # type: ignore[assignment]
-
-    def evaluate(self, example: sybil.Example) -> Optional[str]:
-        raise NotImplementedError
-
-    def __call__(self, document: sybil.Document) -> Iterable[sybil.Region]:
-        for lexed in chain(*(lexer(document) for lexer in self.lexers)):
-            if lexed.lexemes["arguments"] == self.language:
-                r = sybil.Region(
-                    lexed.start,
-                    lexed.end,
-                    lexed.lexemes["source"],
-                    self.evaluate,
-                )
-                r.options = lexed.lexemes.get("options", {})
-                yield r
-
-
-class CodeBlockParser(AbstractCodeBlockParser):
-    """
-    Parser for "code-block" directives.
-    """
-
-    def __init__(
-        self,
-        language: Optional[str] = None,
-        evaluator: Optional[sybil.typing.Evaluator] = None,
-    ):
-        super().__init__(
-            [
-                sybil.parsers.myst.lexers.FencedCodeBlockLexer(
-                    language=r".+",
-                    mapping={"language": "arguments", "source": "source"},
-                ),
-                MystCodeBlockLexer(),
-                RestCodeBlockLexer(),
-                sybil.parsers.rest.lexers.DirectiveInCommentLexer(
-                    directive=r"(invisible-)?code(-block)?"
-                ),
-                # sybil.parser.myst.lexers.DirectiveInPercentCommentLexer(directive=...)
-            ],
-            language,
-            evaluator,
-        )
-
-    pad = staticmethod(sybil.evaluators.python.pad)
-
-
-class CodeFileParser(CodeBlockParser):
+class CodeFileParser(sybil.parsers.myst.CodeBlockParser):
     """
     Parser for included/referenced files.
     """
@@ -183,7 +35,7 @@ class CodeFileParser(CodeBlockParser):
         language: Optional[str] = None,
         *,
         ext: Optional[str] = None,
-        fallback_evaluator: sybil.typing.Evaluator = None,
+        fallback_evaluator: Optional[sybil.typing.Evaluator] = None,
         doctest_optionflags: int = 0,
     ) -> None:
         super().__init__(language=language)  # type: ignore[arg-type]
@@ -191,26 +43,29 @@ class CodeFileParser(CodeBlockParser):
             self.ext = ext
         if self.ext is None:
             raise ValueError('"ext" must be specified!')
+
+        self.evaluator = fallback_evaluator
+
+        # Allow doctests in normal "```python" blocks
+        self.doctest_parser: Optional[sybil.parsers.abstract.DocTestStringParser] = None
         if language == "python":
             self.doctest_parser = sybil.parsers.abstract.DocTestStringParser(
                 sybil.evaluators.doctest.DocTestEvaluator(doctest_optionflags)
             )
-        else:
-            self.doctest_parser = None
-        self.evaluator = fallback_evaluator
 
     def __call__(self, document: sybil.Document) -> Iterable[sybil.Region]:
         for region in super().__call__(document):
+            # Doctests in a normal "```python" block
             source = region.parsed
-            if region.parsed.startswith(">>>"):
-                for doctest_region in self.doctest_parser(source, document.path):
+            if self.language == "python" and source.startswith(">>>"):
+                for doctest_region in self.doctest_parser(source, document.path):  # type: ignore
                     doctest_region.adjust(region, source)
                     yield doctest_region
             else:
                 yield region
 
     def evaluate(self, example: sybil.Example) -> None:
-        caption = example.region.options.get("caption")
+        caption = example.region.lexemes.get("options", {}).get("caption")
         if caption and caption.endswith(self.ext):
             raw_text = dedent(example.parsed)
             Path(caption).write_text(raw_text)
