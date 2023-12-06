@@ -389,7 +389,7 @@ def register_strlist_hook(
         sep: A separator used for splitting strings (see :meth:`str.split()`).
             Cannot be used together with *fn*.
         fn: A function that takes a string and returns a list, e.g.,
-            :func:`json.loads()`.  Cannot be used together with *spe*.
+            :func:`json.loads()`.  Cannot be used together with *sep*.
 
     Example:
         >>> from typing import List
