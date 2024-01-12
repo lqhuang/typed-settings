@@ -238,6 +238,22 @@ class TestLoadSettings:
         result = _core.load(Settings, appname="a-b")
         assert result == Settings(option=False)
 
+    def test_implicit_env_prefix_appname_dash(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """
+        Dashes in the appname get replaced for the env vars.
+        """
+
+        @settings(frozen=True)
+        class Settings:
+            option: bool = False
+
+        monkeypatch.setenv("A_B_OPTION", "1")
+
+        result = _core.load(Settings, appname="a-b")
+        assert result == Settings(option=True)
+
     def test_explicit_env_prefix(self, monkeypatch: pytest.MonkeyPatch) -> None:
         monkeypatch.setenv("P_SPAM", "spam")
 
