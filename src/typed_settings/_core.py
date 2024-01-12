@@ -190,7 +190,11 @@ def default_loaders(
     if env_prefix is None:
         LOGGER.debug("Loading settings from env vars is disabled.")
     else:
-        prefix = f"{appname.upper()}_" if isinstance(env_prefix, _Auto) else env_prefix
+        prefix = (
+            f"{appname.upper()}_".replace("-", "_")
+            if isinstance(env_prefix, _Auto)
+            else env_prefix
+        )
         loaders.append(EnvLoader(prefix=prefix))
 
     return loaders
