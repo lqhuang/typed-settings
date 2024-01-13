@@ -270,8 +270,8 @@ class Pydantic:
                 ):
                     iter_attribs(field.annotation, f"{prefix}{name}.")
                 else:
-                    json_schema_extra = field.json_schema_extra or {}
-                    metadata = json_schema_extra.get("metadata", {})
+                    metadata = _get_metadata(field)
+
                     oinfo = types.OptionInfo(
                         parent_cls=r_cls,
                         path=f"{prefix}{name}",
@@ -293,9 +293,39 @@ class Pydantic:
                         has_no_default=field.is_required(),
                         default_is_factory=False,
                         converter=None,
-                        metadata=metadata.get(constants.METADATA_KEY, {}),
+                        metadata=metadata,
                     )
                     result.append(oinfo)
+
+        def _get_metadata(field: pydantic.fields.FieldInfo) -> dict:
+            json_schema_extra: dict = (
+                field.json_schema_extra
+                if isinstance(field.json_schema_extra, dict)
+                else {}
+            )
+            meta_key = constants.METADATA_KEY.replace("-", "_")
+            metadata = json_schema_extra.get(meta_key, {})
+
+            cli_defaults: dict[str, Any] = {}
+            if field.description:
+                cli_defaults["help"] = field.description
+            if "help" in metadata:
+                cli_defaults["help"] = metadata["help"]
+
+            click_config = {
+                **cli_defaults,
+                **metadata.get(constants.CLICK_METADATA_KEY, {}),
+            }
+            argparse_config = {
+                **cli_defaults,
+                **metadata.get(constants.ARGPARSE_METADATA_KEY, {}),
+            }
+            if click_config:
+                metadata[constants.CLICK_METADATA_KEY] = click_config
+            if argparse_config:
+                metadata[constants.ARGPARSE_METADATA_KEY] = argparse_config
+
+            return metadata
 
         iter_attribs(cls, "")
         return tuple(result)

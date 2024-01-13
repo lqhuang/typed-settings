@@ -614,10 +614,12 @@ class TestPydantic:
         from pydantic_core._pydantic_core import PydanticUndefined
 
         class GrandChild(pydantic.BaseModel):
-            x: Optional[int] = None
+            x: Optional[int] = pydantic.Field(default=None, description="grand child x")
 
         class Child(pydantic.BaseModel):
-            x: "float"  # Test resolving types
+            x: "float" = pydantic.Field(  # Test resolving types
+                typed_settings={"help": "child x"},  # type: ignore[call-arg]
+            )
             y: GrandChild
 
         class Parent(pydantic.BaseModel):
@@ -642,6 +644,11 @@ class TestPydantic:
                 default=PydanticUndefined,
                 has_no_default=True,
                 default_is_factory=False,
+                metadata={
+                    "argparse": {"help": "child x"},
+                    "click": {"help": "child x"},
+                    "help": "child x",
+                },
             ),
             types.OptionInfo(
                 parent_cls=GrandChild,
@@ -650,6 +657,10 @@ class TestPydantic:
                 default=None,
                 has_no_default=False,
                 default_is_factory=False,
+                metadata={
+                    "argparse": {"help": "grand child x"},
+                    "click": {"help": "grand child x"},
+                },
             ),
             types.OptionInfo(
                 parent_cls=Parent,
