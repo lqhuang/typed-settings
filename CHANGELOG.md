@@ -2,10 +2,15 @@
 
 ## 24.0.0 (unreleased)
 
+- ✨ Settings can now be loaded from the top level of a TOML and Python
+  file.  This is only exposed by the loaders themselves, but not the
+  simple `load()` API, though [#36].
+
 - 🐛 The env var prefix for app names containing a `-` is now derived
-  like this: `a-b` => `A_B_` (previously it was `A-B_`). [!27]
+  like this: `a-b` => `A_B_` (previously it was `A-B_`) [!27].
 
 [!27]: https://gitlab.com/sscherfke/typed-settings/-/merge_requests/27
+[#36]: https://gitlab.com/sscherfke/typed-settings/-/issues/36
 
 
 ## 23.1.1 (2023-11-10)

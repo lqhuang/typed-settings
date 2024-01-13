@@ -160,6 +160,15 @@ class TestPythonFormat:
                     HOST_PORT = 42
                 """,
             ),
+            (
+                PythonFormat(None, key_transformer=PythonFormat.to_lower),
+                """\
+                URL = "spam"
+
+                class HOST:
+                    PORT = 42
+                """,
+            ),
         ],
     )
     def test_load_python(self, fmt: FileFormat, data: str, tmp_path: Path) -> None:
@@ -261,6 +270,30 @@ class TestTomlFormat:
         assert result == {
             "a": "spam",
             "sub": {"b": "eggs"},
+        }
+
+    def test_load_no_section(self, tmp_path: Path) -> None:
+        """
+        If the sections is ``None``, the "top level" settings are loaded.
+        """
+        config_file = tmp_path.joinpath("settings.toml")
+        config_file.write_text(
+            """\
+            a = "spam"
+            [example]
+            b = "eggs"
+        """
+        )
+        result = TomlFormat(None)(
+            config_file,
+            Settings,
+            deep_options(Settings),
+        )
+        assert result == {
+            "a": "spam",
+            "example": {
+                "b": "eggs",
+            },
         }
 
     @pytest.mark.parametrize("section", ["example", "tool.example"])
