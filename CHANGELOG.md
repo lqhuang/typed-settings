@@ -1,5 +1,13 @@
 # Changelog
 
+## 24.0.0 (unreleased)
+
+- 🐛 The env var prefix for app names containing a `-` is now derived
+  like this: `a-b` => `A_B_` (previously it was `A-B_`). [!27]
+
+[!27]: https://gitlab.com/sscherfke/typed-settings/-/merge_requests/27
+
+
 ## 23.1.1 (2023-11-10)
 
 - 🐛 Don't require `click` when `typed_settings.secret()` is used ([#44])
