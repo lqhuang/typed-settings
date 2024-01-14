@@ -245,11 +245,26 @@ class TestAttrs:
 
         @attrs.define
         class GrandChild:
-            x: Optional[int] = attrs.field(factory=factory_fn)
+            x: Optional[int] = attrs.field(
+                factory=factory_fn,
+                metadata={
+                    "typed-settings": {
+                        "help": "grand child x",
+                        "argparse": {"metavar": "GX"},
+                        "click": {"metavar": "GX"},
+                    },
+                },
+            )
 
         @attrs.define
         class Child:
-            x: "float"  # Test resolving types
+            x: "float" = attrs.field(  # Test resolving types
+                metadata={
+                    "typed-settings": {
+                        "click": {"help": "child x", "metavar": "X"},
+                    },
+                },
+            )
             y: GrandChild
 
         @attrs.define
@@ -275,6 +290,9 @@ class TestAttrs:
                 default=attrs.NOTHING,
                 has_no_default=True,
                 default_is_factory=False,
+                metadata={
+                    "click": {"help": "child x", "metavar": "X"},
+                },
             ),
             types.OptionInfo(
                 parent_cls=GrandChild,
@@ -283,6 +301,11 @@ class TestAttrs:
                 default=attrs.Factory(factory_fn),
                 has_no_default=False,
                 default_is_factory=True,
+                metadata={
+                    "argparse": {"help": "grand child x", "metavar": "GX"},
+                    "click": {"help": "grand child x", "metavar": "GX"},
+                    "help": "grand child x",
+                },
             ),
             types.OptionInfo(
                 parent_cls=Parent,
@@ -424,11 +447,26 @@ class TestDataclasses:
 
         @dataclasses.dataclass
         class GrandChild:
-            x: Optional[int] = None
+            x: Optional[int] = dataclasses.field(
+                default=None,
+                metadata={
+                    "typed-settings": {
+                        "help": "grand child x",
+                        "argparse": {"metavar": "GX"},
+                        "click": {"metavar": "GX"},
+                    },
+                },
+            )
 
         @dataclasses.dataclass
         class Child:
-            x: "float"  # Test resolving types
+            x: "float" = dataclasses.field(  # Test resolving types
+                metadata={
+                    "typed-settings": {
+                        "click": {"help": "child x", "metavar": "X"},
+                    },
+                },
+            )
             y: GrandChild
 
         @dataclasses.dataclass
@@ -454,6 +492,9 @@ class TestDataclasses:
                 default=dataclasses.MISSING,
                 has_no_default=True,
                 default_is_factory=False,
+                metadata={
+                    "click": {"help": "child x", "metavar": "X"},
+                },
             ),
             types.OptionInfo(
                 parent_cls=GrandChild,
@@ -462,6 +503,11 @@ class TestDataclasses:
                 default=None,
                 has_no_default=False,
                 default_is_factory=False,
+                metadata={
+                    "argparse": {"help": "grand child x", "metavar": "GX"},
+                    "click": {"help": "grand child x", "metavar": "GX"},
+                    "help": "grand child x",
+                },
             ),
             types.OptionInfo(
                 parent_cls=Parent,
@@ -614,11 +660,21 @@ class TestPydantic:
         from pydantic_core._pydantic_core import PydanticUndefined
 
         class GrandChild(pydantic.BaseModel):
-            x: Optional[int] = pydantic.Field(default=None, description="grand child x")
+            x: Optional[int] = pydantic.Field(
+                default=None,
+                description="grand child x",
+                typed_settings={  # type: ignore[call-arg]
+                    "argparse": {"metavar": "GX"},
+                    "click": {"metavar": "GX"},
+                },
+            )
 
         class Child(pydantic.BaseModel):
             x: "float" = pydantic.Field(  # Test resolving types
-                typed_settings={"help": "child x"},  # type: ignore[call-arg]
+                typed_settings={  # type: ignore[call-arg]
+                    "help": "child x",
+                    "click": {"metavar": "X"},
+                },
             )
             y: GrandChild
 
@@ -646,7 +702,7 @@ class TestPydantic:
                 default_is_factory=False,
                 metadata={
                     "argparse": {"help": "child x"},
-                    "click": {"help": "child x"},
+                    "click": {"help": "child x", "metavar": "X"},
                     "help": "child x",
                 },
             ),
@@ -658,8 +714,8 @@ class TestPydantic:
                 has_no_default=False,
                 default_is_factory=False,
                 metadata={
-                    "argparse": {"help": "grand child x"},
-                    "click": {"help": "grand child x"},
+                    "argparse": {"help": "grand child x", "metavar": "GX"},
+                    "click": {"help": "grand child x", "metavar": "GX"},
                 },
             ),
             types.OptionInfo(

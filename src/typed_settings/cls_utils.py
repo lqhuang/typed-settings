@@ -88,6 +88,7 @@ class Attrs:
                 else:
                     is_nothing = field.default is attrs.NOTHING
                     is_factory = isinstance(field.default, cast(type, attrs.Factory))
+                    metadata = _get_metadata(field.metadata.get(constants.METADATA_KEY))
                     oinfo = types.OptionInfo(
                         parent_cls=r_cls,
                         path=f"{prefix}{field.name}",
@@ -103,7 +104,7 @@ class Attrs:
                         has_no_default=is_nothing,
                         default_is_factory=is_factory,
                         converter=field.converter,
-                        metadata=field.metadata.get(constants.METADATA_KEY, {}),
+                        metadata=metadata,
                     )
                     result.append(oinfo)
 
@@ -151,6 +152,7 @@ class Dataclasses:
                     is_factory = (
                         is_nothing and field.default_factory is not dataclasses.MISSING
                     )
+                    metadata = _get_metadata(field.metadata.get(constants.METADATA_KEY))
                     oinfo = types.OptionInfo(
                         parent_cls=r_cls,
                         path=f"{prefix}{field.name}",
@@ -166,7 +168,7 @@ class Dataclasses:
                         has_no_default=is_nothing,
                         default_is_factory=is_factory,
                         converter=None,
-                        metadata=field.metadata.get(constants.METADATA_KEY, {}),
+                        metadata=metadata,
                     )
                     result.append(oinfo)
 
@@ -270,7 +272,10 @@ class Pydantic:
                 ):
                     iter_attribs(field.annotation, f"{prefix}{name}.")
                 else:
-                    metadata = _get_metadata(field)
+                    json_schema_extra = field.json_schema_extra or {}
+                    meta_key = constants.METADATA_KEY.replace("-", "_")
+                    metadata_or_none = json_schema_extra.get(meta_key, {})
+                    metadata = _get_metadata(metadata_or_none, field.description)
 
                     oinfo = types.OptionInfo(
                         parent_cls=r_cls,
@@ -296,36 +301,6 @@ class Pydantic:
                         metadata=metadata,
                     )
                     result.append(oinfo)
-
-        def _get_metadata(field: pydantic.fields.FieldInfo) -> dict:
-            json_schema_extra: dict = (
-                field.json_schema_extra
-                if isinstance(field.json_schema_extra, dict)
-                else {}
-            )
-            meta_key = constants.METADATA_KEY.replace("-", "_")
-            metadata = json_schema_extra.get(meta_key, {})
-
-            cli_defaults: dict[str, Any] = {}
-            if field.description:
-                cli_defaults["help"] = field.description
-            if "help" in metadata:
-                cli_defaults["help"] = metadata["help"]
-
-            click_config = {
-                **cli_defaults,
-                **metadata.get(constants.CLICK_METADATA_KEY, {}),
-            }
-            argparse_config = {
-                **cli_defaults,
-                **metadata.get(constants.ARGPARSE_METADATA_KEY, {}),
-            }
-            if click_config:
-                metadata[constants.CLICK_METADATA_KEY] = click_config
-            if argparse_config:
-                metadata[constants.ARGPARSE_METADATA_KEY] = argparse_config
-
-            return metadata
 
         iter_attribs(cls, "")
         return tuple(result)
@@ -438,3 +413,28 @@ def group_options(
     grouper = groupby(options, key=keyfn)
     grouped_options = [(g_cls[1], tuple(g_opts)) for g_cls, g_opts in grouper]
     return grouped_options
+
+
+def _get_metadata(metadata_or_none: Any, default_help: Optional[str] = None) -> dict:
+    metadata = metadata_or_none if isinstance(metadata_or_none, dict) else {}
+
+    cli_defaults: dict[str, Any] = {}
+    if default_help:
+        cli_defaults["help"] = default_help
+    if "help" in metadata:
+        cli_defaults["help"] = metadata["help"]
+
+    click_config = {
+        **cli_defaults,
+        **metadata.get(constants.CLICK_METADATA_KEY, {}),
+    }
+    argparse_config = {
+        **cli_defaults,
+        **metadata.get(constants.ARGPARSE_METADATA_KEY, {}),
+    }
+    if click_config:
+        metadata[constants.CLICK_METADATA_KEY] = click_config
+    if argparse_config:
+        metadata[constants.ARGPARSE_METADATA_KEY] = argparse_config
+
+    return metadata
