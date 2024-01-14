@@ -18,6 +18,7 @@ extensions = [
     "sphinx.ext.napoleon",
     "sphinx.ext.viewcode",
     "sphinx_copybutton",
+    "sphinx_inline_tabs",
 ]
 myst_enable_extensions = [
     "colon_fence",
