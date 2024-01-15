@@ -235,7 +235,7 @@ Settings:
 ````{tab} Pydantic
 ```{code-block} python
 :caption: example.py
-:emphasize-lines: 8-10
+:emphasize-lines: 8-16
 
 import pydantic
 import typed_settings as ts
@@ -246,7 +246,13 @@ class Settings(pydantic.BaseModel):
         default=42,
         # "description" will be copied into "typed_settings:argparse:help"
         description="Spam count",
-        typed_settings={"argparse": {"metavar": "SPAM"}},
+        json_schema_extra={
+            "typed-settings": {
+                "argparse": {
+                    "metavar": "SPAM",
+                },
+            },
+        },
     )
 
 

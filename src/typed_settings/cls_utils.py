@@ -273,8 +273,7 @@ class Pydantic:
                     iter_attribs(field.annotation, f"{prefix}{name}.")
                 else:
                     json_schema_extra = field.json_schema_extra or {}
-                    meta_key = constants.METADATA_KEY.replace("-", "_")
-                    metadata_or_none = json_schema_extra.get(meta_key, {})
+                    metadata_or_none = json_schema_extra.get(constants.METADATA_KEY, {})
                     metadata = _get_metadata(metadata_or_none, field.description)
 
                     oinfo = types.OptionInfo(

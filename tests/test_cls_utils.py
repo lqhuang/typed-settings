@@ -663,18 +663,22 @@ class TestPydantic:
             x: Optional[int] = pydantic.Field(
                 default=None,
                 description="grand child x",
-                typed_settings={  # type: ignore[call-arg]
-                    "argparse": {"metavar": "GX"},
-                    "click": {"metavar": "GX"},
+                json_schema_extra={
+                    "typed-settings": {
+                        "argparse": {"metavar": "GX"},
+                        "click": {"metavar": "GX"},
+                    },
                 },
             )
 
         class Child(pydantic.BaseModel):
             x: "float" = pydantic.Field(  # Test resolving types
-                typed_settings={  # type: ignore[call-arg]
-                    "help": "child x",
-                    "click": {"metavar": "X"},
-                },
+                json_schema_extra={
+                    "typed-settings": {
+                        "help": "child x",
+                        "click": {"metavar": "X"},
+                    },
+                }
             )
             y: GrandChild
 

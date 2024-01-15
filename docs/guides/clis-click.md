@@ -440,7 +440,7 @@ Options:
 ````{tab} Pydantic
 ```{code-block} python
 :caption: example.py
-:emphasize-lines: 9-11
+:emphasize-lines: 9-17
 
 import click
 import pydantic
@@ -452,7 +452,13 @@ class Settings(pydantic.BaseModel):
         default=42,
         # "description" will be copied into "typed_settings:click:help"
         description="Amount of SPAM required",
-        typed_settings={"click": {"metavar": "SPAM"}},
+        json_schema_extra={
+            "typed-settings": {
+                "click": {
+                    "metavar": "SPAM",
+                },
+            },
+        },
     )
 
 
