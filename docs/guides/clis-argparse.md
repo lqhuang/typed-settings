@@ -1,5 +1,4 @@
-```{eval-rst}
-.. currentmodule:: typed_settings
+```{currentmodule} typed_settings
 ```
 
 (clis-with-argparse)=
@@ -56,6 +55,15 @@ $ python example.py --spam=3
 Settings(spam=3)
 ```
 
+```{note}
+CLI generation works with all supported settings class backends (e.g., {program}`attrs` and {program}`Pydantic`}).
+
+Most examples will use the Typed Settings wrapper for {program}`attrs`
+because the code for creating a CLI is the same.
+If there are notable implementation differences between the backends,
+the examples use inline tabs to show the code for each backend.
+```
+
 ## Tuning and Extending CLI generation
 
 There are various ways how you can control, fine-tune and extend the default behavior of {func}`~typed_settings.cli_argparse.cli()`:
@@ -73,8 +81,10 @@ But you can override all keyword arguments for {meth}`~argparse.ArgumentParser.a
 
 Lets, for example, change the generated metavar:
 
+````{tab} attrs (TS wrapper)
 ```{code-block} python
 :caption: example.py
+:emphasize-lines: 8-10
 
 import typed_settings as ts
 
@@ -83,6 +93,7 @@ import typed_settings as ts
 class Settings:
     spam: int = ts.option(
         default=42,
+        # "help" will be copied to "argparse:help"
         help="Spam count",
         argparse={"metavar": "SPAM"},
     )
@@ -114,6 +125,164 @@ Settings:
 
   --spam SPAM  Spam count [default: 42]
 ```
+````
+
+````{tab} attrs (pure)
+```{code-block} python
+:caption: example.py
+:emphasize-lines: 9-16
+
+import attrs
+import typed_settings as ts
+
+
+@attrs.frozen
+class Settings:
+    spam: int = attrs.field(
+        default=42,
+        metadata={
+            "typed-settings": {
+                "argparse": {
+                    "help": "Spam count",
+                    "metavar": "SPAM",
+                },
+            },
+        },
+    )
+
+
+@ts.cli(Settings, "example")
+def cli(settings: Settings) -> None:
+    """Example app"""
+    print(settings)
+
+
+if __name__ == "__main__":
+    cli()
+```
+
+Now compare the `--help` output with the [example above](#clis-with-argparse):
+
+```{code-block} console
+$ python example.py --help
+usage: example.py [-h] [--spam SPAM]
+
+Example app
+
+options:
+  -h, --help   show this help message and exit
+
+Settings:
+  Settings options
+
+  --spam SPAM  Spam count [default: 42]
+```
+````
+
+````{tab} dataclasses
+```{code-block} python
+:caption: example.py
+:emphasize-lines: 10-17
+
+import dataclasses
+
+import typed_settings as ts
+
+
+@dataclasses.dataclass
+class Settings:
+    spam: int = dataclasses.field(
+        default=42,
+        metadata={
+            "typed-settings": {
+                "argparse": {
+                    "help": "Spam count",
+                    "metavar": "SPAM",
+                },
+            },
+        },
+    )
+
+
+@ts.cli(Settings, "example")
+def cli(settings: Settings) -> None:
+    """Example app"""
+    print(settings)
+
+
+if __name__ == "__main__":
+    cli()
+```
+
+Now compare the `--help` output with the [example above](#clis-with-argparse):
+
+```{code-block} console
+$ python example.py --help
+usage: example.py [-h] [--spam SPAM]
+
+Example app
+
+options:
+  -h, --help   show this help message and exit
+
+Settings:
+  Settings options
+
+  --spam SPAM  Spam count [default: 42]
+```
+````
+
+````{tab} Pydantic
+```{code-block} python
+:caption: example.py
+:emphasize-lines: 8-16
+
+import pydantic
+import typed_settings as ts
+
+
+class Settings(pydantic.BaseModel):
+    spam: int = pydantic.Field(
+        default=42,
+        # "description" will be copied into "typed_settings:argparse:help"
+        description="Spam count",
+        json_schema_extra={
+            "typed-settings": {
+                "argparse": {
+                    "metavar": "SPAM",
+                },
+            },
+        },
+    )
+
+
+@ts.cli(Settings, "example")
+def cli(settings: Settings) -> None:
+    """Example app"""
+    print(repr(settings))
+
+
+if __name__ == "__main__":
+    cli()
+```
+
+Now compare the `--help` output with the [example above](#clis-with-argparse):
+
+```{code-block} console
+$ python example.py --help
+usage: example.py [-h] [--spam SPAM]
+
+Example app
+
+options:
+  -h, --help   show this help message and exit
+
+Settings:
+  Settings options
+
+  --spam SPAM  Spam count [default: 42]
+```
+````
 
 ```{note}
 It is not possible to retrieve an option's docstring directly within a Python program.

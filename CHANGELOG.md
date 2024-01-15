@@ -2,6 +2,10 @@
 
 ## 24.0.0 (unreleased)
 
+- ✨ For Pydantic classes, read the CLI option's help from the field's
+  *desription* if the field's metadata does not contain a `help` key
+  [#45].
+
 - ✨ Settings can now be loaded from the top level of a TOML and Python
   file.  This is only exposed by the loaders themselves, but not the
   simple `load()` API, though [#36].
@@ -11,6 +15,7 @@
 
 [!27]: https://gitlab.com/sscherfke/typed-settings/-/merge_requests/27
 [#36]: https://gitlab.com/sscherfke/typed-settings/-/issues/36
+[#45]: https://gitlab.com/sscherfke/typed-settings/-/issues/45
 
 
 ## 23.1.1 (2023-11-10)

@@ -1,5 +1,4 @@
-```{eval-rst}
-.. currentmodule:: typed_settings
+```{currentmodule} typed_settings
 ```
 
 (clis-with-click)=
@@ -7,6 +6,15 @@
 
 You can generate Click command line options for your settings.
 These let the users of your application override settings loaded from other sources (like config files).
+
+```{note}
+CLI generation works with all supported settings class backends (e.g., {program}`attrs` and {program}`Pydantic`}).
+
+Most examples will use the Typed Settings wrapper for {program}`attrs`
+because the code for creating a CLI is the same.
+If there are notable implementation differences between the backends,
+the examples use inline tabs to show the code for each backend.
+```
 
 The general algorithm for generating a [Click] CLI for your settings looks like this:
 
@@ -25,7 +33,7 @@ The general algorithm for generating a [Click] CLI for your settings looks like 
    - stores the settings instance in the Click context object (see {attr}`click.Context.obj`),
    - passes the updated settings instances as positional/keyword argument to your CLI function.
 
-```{note}
+```{hint}
 By default, the settings instance is passed as positional argument to your CLI function.
 You can optionally specify a keyword argument name if you want your settings to be passed via a keyword argument.
 
@@ -34,6 +42,7 @@ See [](#click-order-of-decorators) and [](#click-settings-as-keyword-arguments) 
 
 Here is an example:
 
+````{tab} attrs (TS wrapper)
 ```{code-block} python
 :caption: example.py
 
@@ -57,7 +66,7 @@ if __name__ == "__main__":
     cli()
 ```
 
-As you can see, an option is generated for each setting:
+As ou can see, an option is generated for each setting:
 
 ```{code-block} console
 $ export EXAMPLE_SPAM=23
@@ -77,6 +86,154 @@ Let's invoke it with the `--spam` option:
 $ python example.py --spam=3
 Settings(spam=3)
 ```
+````
+
+````{tab} attrs (pure)
+```{code-block} python
+:caption: example.py
+
+import attrs
+import click
+import typed_settings as ts
+
+
+@attrs.frozen
+class Settings:
+    spam: int = attrs.field(
+        default=42,
+        metadata={"typed-settings": {"help": "Amount of SPAM required"}},
+    )
+
+
+@click.command()
+@ts.click_options(Settings, "example")
+def cli(settings: Settings) -> None:
+    """Example app"""
+    print(settings)
+
+
+if __name__ == "__main__":
+    cli()
+```
+
+As ou can see, an option is generated for each setting:
+
+```{code-block} console
+$ export EXAMPLE_SPAM=23
+$ python example.py --help
+Usage: example.py [OPTIONS]
+
+  Example app
+
+Options:
+  --spam INTEGER  Amount of SPAM required  [default: 23]
+  --help          Show this message and exit.
+```
+
+Let's invoke it with the `--spam` option:
+
+```{code-block} console
+$ python example.py --spam=3
+Settings(spam=3)
+```
+````
+
+````{tab} dataclasses
+```{code-block} python
+:caption: example.py
+
+import dataclasses
+
+import click
+import typed_settings as ts
+
+
+@dataclasses.dataclass
+class Settings:
+    spam: int = dataclasses.field(
+        default=42,
+        metadata={"typed-settings": {"help": "Amount of SPAM required"}},
+    )
+
+
+@click.command()
+@ts.click_options(Settings, "example")
+def cli(settings: Settings) -> None:
+    """Example app"""
+    print(settings)
+
+
+if __name__ == "__main__":
+    cli()
+```
+
+As ou can see, an option is generated for each setting:
+
+```{code-block} console
+$ export EXAMPLE_SPAM=23
+$ python example.py --help
+Usage: example.py [OPTIONS]
+
+  Example app
+
+Options:
+  --spam INTEGER  Amount of SPAM required  [default: 23]
+  --help          Show this message and exit.
+```
+
+Let's invoke it with the `--spam` option:
+
+```{code-block} console
+$ python example.py --spam=3
+Settings(spam=3)
+```
+````
+
+````{tab} Pydantic
+```{code-block} python
+:caption: example.py
+
+import click
+import pydantic
+import typed_settings as ts
+
+
+class Settings(pydantic.BaseModel):
+    spam: int = pydantic.Field(default=42, description="Amount of SPAM required")
+
+
+@click.command()
+@ts.click_options(Settings, "example")
+def cli(settings: Settings) -> None:
+    """Example app"""
+    print(repr(settings))
+
+
+if __name__ == "__main__":
+    cli()
+```
+
+As ou can see, an option is generated for each setting:
+
+```{code-block} console
+$ export EXAMPLE_SPAM=23
+$ python example.py --help
+Usage: example.py [OPTIONS]
+
+  Example app
+
+Options:
+  --spam INTEGER  Amount of SPAM required  [default: 23]
+  --help          Show this message and exit.
+```
+
+Let's invoke it with the `--spam` option:
+
+```{code-block} console
+$ python example.py --spam=3
+Settings(spam=3)
+```
+````
 
 The code above is roughly equivalent to:
 
@@ -132,9 +289,10 @@ However, you can override everything if you want to.
 
 Lets, for example, change the generated metavar:
 
+````{tab} attrs (TS wrapper)
 ```{code-block} python
 :caption: example.py
-:emphasize-lines: 10
+:emphasize-lines: 9-11
 
 import click
 import typed_settings as ts
@@ -144,6 +302,7 @@ import typed_settings as ts
 class Settings:
     spam: int = ts.option(
         default=42,
+        # "help" will be copied to "click:help"
         help="Amount of SPAM required",
         click={"metavar": "SPAM"},
     )
@@ -173,6 +332,161 @@ Options:
   --spam SPAM  Amount of SPAM required  [default: 23]
   --help       Show this message and exit.
 ```
+````
+
+````{tab} attrs (pure)
+```{code-block} python
+:caption: example.py
+:emphasize-lines: 10-17
+
+import attrs
+import click
+import typed_settings as ts
+
+
+@attrs.frozen
+class Settings:
+    spam: int = attrs.field(
+        default=42,
+        metadata={
+            "typed-settings": {
+                "click": {
+                    "help": "Amount of SPAM required",
+                    "metavar": "SPAM",
+                },
+            },
+        },
+    )
+
+
+@click.command()
+@ts.click_options(Settings, "example")
+def cli(settings: Settings) -> None:
+    """Example app"""
+    print(settings)
+
+
+if __name__ == "__main__":
+    cli()
+```
+
+Now compare the `--help` output with the [example above](#clis-with-click):
+
+```{code-block} console
+$ export EXAMPLE_SPAM=23
+$ python example.py --help
+Usage: example.py [OPTIONS]
+
+  Example app
+
+Options:
+  --spam SPAM  Amount of SPAM required  [default: 23]
+  --help       Show this message and exit.
+```
+````
+
+````{tab} dataclasses
+```{code-block} python
+:caption: example.py
+:emphasize-lines: 11-18
+
+import dataclasses
+
+import click
+import typed_settings as ts
+
+
+@dataclasses.dataclass
+class Settings:
+    spam: int = dataclasses.field(
+        default=42,
+        metadata={
+            "typed-settings": {
+                "click": {
+                    "help": "Amount of SPAM required",
+                    "metavar": "SPAM",
+                },
+            },
+        },
+    )
+
+
+@click.command()
+@ts.click_options(Settings, "example")
+def cli(settings: Settings) -> None:
+    """Example app"""
+    print(settings)
+
+
+if __name__ == "__main__":
+    cli()
+```
+
+Now compare the `--help` output with the [example above](#clis-with-click):
+
+```{code-block} console
+$ export EXAMPLE_SPAM=23
+$ python example.py --help
+Usage: example.py [OPTIONS]
+
+  Example app
+
+Options:
+  --spam SPAM  Amount of SPAM required  [default: 23]
+  --help       Show this message and exit.
+```
+````
+
+````{tab} Pydantic
+```{code-block} python
+:caption: example.py
+:emphasize-lines: 9-17
+
+import click
+import pydantic
+import typed_settings as ts
+
+
+class Settings(pydantic.BaseModel):
+    spam: int = pydantic.Field(
+        default=42,
+        # "description" will be copied into "typed_settings:click:help"
+        description="Amount of SPAM required",
+        json_schema_extra={
+            "typed-settings": {
+                "click": {
+                    "metavar": "SPAM",
+                },
+            },
+        },
+    )
+
+
+@click.command()
+@ts.click_options(Settings, "example")
+def cli(settings: Settings) -> None:
+    """Example app"""
+    print(repr(settings))
+
+
+if __name__ == "__main__":
+    cli()
+```
+
+Now compare the `--help` output with the [example above](#clis-with-click):
+
+```{code-block} console
+$ export EXAMPLE_SPAM=23
+$ python example.py --help
+Usage: example.py [OPTIONS]
+
+  Example app
+
+Options:
+  --spam SPAM  Amount of SPAM required  [default: 23]
+  --help       Show this message and exit.
+```
+````
 
 ```{note}
 It is not possible to retrieve an option's docstring directly within a Python program.
