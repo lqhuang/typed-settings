@@ -1,6 +1,6 @@
 # Changelog
 
-## 24.0.0 (unreleased)
+## 24.0.0 (2024-01-17)
 
 - ✨ For Pydantic classes, read the CLI option's help from the field's
   *desription* if the field's metadata does not contain a `help` key
