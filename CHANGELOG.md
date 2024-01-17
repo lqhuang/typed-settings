@@ -10,12 +10,16 @@
   file.  This is only exposed by the loaders themselves, but not the
   simple `load()` API, though [#36].
 
+- ✨ Added support for Pydantic `SecretStr` and `SecretBytes` fields in
+  settings [#46].
+
 - 🐛 The env var prefix for app names containing a `-` is now derived
   like this: `a-b` => `A_B_` (previously it was `A-B_`) [!27].
 
 [!27]: https://gitlab.com/sscherfke/typed-settings/-/merge_requests/27
 [#36]: https://gitlab.com/sscherfke/typed-settings/-/issues/36
 [#45]: https://gitlab.com/sscherfke/typed-settings/-/issues/45
+[#46]: https://gitlab.com/sscherfke/typed-settings/-/issues/46
 
 
 ## 23.1.1 (2023-11-10)
