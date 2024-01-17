@@ -213,6 +213,13 @@ SUPPORTED_PATH = [
 ]
 SUPPORTED_TYPES_DATA += [(n, v, e, Path) for n, v, e in SUPPORTED_PATH]
 
+# Pydantic Secret Str|Bytes
+SUPPORTED_PYDANTIC_SECRET = [
+    ("pydantic.SecretStr", "x", pydantic.SecretStr("x"), pydantic.SecretStr),
+    ("pydantic.SecretBytes", b"x", pydantic.SecretBytes(b"x"), pydantic.SecretBytes),
+]
+SUPPORTED_TYPES_DATA += SUPPORTED_PYDANTIC_SECRET
+
 # list
 SUPPORTED_LIST: Example4T = [
     ("List[any]", [1, "2"], [1, "2"], List),
@@ -635,3 +642,24 @@ def test_get_cattrs_converter_uninstalled(unimport: Callable[[str], None]) -> No
     unimport("cattrs")
     with pytest.raises(ModuleNotFoundError):
         converters.get_default_cattrs_converter()
+
+
+@pytest.mark.parametrize(
+    "get_converter",
+    [
+        pytest.param(converters.get_default_cattrs_converter, id="converter:cattrs"),
+        pytest.param(converters.get_default_ts_converter, id="converter:ts"),
+    ],
+)
+def test_pydantic_converters_pydantic_uninstalled(
+    get_converter: Callable[[], converters.Converter], unimport: Callable[[str], None]
+) -> None:
+    """
+    If pydantic is not installed, the Pydantic converters are not available.
+    """
+    unimport("pydantic")
+    converter = get_converter()
+    with pytest.raises((TypeError, cattrs.errors.StructureHandlerNotFoundError)):
+        converter.structure("x", pydantic.SecretStr)
+    with pytest.raises((TypeError, cattrs.errors.StructureHandlerNotFoundError)):
+        converter.structure(b"x", pydantic.SecretBytes)

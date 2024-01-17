@@ -37,6 +37,7 @@ from .types import ET, T
 
 if TYPE_CHECKING:
     import cattrs
+    import pydantic
 #
 #
 # __all__ = [
@@ -108,6 +109,14 @@ class TSConverter:
             Enum: to_enum,
             Path: to_resolved_path if resolve_paths else to_path,
         }
+        try:
+            import pydantic
+
+            self.scalar_converters[pydantic.SecretBytes] = to_pydantic_secretbytes
+            self.scalar_converters[pydantic.SecretStr] = to_pydantic_secretstr
+        except ImportError:
+            pass
+
         self.composite_hook_factories: List[HookFactory] = [
             ListHookFactory,
             TupleHookFactory,
@@ -269,12 +278,20 @@ def get_default_structure_hooks(
         :meth:`cattrs.BaseConverter.register_structure_hook()`.
     """
     path_hook = to_resolved_path if resolve_paths else to_path
-    return [
+    hooks: List[Tuple[type, Callable[[Any, type], Any]]] = [
         (bool, to_bool),
         (datetime, to_dt),
         (Enum, to_enum),
         (Path, path_hook),
     ]
+    try:
+        import pydantic
+
+        hooks.append((pydantic.SecretBytes, to_pydantic_secretbytes))
+        hooks.append((pydantic.SecretStr, to_pydantic_secretstr))
+    except ImportError:
+        pass
+    return hooks
 
 
 def register_attrs_hook_factory(converter: "cattrs.Converter") -> None:
@@ -596,6 +613,43 @@ def to_type(value: Any, cls: Type[T]) -> T:
         ValueError: if *value* cannot be converted to *cls*.
     """
     return cls(value)  # type: ignore[call-arg]
+
+
+def to_pydantic_secretbytes(
+    value: Any, _cls: "Type[pydantic.SecretBytes]"
+) -> "pydantic.SecretBytes":
+    """
+    Convert *value* to :class:`pydantic.SecretStr`.
+
+    Args:
+        value: The input data
+        _cls: (ignored)
+
+    Return:
+        An instance of *cls*.
+    """
+    import pydantic
+
+    return pydantic.SecretBytes(value)
+
+
+def to_pydantic_secretstr(
+    value: Any, _cls: "Type[pydantic.SecretStr]"
+) -> "pydantic.SecretStr":
+    """
+    Convert *value* to :class:`pydantic.SecretStr`.
+
+    Args:
+        value: The input data
+        cls: A pydantic SecretStr class or any subclass
+        _cls: (ignored)
+
+    Return:
+        An instance of *cls*.
+    """
+    import pydantic
+
+    return pydantic.SecretStr(value)
 
 
 class HookFactory(Protocol):
