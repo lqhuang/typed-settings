@@ -8,6 +8,7 @@ from typing import Any, Callable, Generic, List, Optional, TypeVar, Union
 import attrs
 import click
 import click.testing
+import pydantic
 import pytest
 
 import typed_settings.cli_click as cli_click
@@ -967,3 +968,35 @@ def test_multiple_invocations(invoke: Invoke) -> None:
     invoke(cli, "--o=3")
     invoke(cli)
     assert loaded_settings == [Settings(3), Settings(0)]
+
+
+def test_pydantic_secrets(invoke: Invoke) -> None:
+    """
+    Tests for pydantic secrets handling together with click.
+    """
+
+    class Settings(pydantic.BaseModel):
+        secret: pydantic.SecretStr = pydantic.Field(
+            default=pydantic.SecretStr("secret-default"),
+        )
+
+    default_settings = Settings()
+
+    assert default_settings.secret.get_secret_value() == "secret-default"
+
+    loaded_settings: List[Settings] = []
+
+    @click.command()
+    @click_options(Settings, "example")
+    def cli(settings: Settings) -> None:
+        loaded_settings.append(settings)
+
+    invoke(cli)
+    invoke(cli, "--secret=secret-string")
+
+    assert loaded_settings == [
+        Settings(),
+        Settings(secret=pydantic.SecretStr("secret-string")),
+    ]
+    assert loaded_settings[0].secret.get_secret_value() == "secret-default"
+    assert loaded_settings[1].secret.get_secret_value() == "secret-string"

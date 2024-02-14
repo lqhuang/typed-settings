@@ -630,6 +630,9 @@ def to_pydantic_secretbytes(
     """
     import pydantic
 
+    if isinstance(value, pydantic.SecretBytes):
+        return value
+
     return pydantic.SecretBytes(value)
 
 
@@ -648,6 +651,9 @@ def to_pydantic_secretstr(
         An instance of *cls*.
     """
     import pydantic
+
+    if isinstance(value, pydantic.SecretStr):
+        return value
 
     return pydantic.SecretStr(value)
 
@@ -765,7 +771,8 @@ class DataclassesHookFactory:
                 )
 
             fields = {
-                f.name: f for f in dataclasses.fields(cls)  # type: ignore[arg-type]
+                f.name: f
+                for f in dataclasses.fields(cls)  # type: ignore[arg-type]
             }
             values = {
                 n: converter.structure(v, fields[n].type)  # type: ignore[arg-type]
