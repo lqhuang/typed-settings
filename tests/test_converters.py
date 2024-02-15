@@ -119,11 +119,12 @@ class ParentPydantic(pydantic.BaseModel):
 
     child: ChildPydantic
     a: float
-    b: float = pydantic.Field(default=3.14, le=2)
+    b: float = pydantic.Field(default=3.14, le=4)
     c: LeEnum
     d: datetime
     e: List[ChildPydantic]
     f: Set[datetime]
+    g: pydantic.SecretStr = pydantic.Field(default=pydantic.SecretStr("secret-default"))
 
 
 Example3T = List[Tuple[str, Any, Any]]  # 3-tuple example
@@ -217,6 +218,18 @@ SUPPORTED_TYPES_DATA += [(n, v, e, Path) for n, v, e in SUPPORTED_PATH]
 SUPPORTED_PYDANTIC_SECRET = [
     ("pydantic.SecretStr", "x", pydantic.SecretStr("x"), pydantic.SecretStr),
     ("pydantic.SecretBytes", b"x", pydantic.SecretBytes(b"x"), pydantic.SecretBytes),
+    (
+        "pydantic.SecretStr",
+        pydantic.SecretStr("x"),
+        pydantic.SecretStr("x"),
+        pydantic.SecretStr,
+    ),
+    (
+        "pydantic.SecretBytes",
+        pydantic.SecretBytes(b"x"),
+        pydantic.SecretBytes(b"x"),
+        pydantic.SecretBytes,
+    ),
 ]
 SUPPORTED_TYPES_DATA += SUPPORTED_PYDANTIC_SECRET
 
@@ -435,6 +448,7 @@ SUPPORTED_PYDANTIC: Example4T = [
             "d": "2023-05-04T13:37:42+00:00",
             "e": [{"x": 0, "y": "a"}, {"x": 1, "y": "b"}],
             "f": ["2023-05-04T13:37:42+00:00", "2023-05-04T13:37:42+00:00"],
+            "g": "secret-string",
             "child": {"x": 3, "y": "c"},
         },
         ParentPydantic(
@@ -447,6 +461,32 @@ SUPPORTED_PYDANTIC: Example4T = [
                 ChildPydantic(x=1, y=Path("b")),
             ],
             f={datetime(2023, 5, 4, 13, 37, 42, tzinfo=timezone.utc)},
+            g=pydantic.SecretStr("secret-string"),
+            child=ChildPydantic(x=3, y=Path("c")),
+        ),
+        ParentPydantic,
+    ),
+    (
+        "pydantic(nested) defaults",
+        {
+            "a": "3.14",
+            "c": "Le Eggs",
+            "d": "2023-05-04T13:37:42+00:00",
+            "e": [{"x": 0, "y": "a"}, {"x": 1, "y": "b"}],
+            "f": ["2023-05-04T13:37:42+00:00", "2023-05-04T13:37:42+00:00"],
+            "child": {"x": 3, "y": "c"},
+        },
+        ParentPydantic(
+            a=3.14,
+            b=3.14,
+            c=LeEnum.eggs,
+            d=datetime(2023, 5, 4, 13, 37, 42, tzinfo=timezone.utc),
+            e=[
+                ChildPydantic(x=0, y=Path("a")),
+                ChildPydantic(x=1, y=Path("b")),
+            ],
+            f={datetime(2023, 5, 4, 13, 37, 42, tzinfo=timezone.utc)},
+            g=pydantic.SecretStr("secret-default"),
             child=ChildPydantic(x=3, y=Path("c")),
         ),
         ParentPydantic,
@@ -624,7 +664,7 @@ def test_get_default_converter_cattrs_installed() -> None:
 
 
 def test_get_default_converter_cattrs_uninstalled(
-    unimport: Callable[[str], None]
+    unimport: Callable[[str], None],
 ) -> None:
     """
     If cattrs is not installed, the builtin converter is used by default.
