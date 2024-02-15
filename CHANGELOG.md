@@ -1,5 +1,12 @@
 # Changelog
 
+## 24.0.1 (2024-02-15)
+
+- 🐛 Fix a bug with Pydantic `SecretStr` in Click options [#49].
+
+[#49]: https://gitlab.com/sscherfke/typed-settings/-/issues/49
+
+
 ## 24.0.0 (2024-01-17)
 
 - ✨ For Pydantic classes, read the CLI option's help from the field's
