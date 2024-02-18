@@ -44,29 +44,63 @@ import typed_settings as ts
 
 @ts.settings
 class Nested:
-    attrib1: int = 0
-    attrib2: bool = True
+    attrib: int = 0
 
 
 @ts.settings
 class Settings:
     nested: Nested = Nested()
     attrib: str = ""
+    flag: bool = True
 
 
 print(ts.load(Settings, "myapp"))
 ```
 ```{code-block} console
 $ export MYAPP_ATTRIB=spam
-$ export MYAPP_NESTED_ATTRIB1=42
-$ export MYAPP_NESTED_ATTRIB2=0
+$ export MYAPP_FLAG=0
+$ export MYAPP_NESTED_ATTRIB=42
 $ python example.py
-Settings(nested=Nested(attrib1=42, attrib2=False), attrib='spam')
+Settings(nested=Nested(attrib=42), attrib='spam', flag=False)
 ```
 
-```{warning}
-{code}`Settings` should not define an attribute {code}`nested_attrib1` as it would conflict with {code}`nested.attrib1`.
-If you added this attribute to the example above, the value `42` would be assigned to both options.
+### Delimiter for nested settings
+
+If the {code}`Settings` from above defined an attribute {code}`nested_attrib`},
+this would lead to a conflict with the env-var name {code}`MYAPP_NESTED_ATTRIB`.
+
+To avoid this problem, you can define a *nested delimiter* when you load the settings:
+
+```{code-block} python
+:caption: example.py
+:emphasize-lines: 18
+
+import typed_settings as ts
+
+
+@ts.settings
+class Nested:
+    attrib: str
+
+
+@ts.settings
+class Settings:
+    nested: Nested
+    nested_attrib: str
+
+
+settings = ts.load(
+    Settings,
+    "myapp",
+    env_nested_delimiter="__",
+)
+print(settings)
+```
+```{code-block} console
+$ export MYAPP_NESTED_ATTRIB=spam
+$ export MYAPP_NESTED__ATTRIB=eggs
+$ python example.py
+Settings(nested=Nested(attrib='eggs'), nested_attrib='spam')
 ```
 
 ## Overriding the var name for a single option

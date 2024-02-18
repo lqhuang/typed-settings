@@ -230,10 +230,12 @@ class EnvLoader:
 
     Args:
         prefix: Prefix for environment variables, e.g., ``MYAPP_``.
+        nested_delimiter: Delimiter for attribute names of nested classes.
     """
 
-    def __init__(self, prefix: str) -> None:
+    def __init__(self, prefix: str, nested_delimiter: str = "_") -> None:
         self.prefix = prefix
+        self.nested_delimiter = nested_delimiter
 
     def __call__(
         self, settings_cls: SettingsClass, options: OptionList
@@ -266,7 +268,7 @@ class EnvLoader:
         """
         Return the envvar name for the he given option.
         """
-        return f"{self.prefix}{option.path.upper().replace('.', '_')}"
+        return f"{self.prefix}{option.path.upper().replace('.', self.nested_delimiter)}"
 
 
 class FileLoader:
