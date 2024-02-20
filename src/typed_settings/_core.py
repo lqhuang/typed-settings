@@ -128,6 +128,7 @@ def default_loaders(
     config_file_section: Union[str, _Auto] = AUTO,
     config_files_var: Union[None, str, _Auto] = AUTO,
     env_prefix: Union[None, str, _Auto] = AUTO,
+    env_nested_delimiter: str = "_",
 ) -> List[Loader]:
     """
     Return a list of default settings loaders that are used by :func:`load()`.
@@ -164,6 +165,9 @@ def default_loaders(
 
           Set to ``None`` to disable loading env vars.
 
+        env_nested_delimiter: Delimiter for concatenating attribute names of nested
+            classes in env. var. names.
+
     Return:
         A list of :class:`.Loader` instances.
     """
@@ -195,7 +199,7 @@ def default_loaders(
             if isinstance(env_prefix, _Auto)
             else env_prefix
         )
-        loaders.append(EnvLoader(prefix=prefix))
+        loaders.append(EnvLoader(prefix=prefix, nested_delimiter=env_nested_delimiter))
 
     return loaders
 
@@ -208,6 +212,7 @@ def load(
     config_file_section: Union[str, _Auto] = AUTO,
     config_files_var: Union[None, str, _Auto] = AUTO,
     env_prefix: Union[None, str, _Auto] = AUTO,
+    env_nested_delimiter: str = "_",
     base_dir: Path = Path(),
 ) -> ST:
     """
@@ -262,6 +267,9 @@ def load(
 
           Set to ``None`` to disable loading env vars.
 
+        env_nested_delimiter: Delimiter for concatenating attribute names of nested
+            classes in env. var. names.
+
         base_dir: Base directory for resolving relative paths in default option values.
 
     Return:
@@ -285,6 +293,7 @@ def load(
         config_file_section=config_file_section,
         config_files_var=config_files_var,
         env_prefix=env_prefix,
+        env_nested_delimiter=env_nested_delimiter,
     )
     converter = default_converter()
     state = SettingsState(cls, loaders, [], converter, base_dir)

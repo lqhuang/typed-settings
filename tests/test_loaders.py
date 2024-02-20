@@ -580,6 +580,18 @@ class TestEnvLoader:
         results = loader(Settings, deep_options(Settings))
         assert results == LoadedSettings({"url": "spam"}, LoaderMeta("EnvLoader"))
 
+    @pytest.mark.parametrize("delimiter", ["_", "__", "#"])
+    def test_nested_delimiter(self, delimiter: str, monkeypatch: MonkeyPatch) -> None:
+        """
+        The delimiter for for name parts of nested settings can be set by the user.
+        """
+        monkeypatch.setenv(f"T_HOST{delimiter}NAME", "test")
+        loader = EnvLoader(prefix="T_", nested_delimiter=delimiter)
+        results = loader(Settings, deep_options(Settings))
+        assert results == LoadedSettings(
+            {"host": {"name": "test"}}, LoaderMeta("EnvLoader")
+        )
+
 
 class TestInstanceLoader:
     """Tests for InstanceLoader."""

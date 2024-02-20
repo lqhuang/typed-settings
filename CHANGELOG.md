@@ -1,5 +1,14 @@
 # Changelog
 
+## 24.0.2 (unreleased)
+
+- ✨ Allow specifying an *env nested delimiter*.  This is the string
+  used for concatenating the attribute names of nested classes when
+  creating env. var. names.  It defaults to `"_"`.  ([!31])
+
+[!31]: https://gitlab.com/sscherfke/typed-settings/-/merge_requests/31
+
+
 ## 24.0.1 (2024-02-15)
 
 - 🐛 Fix a bug with Pydantic `SecretStr` in Click options [#49].
