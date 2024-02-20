@@ -1,6 +1,6 @@
 # Changelog
 
-## 24.0.2 (unreleased)
+## 24.1.0 (2024-02-24)
 
 - ✨ Allow specifying an *env nested delimiter*.  This is the string
   used for concatenating the attribute names of nested classes when
