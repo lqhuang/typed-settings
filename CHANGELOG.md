@@ -1,5 +1,13 @@
 # Changelog
 
+## 24.2.0 (unreleased)
+
+- 🐛 Fix handling of built-in collection types in Pydantic classes
+  [#50].
+
+[#50]: https://gitlab.com/sscherfke/typed-settings/-/issues/50
+
+
 ## 24.1.0 (2024-02-24)
 
 - ✨ Allow specifying an *env nested delimiter*.  This is the string

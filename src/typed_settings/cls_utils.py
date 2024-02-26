@@ -311,7 +311,8 @@ class Pydantic:
         return {
             name: (
                 field.annotation
-                if issubclass(field.annotation, pydantic.BaseModel)
+                if isinstance(field.annotation, type)
+                and issubclass(field.annotation, pydantic.BaseModel)
                 else cls
             )
             for name, field in cls.model_fields.items()  # type: ignore[attr-defined]

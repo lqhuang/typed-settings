@@ -8,7 +8,7 @@ import attrs
 import pydantic
 import pytest
 
-from typed_settings import cls_utils, types
+from typed_settings import _compat, cls_utils, types
 
 
 @attrs.define
@@ -234,6 +234,7 @@ class TestAttrs:
 
         assert not cls_utils.Attrs.check(C)
 
+    @pytest.mark.skipif(not _compat.PY_39, reason="Doesn't work on 3.8")
     def test_iter_fields(self) -> None:
         """
         "iter_fields()" yields an option info for all options, including nested
@@ -271,7 +272,7 @@ class TestAttrs:
         class Parent:
             x: str
             y: Child
-            z: str = "default"
+            z: list[str] = ["default"]
 
         option_infos = cls_utils.Attrs.iter_fields(Parent)
         assert option_infos == (
@@ -310,8 +311,8 @@ class TestAttrs:
             types.OptionInfo(
                 parent_cls=Parent,
                 path="z",
-                cls=str,
-                default="default",
+                cls=list[str],
+                default=["default"],
                 has_no_default=False,
                 default_is_factory=False,
             ),
