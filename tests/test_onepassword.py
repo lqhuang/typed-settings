@@ -1,6 +1,7 @@
 """
 Tests for "typed_settings.onepasword".
 """
+
 import os
 import subprocess
 from pathlib import Path

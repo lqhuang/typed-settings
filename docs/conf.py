@@ -1,6 +1,7 @@
 """
 Configuration for Sphinx docs.
 """
+
 from importlib.metadata import version as get_version
 
 

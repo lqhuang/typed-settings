@@ -1,6 +1,7 @@
 """
 Test behavior when no optional dependencies are installed.
 """
+
 import sys
 
 import pytest

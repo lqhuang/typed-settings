@@ -1,6 +1,7 @@
 """
 Helpers for invoking the 1Password CLI.
 """
+
 import json
 import subprocess
 from typing import Any, Dict, Optional

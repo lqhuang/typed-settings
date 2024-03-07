@@ -1,6 +1,7 @@
 """
 Shared fixtures for all tests.
 """
+
 import dataclasses
 import os
 import sys

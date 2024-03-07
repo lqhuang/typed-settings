@@ -1,6 +1,7 @@
 """
 Internal data structures.
 """
+
 import dataclasses
 from collections.abc import Collection
 from enum import Enum

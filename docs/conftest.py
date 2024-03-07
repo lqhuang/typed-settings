@@ -4,6 +4,7 @@ This plugin collects and runs the examples in :file:`doc/examples/`.
 Examples need to have a :file:`test.console` file that contains shell commands
 and their output similarly to Python doctests.
 """
+
 import subprocess
 import sys
 from pathlib import Path

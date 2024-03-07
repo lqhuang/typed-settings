@@ -1,6 +1,7 @@
 """
 Tests for supported CLI param types for both, Click and argparse.
 """
+
 import re
 from datetime import datetime, timezone
 from enum import Enum

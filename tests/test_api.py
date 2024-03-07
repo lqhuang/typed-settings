@@ -1,6 +1,7 @@
 """
 Test that all public functions are properly exposed.
 """
+
 from pathlib import Path
 from typing import Type
 

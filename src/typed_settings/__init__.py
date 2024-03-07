@@ -1,6 +1,7 @@
 """
 Core functions for loading and working with settings.
 """
+
 from typing import Any, List
 
 from ._core import SettingsState, convert, default_loaders, load, load_settings

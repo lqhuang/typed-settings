@@ -1,6 +1,7 @@
 """
 Tests for "typed_settings.loaders".
 """
+
 import dataclasses
 import textwrap
 from itertools import product

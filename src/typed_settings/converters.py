@@ -1,6 +1,7 @@
 """
 Converters and structure hooks for various data types.
 """
+
 import dataclasses
 from datetime import datetime
 from enum import Enum

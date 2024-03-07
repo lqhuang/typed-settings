@@ -1,6 +1,7 @@
 """
 Utilities for generating Click options.
 """
+
 from datetime import datetime
 from enum import Enum
 from functools import partial, update_wrapper
@@ -275,13 +276,13 @@ def _get_wrapper(  # noqa: C901
 
 
 @overload
-def pass_settings(f: None = None, *, argname: Optional[str] = ...) -> Callable[[F], F]:
-    ...
+def pass_settings(
+    f: None = None, *, argname: Optional[str] = ...
+) -> Callable[[F], F]: ...
 
 
 @overload
-def pass_settings(f: F, *, argname: Optional[str] = ...) -> F:
-    ...
+def pass_settings(f: F, *, argname: Optional[str] = ...) -> F: ...
 
 
 def pass_settings(

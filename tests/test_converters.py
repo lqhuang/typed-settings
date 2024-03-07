@@ -1,6 +1,7 @@
 """
 Tests for `typed_settings.attrs.converters`.
 """
+
 import dataclasses
 import json
 from datetime import datetime, timedelta, timezone

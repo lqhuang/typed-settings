@@ -1,6 +1,7 @@
 """
 Tests for "typed_settings.cls_attrs".
 """
+
 import typing as t
 
 import attrs

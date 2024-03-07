@@ -1,6 +1,7 @@
 """
 Tests for "typed_settings.cli_utils".
 """
+
 from collections.abc import (
     Mapping,
     MutableMapping,

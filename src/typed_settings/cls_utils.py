@@ -7,6 +7,7 @@ Supported backends are:
 - `attrs <https://attrs.org>`_ (optional dependency)
 - `pydantic <https://docs.pydantic.dev>`_ (optional dependency)
 """
+
 import dataclasses
 from itertools import groupby
 from typing import Any, Dict, List, Optional, Protocol, Tuple, Type, cast

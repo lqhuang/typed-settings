@@ -3,6 +3,7 @@ Utilities for generating an :mod:`argparse` based CLI.
 
 .. versionadded:: 2.0.0
 """
+
 import argparse
 import itertools
 from datetime import datetime

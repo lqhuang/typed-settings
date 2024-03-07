@@ -1,6 +1,7 @@
 """
 Deprecated alias for :mod:`typed_settings.argparse_utils`.
 """
+
 import warnings
 
 from .cli_argparse import *  # noqa

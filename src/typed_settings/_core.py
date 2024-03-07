@@ -1,6 +1,7 @@
 """
 Core functionality for loading settings.
 """
+
 import logging
 import os
 from contextlib import contextmanager

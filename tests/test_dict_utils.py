@@ -1,6 +1,7 @@
 """
 Tests for "typed_settings.dict_utils".
 """
+
 from typing import Any, Dict, Type, Union
 
 import attrs

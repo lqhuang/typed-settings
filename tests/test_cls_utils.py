@@ -1,6 +1,7 @@
 """
 Tests for "typed_settings.cls_utils".
 """
+
 import dataclasses
 from typing import Callable, Optional
 

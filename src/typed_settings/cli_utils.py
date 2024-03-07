@@ -2,6 +2,7 @@
 Framework agnostic utilities for generating CLI options from Typed Settings
 options.
 """
+
 from collections.abc import (
     Mapping,
     MutableMapping,

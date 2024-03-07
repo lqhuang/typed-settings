@@ -1,6 +1,7 @@
 """
 Utility functions for working settings dicts and serilizing nested settings.
 """
+
 from typing import Any, Generator, Sequence, Tuple
 
 from .types import (

@@ -3,6 +3,7 @@ Global constants shared by different modules.
 
 .. versionadded: 23.1.1
 """
+
 from typing import Final
 
 

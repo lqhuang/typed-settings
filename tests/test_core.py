@@ -1,6 +1,7 @@
 """
 Tests for "typed_settings._core".
 """
+
 import json
 import logging
 import re

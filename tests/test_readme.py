@@ -1,6 +1,7 @@
 """
 Extract examples from the README and assert they work.
 """
+
 import pathlib
 import subprocess
 from pathlib import Path

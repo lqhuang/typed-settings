@@ -1,6 +1,7 @@
 """
 Deprecated alias for :mod:`typed_settings.cli_utils`.
 """
+
 import warnings
 
 from .cli_click import *  # noqa

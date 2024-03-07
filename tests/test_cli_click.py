@@ -1,6 +1,7 @@
 """
 Tests for "typed_settings.cli.click".
 """
+
 import unittest.mock as mock
 from pathlib import Path
 from typing import Any, Callable, Generic, List, Optional, TypeVar, Union
@@ -83,8 +84,7 @@ def test_unkown_type(invoke: Invoke) -> None:
 
         @click.command()  # pragma: no cover
         @click_options(Settings, "test")
-        def cli(settings: Settings) -> None:
-            ...
+        def cli(settings: Settings) -> None: ...
 
 
 def test_attrs_meta_not_modified() -> None:
@@ -127,8 +127,7 @@ class TestDefaultsLoading:
 
         @click.command()
         @click_options(Settings, default_loaders("test"))
-        def cli(settings: Settings) -> None:
-            ...
+        def cli(settings: Settings) -> None: ...
 
         result = invoke(cli)
         assert result.output == (
@@ -151,8 +150,7 @@ class TestDefaultsLoading:
 
         @click.command()
         @click_options(Settings, default_loaders("test"))
-        def cli(settings: Settings) -> None:
-            ...
+        def cli(settings: Settings) -> None: ...
 
         result = invoke(cli, "--help")
         assert result.output == (
@@ -178,8 +176,7 @@ class TestDefaultsLoading:
 
         @click.command()
         @click_options(Settings, default_loaders("test"))
-        def cli(settings: Settings) -> None:
-            ...
+        def cli(settings: Settings) -> None: ...
 
         result = invoke(cli, "--help")
         assert result.output == (
@@ -203,8 +200,7 @@ class TestDefaultsLoading:
 
         @click.command()
         @click_options(Settings, [], show_envvars_in_help=True)
-        def cli(settings: Settings) -> None:
-            ...
+        def cli(settings: Settings) -> None: ...
 
         result = invoke(cli, "--help")
         assert result.output == (
@@ -228,8 +224,7 @@ class TestDefaultsLoading:
 
         @click.command()
         @click_options(Settings, default_loaders("test"))
-        def cli(settings: Settings) -> None:
-            ...
+        def cli(settings: Settings) -> None: ...
 
         result = invoke(cli, "--help")
         assert result.output == (
@@ -267,8 +262,7 @@ class TestDefaultsLoading:
             Settings,
             default_loaders("test", [tmp_path.joinpath("settings.toml")]),
         )
-        def cli(settings: Settings) -> None:
-            ...
+        def cli(settings: Settings) -> None: ...
 
         result = invoke(cli, "--help")
         assert result.output == (
@@ -442,8 +436,7 @@ class TestSettingsPassing:
         @click.command()
         @click_options(A, "test-a", argname="sa")
         @click_options(B, "test-b", argname="sb")
-        def cli(*, sa: A, sb: B) -> None:
-            ...
+        def cli(*, sa: A, sb: B) -> None: ...
 
         result = invoke(cli, "--help")
         assert result.output == (
@@ -762,8 +755,7 @@ class TestDecoratorFactory:
 
         @click.command()
         @click_options(settings_cls, "t")
-        def cli1(settings: Any) -> None:
-            ...
+        def cli1(settings: Any) -> None: ...
 
         @click.command()
         @click_options(
@@ -771,8 +763,7 @@ class TestDecoratorFactory:
             "t",
             decorator_factory=cli_click.ClickOptionFactory(),
         )
-        def cli2(settings: Any) -> None:
-            ...
+        def cli2(settings: Any) -> None: ...
 
         r1 = invoke(cli1, "--help").output.splitlines()[1:]
         r2 = invoke(cli2, "--help").output.splitlines()[1:]
@@ -789,8 +780,7 @@ class TestDecoratorFactory:
             "t",
             decorator_factory=cli_click.OptionGroupFactory(),
         )
-        def cli(settings: Any) -> None:
-            ...
+        def cli(settings: Any) -> None: ...
 
         result = invoke(cli, "--help").output.splitlines()
         assert result == [
@@ -838,8 +828,7 @@ def test_show_envvar_in_help(
         decorator_factory=factory,
         show_envvars_in_help=True,
     )
-    def cli(settings: Settings) -> None:
-        ...
+    def cli(settings: Settings) -> None: ...
 
     result = invoke(cli, "--help")
     if isinstance(factory, cli_click.OptionGroupFactory):

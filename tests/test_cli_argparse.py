@@ -1,6 +1,7 @@
 """
 Tests for "typed_settings.argparse_utils".
 """
+
 import sys
 from pathlib import Path
 from typing import Any, Callable, List, TypeVar

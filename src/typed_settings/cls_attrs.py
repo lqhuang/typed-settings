@@ -1,6 +1,7 @@
 """
 Helpers for and additions to :mod:`attrs`.
 """
+
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -62,8 +63,7 @@ def option(
     help: Optional[str] = ...,
     click: Optional[Dict[str, Any]] = ...,
     argparse: Optional[Dict[str, Any]] = ...,
-) -> Any:
-    ...
+) -> Any: ...
 
 
 # This form catches an explicit None or no default and infers the type from the
@@ -86,8 +86,7 @@ def option(
     help: Optional[str] = ...,
     click: Optional[Dict[str, Any]] = ...,
     argparse: Optional[Dict[str, Any]] = ...,
-) -> "_T":
-    ...
+) -> "_T": ...
 
 
 # This form catches an explicit default argument.
@@ -109,8 +108,7 @@ def option(
     help: Optional[str] = ...,
     click: Optional[Dict[str, Any]] = ...,
     argparse: Optional[Dict[str, Any]] = ...,
-) -> "_T":
-    ...
+) -> "_T": ...
 
 
 # This form covers type=non-Type: e.g. forward references (str), Any
@@ -132,8 +130,7 @@ def option(
     help: Optional[str] = ...,
     click: Optional[Dict[str, Any]] = ...,
     argparse: Optional[Dict[str, Any]] = ...,
-) -> Any:
-    ...
+) -> Any: ...
 
 
 def option(  # type: ignore[no-untyped-def]
@@ -193,8 +190,7 @@ def secret(
     help: Optional[str] = ...,
     click: Optional[Dict[str, Any]] = ...,
     argparse: Optional[Dict[str, Any]] = ...,
-) -> Any:
-    ...
+) -> Any: ...
 
 
 # This form catches an explicit None or no default and infers the type from the
@@ -217,8 +213,7 @@ def secret(
     help: Optional[str] = ...,
     click: Optional[Dict[str, Any]] = ...,
     argparse: Optional[Dict[str, Any]] = ...,
-) -> "_T":
-    ...
+) -> "_T": ...
 
 
 # This form catches an explicit default argument.
@@ -240,8 +235,7 @@ def secret(
     help: Optional[str] = ...,
     click: Optional[Dict[str, Any]] = ...,
     argparse: Optional[Dict[str, Any]] = ...,
-) -> "_T":
-    ...
+) -> "_T": ...
 
 
 # This form covers type=non-Type: e.g. forward references (str), Any
@@ -263,8 +257,7 @@ def secret(
     help: Optional[str] = ...,
     click: Optional[Dict[str, Any]] = ...,
     argparse: Optional[Dict[str, Any]] = ...,
-) -> Any:
-    ...
+) -> Any: ...
 
 
 def secret(  # type: ignore[no-untyped-def]

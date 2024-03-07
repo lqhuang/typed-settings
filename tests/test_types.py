@@ -1,6 +1,7 @@
 """
 Tests for "typed_settings.types".
 """
+
 from pathlib import Path
 from typing import Any
 
