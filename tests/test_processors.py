@@ -1,8 +1,10 @@
 """
 Tests for "typed_settings.processors".
 """
+
 from typing import Callable, Type, Union
 
+import jinja2
 import pytest
 
 from typed_settings import processors, settings
@@ -90,7 +92,7 @@ def test_handle_script() -> None:
 @pytest.mark.parametrize(
     "cmd, code, stdout, stderr",
     [
-        ("xyz", 127, "", "/bin/sh.*xyz.*not found\n"),
+        ("xyz", 127, "", ".*/bin/sh.*xyz.*not found\n"),
         ("echo a; echo b 1>&2; exit 1", 1, "a\n", "b\n"),
     ],
 )
@@ -395,6 +397,16 @@ class TestJinjaProcessor:
         ),
     ]
 
+    DATA_WITH_CUSTOM_JINJA = [
+        *DATA,
+        pytest.param(
+            {"d": "{{ foo('bar') }}"}, {"d": "foo_bar"}, id="custom-jinja-function"
+        ),
+        pytest.param(
+            {"d": "{{ 'foo' | bar(2) }}"}, {"d": "foofoo"}, id="custom-jinja-filter"
+        ),
+    ]
+
     @pytest.mark.parametrize("data, expected", DATA)
     def test_jinja_processor(
         self, data: dict, expected: Union[dict, Type[Exception]]
@@ -409,6 +421,25 @@ class TestJinjaProcessor:
         else:
             with pytest.raises(expected):
                 processors.JinjaProcessor()(data, Settings, OPTIONS)
+
+    @pytest.mark.parametrize("data, expected", DATA_WITH_CUSTOM_JINJA)
+    def test_jinja_processor_custom_environment(
+        self, data: dict, expected: Union[dict, Type[Exception]]
+    ):
+        """
+        Custom jinja environments with user extensions can be passed to the
+        JinjaProcessor.
+        """
+        env = jinja2.Environment()  # noqa: S701
+        env.globals["foo"] = lambda x: f"foo_{x}"
+        env.filters["bar"] = lambda val, times: val * times
+
+        if isinstance(expected, dict):
+            result = processors.JinjaProcessor(environment=env)(data, Settings, OPTIONS)
+            assert result == expected
+        else:
+            with pytest.raises(expected):
+                processors.JinjaProcessor(environment=env)(data, Settings, OPTIONS)
 
     def test_jinja_not_installed(self, unimport: Callable[[str], None]) -> None:
         unimport("jinja2")
