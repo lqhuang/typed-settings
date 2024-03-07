@@ -6,7 +6,9 @@ stages:
   - release
 
 variables:
-  PIP_CACHE_DIR: "$CI_PROJECT_DIR/.cache/pip"
+  PIP_CACHE_DIR: '$CI_PROJECT_DIR/.cache/pip'
+  UV_CACHE_DIR: '$CI_PROJECT_DIR/.cache/uv'
+  NOX_DEFAULT_VENV_BACKEND: 'uv'
 
 default:
   image: python:3
@@ -15,6 +17,7 @@ default:
   cache:
     paths:
       - .cache/pip
+      - .cache/uv
 
 build:
   stage: build

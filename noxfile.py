@@ -1,6 +1,7 @@
 """
 Configuration and tasks for **Nox**.
 """
+
 import glob
 import os
 import pathlib
@@ -109,7 +110,7 @@ def test(session: nox.Session, deps_min_version: bool, pkg_format: str) -> None:
             spec = spec.replace(">=", "==")
             install_deps.append(f"{req.name}{spec}")
 
-    session.install(f"{src}[test]", *install_deps)
+    session.install(f"typed-settings[test] @ {src}", *install_deps)
 
     # We have to run the tests for the doctests in "src" separately or we'll
     # get an "ImportPathMismatchError" (the "same" file is located in the
@@ -129,7 +130,7 @@ def test_no_optionals(session: nox.Session) -> None:
     Run tests with no optional dependencies installed.
     """
     pkgs = glob.glob("dist/*.whl")
-    session.install(pkgs[0], "coverage", "pytest", "sybil")
+    session.install(f"typed-settings @ {pkgs[0]}", "coverage", "pytest", "sybil")
     session.run("coverage", "run", "-m", "pytest", "tests/test_no_optionals.py")
 
 
@@ -142,7 +143,7 @@ def coverage_report(session: nox.Session) -> None:
     if OMMIT_IN_REPORT:
         args.append(f"--omit={','.join(OMMIT_IN_REPORT)}")
 
-    session.install(".[test]")
+    session.install("typed-settings[test] @ .")
     session.run("coverage", "combine")
     # Only let the "report" command fail under 100%
     session.run("coverage", "xml", "--fail-under=0")
@@ -164,7 +165,7 @@ def lint(session: nox.Session) -> None:
     """
     Run the linters.
     """
-    session.install(".[lint]")
+    session.install("typed-settings[lint] @ .")
     session.run("ruff", *LINT_PATHS)
 
 
@@ -173,7 +174,7 @@ def mypy(session: nox.Session) -> None:
     """
     Run type checking with MyPy.
     """
-    session.install(".[dev]")
+    session.install("typed-settings[dev] @ .")
     for paths in MYPY_PATHS:
         session.run("mypy", "--show-error-codes", *paths)
 
@@ -183,5 +184,5 @@ def sec_check(session: nox.Session) -> None:
     """
     Run a security check with pip-audit.
     """
-    session.install(".[dev]")  # Install *everything*
+    session.install("typed-settings[dev] @ .")  # Install *everything*
     session.run("pip-audit")
