@@ -2,9 +2,10 @@
 This module contains the settings processors provided by Typed Settings and the
 protocol specification that they must implement.
 """
+
 import logging
 import subprocess
-from typing import Any, Dict, Protocol
+from typing import TYPE_CHECKING, Any, Dict, Optional, Protocol
 
 from .dict_utils import iter_settings, set_path
 from .types import OptionList, SettingsClass, SettingsDict
@@ -253,6 +254,10 @@ class FormatProcessor:
         return isinstance(value, str) and "{" in value and "}" in value
 
 
+if TYPE_CHECKING:
+    from jinja2 import Environment
+
+
 class JinjaProcessor:
     """
     Perform value templating with Jinja__.
@@ -271,7 +276,7 @@ class JinjaProcessor:
     .. versionadded:: 23.0.0
     """
 
-    def __init__(self) -> None:
+    def __init__(self, environment: Optional["Environment"] = None) -> None:
         try:
             import jinja2
         except ImportError as e:
@@ -281,9 +286,13 @@ class JinjaProcessor:
             ) from e
 
         self._jinja2 = jinja2
-        # autoescape msut be False or recursive rendering will not work
+        # autoescape must be False or recursive rendering will not work
         # properly.
-        self._env = jinja2.Environment(autoescape=False)  # noqa: S701
+        if environment is None:
+            self._env = jinja2.Environment(autoescape=False)  # noqa: S701
+        else:
+            self._env = environment
+            self._env.autoescape = False
 
     def __call__(
         self,
