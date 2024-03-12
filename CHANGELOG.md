@@ -1,17 +1,19 @@
 # Changelog
 
-## 24.2.0 (unreleased)
+## 24.2.0 (2024-03-12)
+
+- ✨ Allow passing a custom Jinja Environment to `JinjaProcessor`.
+  This lets the library use custom Jinja functions, filters, etc.
+  ([!32])
 
 - 🐛 Fix handling of built-in collection types in Pydantic classes
   [#50].
-- 🐛 Fix handling of NewType types
-  [#52].
-- ✨ Allow passing a custom Jinja Environment to `JinjaProcessor`. 
-  This lets the the library use custom Jinja functions, filters, etc.  ([!32])
 
+- 🐛 Fix handling of `NewType` types [#52].
+
+[!32]: https://gitlab.com/sscherfke/typed-settings/-/merge_requests/32
 [#50]: https://gitlab.com/sscherfke/typed-settings/-/issues/50
 [#52]: https://gitlab.com/sscherfke/typed-settings/-/issues/52
-[!32]: https://gitlab.com/sscherfke/typed-settings/-/merge_requests/32
 
 ## 24.1.0 (2024-02-24)
 
