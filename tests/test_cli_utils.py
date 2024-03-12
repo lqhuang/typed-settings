@@ -13,6 +13,7 @@ from typing import (
     Any,
     Dict,
     List,
+    NewType,
     Optional,
     Tuple,
     Union,
@@ -26,6 +27,9 @@ import pytest
 
 from typed_settings import cli_utils, default_converter, types
 from typed_settings._compat import PY_39, PY_310
+
+
+NewInt = NewType("NewInt", int)
 
 
 def test_nodefaulttype_singleton() -> None:
@@ -154,6 +158,26 @@ class TestTypeArgsMaker:
         handler and returns its results.
         """
         t = Optional[int] if is_optional else int
+        result = tam.get_kwargs(t, default)
+        assert result == {
+            "type": int,
+            "default": _none_or_default(default, is_optional),
+            "is_optional": is_optional,
+            "called": "special",
+        }
+
+    @pytest.mark.parametrize("default", [None, 2, NewInt(1), cli_utils.NO_DEFAULT])
+    @pytest.mark.parametrize("is_optional", [True, False])
+    def test_newtype(
+        self,
+        default: Any,
+        is_optional: bool,
+        tam: cli_utils.TypeArgsMaker,
+    ) -> None:
+        """
+        "NewType" and "Optional[NewType]" can be used as option types.
+        """
+        t = Optional[NewInt] if is_optional else NewInt
         result = tam.get_kwargs(t, default)
         assert result == {
             "type": int,

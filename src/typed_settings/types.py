@@ -8,20 +8,27 @@ from enum import Enum
 from pathlib import Path
 from types import MappingProxyType
 from typing import (
+    TYPE_CHECKING,
     Any,
     Callable,
     Dict,
     Generic,
     NamedTuple,
+    NewType,
     Optional,
+    Protocol,
     Tuple,
+    Type,
     TypeVar,
     Union,
 )
 
-from ._compat import PY_39
+from ._compat import PY_39, PY_310
 from .constants import SECRET_REPR
 
+
+if TYPE_CHECKING:
+    from typing_extensions import TypeGuard
 
 __all__ = [
     "AUTO",
@@ -44,6 +51,7 @@ __all__ = [
     "Secret",
     "SecretStr",
     "SECRETS_TYPES",
+    "is_new_type",
 ]
 
 
@@ -335,6 +343,20 @@ class SecretRepr:
 
     def __repr__(self) -> str:
         return "***"
+
+
+class NewTypeLike(Protocol):
+    __supertype__: Type
+
+
+def is_new_type(obj: Any) -> "TypeGuard[NewTypeLike]":
+    """
+    Return ``True`` if *obj* is a :class:`~typing.NewType`.
+    """
+    if PY_310:
+        return isinstance(obj, NewType)
+    else:
+        return hasattr(obj, "__supertype__") and isinstance(obj.__supertype__, type)
 
 
 SECRETS_TYPES = (Secret, SecretStr)
