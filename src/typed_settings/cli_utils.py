@@ -306,6 +306,8 @@ class TypeArgsMaker:
         elif origin is None:
             scalar_handlers = self.type_handler.get_scalar_handlers()
             for target_type, get_kwargs in scalar_handlers.items():
+                if types.is_new_type(otype):
+                    otype = otype.__supertype__
                 if issubclass(otype, target_type):
                     return get_kwargs(otype, default, is_optional)
 
