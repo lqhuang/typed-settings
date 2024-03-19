@@ -1,5 +1,24 @@
 # Changelog
 
+Typed Settings follows [Calendar Versioning](https://calver.org):
+
+- The **first number** of the version is the year.
+- The **second number** is incremented with each release, starting at 0 for each year.
+- The **third number** is for emergencies when we need to start branches for older releases.
+
+We try to be as backwards-compatible as possible,
+so you should not be afraid to upgrade if you're only using our documented public APIs and
+pay attention to `DeprecationWarning`s.
+
+Whenever there's a need to break compatibility, it is announced in this changelog.
+The affected function raises a `DeprecationWarning` for at least half a year (if possible) before it's finally really broken.
+
+Except for emergencies, only the latest version is supported and will receive bugfixes.
+
+Support for older Python versions is dropped when they become [end-of-life](https://devguide.python.org/versions/).
+
+<!-- changelog follows -->
+
 ## 24.2.0 (2024-03-12)
 
 - ✨ Allow passing a custom Jinja Environment to `JinjaProcessor`.
