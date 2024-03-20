@@ -355,3 +355,33 @@ class TestCombine:
 
         Composed = combine("Composed", BaseSettings, {"n1": Nested1()})
         assert Composed.__doc__ == "Le doc string."
+
+    def test_postponed_annotations(self) -> None:
+        """
+        The created class copies the annotations from the base and adds entries for all
+        nested classes.
+
+        See: https://gitlab.com/sscherfke/typed-settings/-/issues/54
+        """
+
+        @attrs.define
+        class Nested1:
+            a: "str" = ""
+
+        @attrs.define
+        class BaseSettings:
+            a: "bool" = False
+
+        Composed = combine("Composed", BaseSettings, {"n1": Nested1()})
+
+        # Composed has __annotations__ populated with base and nested attribs
+        assert Composed.__annotations__ == {
+            "a": "bool",
+            "n1": Nested1,
+        }
+
+        # Types can be resolved
+        Composed = attrs.resolve_types(Composed)
+        fields = attrs.fields(Composed)
+        assert fields.a.type is bool
+        assert fields.n1.type is Nested1

@@ -469,11 +469,14 @@ def combine(
         )
         for a in attr.fields(base_cls)  # type: ignore[misc]
     }
+    annotations = dict(base_cls.__annotations__)
     for aname, default in nested.items():
         if aname in attribs:
             raise ValueError(f"Duplicate attribute for nested class: {aname}")
         attribs[aname] = attr.attrib(default=default, type=default.__class__)
+        annotations[aname] = default.__class__
 
     cls = attr.make_class(name, attribs)
+    cls.__annotations__ = annotations
     cls.__doc__ = base_cls.__doc__
     return cls

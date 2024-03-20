@@ -19,6 +19,16 @@ Support for older Python versions is dropped when they become [end-of-life](http
 
 <!-- changelog follows -->
 
+## 24.3.0 (unreleased)
+
+- 🐛 `typed_settings.cls_attrs.combine()` now properly populates the
+  `__annotations__` dict of the generated class.  Without that,
+  postponed annotations ([PEP 563]) wouldn't work properly.  ([#54])
+
+[#54]: https://gitlab.com/sscherfke/typed-settings/-/issues/54
+[PEP 563]: https://peps.python.org/pep-0563/
+
+
 ## 24.2.0 (2024-03-12)
 
 - ✨ Allow passing a custom Jinja Environment to `JinjaProcessor`.
@@ -33,6 +43,7 @@ Support for older Python versions is dropped when they become [end-of-life](http
 [!32]: https://gitlab.com/sscherfke/typed-settings/-/merge_requests/32
 [#50]: https://gitlab.com/sscherfke/typed-settings/-/issues/50
 [#52]: https://gitlab.com/sscherfke/typed-settings/-/issues/52
+
 
 ## 24.1.0 (2024-02-24)
 
