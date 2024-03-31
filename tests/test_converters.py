@@ -201,6 +201,31 @@ SUPPORTED_DATETIME: Example3T = [
 ]
 SUPPORTED_TYPES_DATA += [(n, v, e, datetime) for n, v, e in SUPPORTED_DATETIME]
 
+# timedelta - can be parsed from ISO and simpliefied string formats
+SUPPORTED_TIMEDELTA: Example3T = [
+    (
+        "timedelta(simple-days)",
+        "1 01:01:01.111111",
+        timedelta(days=1, seconds=3661, microseconds=111111),
+    ),
+    (
+        "timedelta(simple-days-neg)",
+        "-1 01:01:01.111111",
+        timedelta(days=-1, seconds=-3661, microseconds=-111111),
+    ),
+    ("timedelta(simple-hours)", "01:01:01", timedelta(seconds=3661)),
+    ("timedelta(simple-hours-neg)", "-01:01:01", timedelta(seconds=-3661)),
+    ("timedelta(simple-minutes-neg)", "01:01", timedelta(seconds=61)),
+    ("timedelta(simple-minutes-neg)", "-01:01", timedelta(seconds=-61)),
+    ("timedelta(simple-seconds)", "01", timedelta(seconds=1)),
+    ("timedelta(simple-seconds-neg)", "-01", timedelta(seconds=-1)),
+    ("timedelta(iso)", "P1DT01H01M01S", timedelta(days=1, seconds=3661)),
+    ("timedelta(iso-pos)", "+P1DT01H01M01S", timedelta(days=1, seconds=3661)),
+    ("timedelta(iso-neg)", "-P1DT01H01M01S", timedelta(days=-1, seconds=-3661)),
+    ("timedelta(inst)", timedelta(days=1, seconds=2), timedelta(days=1, seconds=2)),
+]
+SUPPORTED_TYPES_DATA += [(n, v, e, timedelta) for n, v, e in SUPPORTED_TIMEDELTA]
+
 # Enum - Enums are parsed from their "key"
 SUPPORTED_ENUM: Example3T = [
     ("enum(str)", "eggs", LeEnum.eggs),
