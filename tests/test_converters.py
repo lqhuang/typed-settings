@@ -219,9 +219,21 @@ SUPPORTED_TIMEDELTA: Example3T = [
     ("timedelta(simple-minutes-neg)", "-01:01", timedelta(seconds=-61)),
     ("timedelta(simple-seconds)", "01", timedelta(seconds=1)),
     ("timedelta(simple-seconds-neg)", "-01", timedelta(seconds=-1)),
-    ("timedelta(iso)", "P1DT01H01M01S", timedelta(days=1, seconds=3661)),
+    ("timedelta(simple2-hours)", "1h1m1s", timedelta(seconds=3661)),
+    ("timedelta(simple2-hours-neg)", "-1h1m1s", timedelta(seconds=-3661)),
+    (
+        "timedelta(iso)",
+        "P1DT01H01M01.111111S",
+        timedelta(days=1, seconds=3661, microseconds=111111),
+    ),
     ("timedelta(iso-pos)", "+P1DT01H01M01S", timedelta(days=1, seconds=3661)),
     ("timedelta(iso-neg)", "-P1DT01H01M01S", timedelta(days=-1, seconds=-3661)),
+    ("timedelta(iso-days)", "P1D", timedelta(days=1)),
+    ("timedelta(iso-hours)", "PT1H", timedelta(seconds=3600)),
+    ("timedelta(iso-minutes)", "PT1M", timedelta(seconds=60)),
+    ("timedelta(iso-seconds)", "PT1S", timedelta(seconds=1)),
+    ("timedelta(iso-days-seconds)", "P1DT1S", timedelta(days=1, seconds=1)),
+    ("timedelta(iso-hours-seconds)", "PT1H1S", timedelta(seconds=3601)),
     ("timedelta(inst)", timedelta(days=1, seconds=2), timedelta(days=1, seconds=2)),
 ]
 SUPPORTED_TYPES_DATA += [(n, v, e, timedelta) for n, v, e in SUPPORTED_TIMEDELTA]

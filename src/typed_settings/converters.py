@@ -3,7 +3,8 @@ Converters and structure hooks for various data types.
 """
 
 import dataclasses
-from datetime import datetime
+import re
+from datetime import date, datetime, timedelta
 from enum import Enum
 from pathlib import Path
 from types import MappingProxyType
@@ -106,7 +107,9 @@ class TSConverter:
             int: to_type,
             float: to_type,
             str: to_type,
-            datetime: to_dt,
+            datetime: to_datetime,
+            date: to_date,  # Must come after "datetime" b/c of subclassing!
+            timedelta: to_timedelta,
             Enum: to_enum,
             Path: to_resolved_path if resolve_paths else to_path,
         }
@@ -281,7 +284,9 @@ def get_default_structure_hooks(
     path_hook = to_resolved_path if resolve_paths else to_path
     hooks: List[Tuple[type, Callable[[Any, type], Any]]] = [
         (bool, to_bool),
-        (datetime, to_dt),
+        (datetime, to_datetime),
+        (date, to_date),
+        (timedelta, to_timedelta),
         (Enum, to_enum),
         (Path, path_hook),
     ]
@@ -511,7 +516,11 @@ def to_bool(value: Any, _cls: type = bool) -> bool:
     raise ValueError(f"Cannot convert value to bool: {value}")
 
 
-def to_dt(value: Union[datetime, str], _cls: type = datetime) -> datetime:
+def to_date(value: Union[datetime, str], cls: type = date) -> date:
+    pass
+
+
+def to_datetime(value: Union[datetime, str], cls: type = datetime) -> datetime:
     """
     Convert an ISO formatted string to :class:`datetime.datetime`.  Leave the
     input untouched if it is already a datetime.
@@ -537,8 +546,63 @@ def to_dt(value: Union[datetime, str], _cls: type = datetime) -> datetime:
     if isinstance(value, str):
         if value[-1] == "Z":
             value = value.replace("Z", "+00:00")
-        return datetime.fromisoformat(value)
+        return cls.fromisoformat(value)
     return value
+
+
+_SIGN = "(?P<sign>[+-])?"
+_DAYS = "(?P<days>[0-9]+)"
+_HOURS = "(?P<hours>[0-9]+)"
+_MINUTES = "(?P<minutes>[0-9]+)"
+_SECONDS = r"(?P<seconds>[0-9]+)(\.(?P<micros>[0-9]{1,6}))?"
+#: [[[D ]HH:]MM:]SS[.ffffff]
+RE_TIMEDELTA_SIMPLE_1 = re.compile(
+    f"^{_SIGN}((({_DAYS} )?{_HOURS}:)?{_MINUTES}:)?{_SECONDS}$", flags=re.IGNORECASE
+)
+#: [nnD][nnH][nnM][nnS]
+RE_TIMEDELTA_SIMPLE_2 = re.compile(
+    f"^{_SIGN}({_DAYS}D)?({_HOURS}H)?({_MINUTES}M)?({_SECONDS}S)?$", flags=re.IGNORECASE
+)
+#: P[nnD][T[nnH][nnM][nnS]]
+RE_TIMEDELTA_ISO = re.compile(
+    f"^{_SIGN}"
+    r"P(?!\b)"  # "P", but not on a word boundary (e.g., at the end of the string)
+    f"({_DAYS}D)?"
+    f"("
+    r"T(?!\b)"  # "T", but not on a word boundary (e.g., at the end of the string)
+    f"({_HOURS}H)?"
+    f"({_MINUTES}M)?"
+    f"({_SECONDS}S)?"
+    r")?$",
+    flags=re.IGNORECASE,
+)
+
+
+def to_timedelta(value: Union[timedelta, int, float, str], cls: timedelta) -> timedelta:
+    if isinstance(value, timedelta):
+        return value
+
+    if isinstance(value, (int, float)):
+        return cls(seconds=value)
+
+    for regex in (RE_TIMEDELTA_ISO, RE_TIMEDELTA_SIMPLE_1, RE_TIMEDELTA_SIMPLE_2):
+        match = regex.match(value)
+        if match:
+            break
+    else:
+        raise ValueError(f"Cannot parse value as timedelta: {value}")
+
+    parts = match.groupdict(default="0")
+    sign_factor = -1 if parts["sign"] == "-" else 1
+    days = int(parts["days"]) * sign_factor
+    seconds = int(parts["hours"]) * 3600
+    seconds += int(parts["minutes"]) * 60
+    seconds += int(parts["seconds"])
+    seconds *= sign_factor
+    # Append "0" to "micros" to get a 6-digit number (.7 -> 7 -> 700_000)
+    micros = int(f"{parts['micros']:<06}") * sign_factor
+
+    return timedelta(days=days, seconds=seconds, microseconds=micros)
 
 
 def to_enum(value: Any, cls: Type[ET]) -> ET:
