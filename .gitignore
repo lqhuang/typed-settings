@@ -1,7 +1,8 @@
 *.egg-info/
 .DS_Store
-.coverage.*
 .coverage
+.coverage.*
+.hypothesis/
 .mypy_cache/
 .nox/
 .pytest_cache/
