@@ -157,7 +157,7 @@ def fix(session: nox.Session) -> None:
     Run code fixers.
     """
     session.run("black", *LINT_PATHS)
-    session.run("ruff", "--fix-only", *LINT_PATHS)
+    session.run("ruff", "check", "--fix-only", *LINT_PATHS)
 
 
 @nox.session(tags=["lint"])
@@ -166,7 +166,7 @@ def lint(session: nox.Session) -> None:
     Run the linters.
     """
     session.install("typed-settings[lint] @ .")
-    session.run("ruff", *LINT_PATHS)
+    session.run("ruff", "check", *LINT_PATHS)
 
 
 @nox.session(tags=["lint"])

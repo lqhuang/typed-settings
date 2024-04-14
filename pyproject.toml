@@ -121,7 +121,7 @@ post-install-commands = [
 test = "pytest {args:docs src tests}"
 cov = "pytest --cov --cov-config=pyproject.toml --cov-report=term-missing {args:docs src tests}"
 lint = [
-  "ruff .",
+  "ruff check .",
   "mypy src/ tests/ ./noxfile.py",
   "mypy docs/conf.py docs/conftest.py",
   "mypy docs/examples",
@@ -182,6 +182,11 @@ disallow_untyped_defs = true
 addopts = "--ignore=README.md --ignore=docs/_build"
 
 [tool.ruff]
+line-length = 88
+src = ["src", "tests"]
+target-version = "py38"
+
+[tool.ruff.lint]
 select = [  # see: https://beta.ruff.rs/docs/rules/
     "F",  # pyflakes
     "E",  # pycodestyle error
@@ -205,20 +210,17 @@ ignore = [
     "D205",  # Allow the first line spanning another line.
     "D212",  # Allow putting the """ in separate lines in multi-line docstrings
 ]
-line-length = 88
-src = ["src", "tests"]
-target-version = "py38"
 
-[tool.ruff.per-file-ignores]
+[tool.ruff.lint.per-file-ignores]
 "docs/examples/*" = ["D100", "D101", "D103", "D415"]
 "examples/*" = ["D101"]
 "tests/*" = ["RUF012"]
 "tests/op" = ["D100"]
 "tests/test_cli_param_types.py" = ["D106"]
 
-[tool.ruff.isort]
+[tool.ruff.lint.isort]
 lines-after-imports = 2
 
-[tool.ruff.pydocstyle]
+[tool.ruff.lint.pydocstyle]
 convention = "google"
 ignore-decorators = ["typing.overload"]
