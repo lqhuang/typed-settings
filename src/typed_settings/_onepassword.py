@@ -30,9 +30,7 @@ def run(*args: str) -> str:
     """
     cmd = ("op", *args)
     try:
-        result = subprocess.run(
-            cmd, capture_output=True, text=True, check=True  # noqa: S603
-        )
+        result = subprocess.run(cmd, capture_output=True, text=True, check=True)  # noqa: S603
     except FileNotFoundError:
         raise ValueError(
             "The 1Password CLI is not properly installed.  You can find help "

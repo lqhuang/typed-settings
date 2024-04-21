@@ -112,30 +112,12 @@ include = [
 [tool.hatch.build.targets.wheel]
 
 [tool.hatch.envs.default]
+path = "./.venv"
 features = ["dev"]
 post-install-commands = [
     "pre-commit install --install-hooks",
 ]
-
-[tool.hatch.envs.default.scripts]
-test = "pytest {args:docs src tests}"
-cov = "pytest --cov --cov-config=pyproject.toml --cov-report=term-missing {args:docs src tests}"
-lint = [
-  "ruff check .",
-  "mypy src/ tests/ ./noxfile.py",
-  "mypy docs/conf.py docs/conftest.py",
-  "mypy docs/examples",
-]
-fix = [
-  "ruff --fix-only {args:.}",
-  "black {args:.}",
-]
-docs = [
-  "make -C docs html",
-]
-clean-docs = [
-  "make -C docs clean html",
-]
+uv = true
 
 [tool.black]
 line-length = 88

@@ -771,9 +771,7 @@ class DataclassesHookFactory:
                     f'"{cls.__name__}" or "dict".'
                 )
 
-            fields = {
-                f.name: f for f in dataclasses.fields(cls)  # type: ignore[arg-type]
-            }
+            fields = {f.name: f for f in dataclasses.fields(cls)}  # type: ignore[arg-type]
             values = {
                 n: converter.structure(v, fields[n].type)  # type: ignore[arg-type]
                 for n, v in value.items()

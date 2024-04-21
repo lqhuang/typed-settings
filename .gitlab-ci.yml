@@ -13,7 +13,7 @@ variables:
 default:
   image: python:3
   before_script:
-    - pip install nox tomli uv
+    - pip install nox uv
   cache:
     paths:
       - .cache/pip
@@ -115,5 +115,5 @@ release:
     TWINE_REPOSITORY_URL: "https://upload.pypi.org/legacy/"
     TWINE_NON_INTERACTIVE: "1"
   script:
-    - pip install twine
+    - uv pip install twine
     - twine upload dist/*

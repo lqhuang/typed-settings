@@ -10,13 +10,13 @@ repos:
 
   - repo: local
     hooks:
-      - id: black
-        name: black
-        entry: black
-        language: system
-        types: [python]
       - id: ruff
         name: ruff
+        entry: ruff
+        language: system
+        types: [python]
+      - id: ruff-fix
+        name: ruff-fix
         args: [--fix, --exit-non-zero-on-fix]
         entry: ruff
         language: system

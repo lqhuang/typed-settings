@@ -25,8 +25,12 @@ Support for older Python versions is dropped when they become [end-of-life](http
   `__annotations__` dict of the generated class.  Without that,
   postponed annotations ([PEP 563]) wouldn't work properly.  ([#54])
 
+- 📝 Update the [development guide] ([#53]).
+
+[#53]: https://gitlab.com/sscherfke/typed-settings/-/issues/53
 [#54]: https://gitlab.com/sscherfke/typed-settings/-/issues/54
 [PEP 563]: https://peps.python.org/pep-0563/
+[development guide]: https://typed-settings.readthedocs.io/en/latest/development.html
 
 
 ## 24.2.0 (2024-03-12)

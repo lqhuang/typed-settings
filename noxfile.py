@@ -156,8 +156,8 @@ def fix(session: nox.Session) -> None:
     """
     Run code fixers.
     """
-    session.run("black", *LINT_PATHS)
     session.run("ruff", "check", "--fix-only", *LINT_PATHS)
+    session.run("ruff", "format", *LINT_PATHS)
 
 
 @nox.session(tags=["lint"])
