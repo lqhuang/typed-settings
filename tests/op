@@ -86,7 +86,7 @@ def read(ctx: click.Context, resource: str) -> None:
     except (KeyError, ValueError):
         click.echo(
             (
-                f"[ERROR] YYYY/MM/DD HH:MM:SS could not read secret {resource}: "
+                f"[ERROR] YYYY/MM/DD HH:MM:SS could not read secret '{resource}': "
                 f"invalid secret reference"
             ),
             err=True,

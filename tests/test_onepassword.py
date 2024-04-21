@@ -106,6 +106,6 @@ def test_get_resource_not_exists() -> None:
     """
     A ValueError with the "op" output is raised if a resource does not exist.
     """
-    msg = '"op" error: could not read secret xyz: invalid secret reference.*'
+    msg = "\"op\" error: could not read secret 'op://Test/x': invalid secret reference"
     with pytest.raises(ValueError, match=msg):
-        op.get_resource("xyz")
+        op.get_resource("op://Test/x")
