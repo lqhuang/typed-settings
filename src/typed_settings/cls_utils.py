@@ -80,7 +80,7 @@ class Attrs:
         result: List[types.OptionInfo] = []
 
         def iter_attribs(r_cls: type, prefix: str) -> None:
-            r_cls = attrs.resolve_types(r_cls)  # type: ignore[type-var]
+            r_cls = attrs.resolve_types(r_cls, globalns=getattr(r_cls, "__globals__", {}))  # type: ignore[type-var]
             for field in attrs.fields(r_cls):  # type: ignore[misc]
                 if field.init is False:
                     continue
