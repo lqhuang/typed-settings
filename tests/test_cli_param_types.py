@@ -3,7 +3,7 @@ Tests for supported CLI param types for both, Click and argparse.
 """
 
 import re
-from datetime import datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 from enum import Enum
 from pathlib import Path
 from typing import (
@@ -337,6 +337,121 @@ class TestDateTimeParam(ParamBase):
         datetime(2020, 5, 4),
         datetime(2020, 5, 4, 13, 37),
         datetime(2020, 5, 4, 13, 37, tzinfo=timezone.utc),
+    )
+
+
+class TestDateParam(ParamBase):
+    """
+    Test date cli_options.
+    """
+
+    @settings
+    class Settings:
+        a: date
+        b: date = date(1970, 1, 1)
+        c: Optional[date] = None
+
+    click_expected_help = [
+        "  --a [%Y-%m-%d]  [required]",
+        "  --b [%Y-%m-%d]  [default: 1970-01-01]",
+        "  --c [%Y-%m-%d]",
+    ]
+    argparse_expected_help = [
+        "  --a YYYY-MM-DD  [required]",
+        "  --b YYYY-MM-DD  [default: 1970-01-01]",
+        "  --c YYYY-MM-DD",
+    ]
+
+    env_vars = {
+        "A": "2021-05-04",
+    }
+    click_expected_env_var_defaults = [
+        "  --a [%Y-%m-%d]  [default: 2021-05-04]",
+        "  --b [%Y-%m-%d]  [default: 1970-01-01]",
+        "  --c [%Y-%m-%d]",
+    ]
+    argparse_expected_env_var_defaults = [
+        "  --a YYYY-MM-DD  [default: 2021-05-04]",
+        "  --b YYYY-MM-DD  [default: 1970-01-01]",
+        "  --c YYYY-MM-DD",
+    ]
+
+    default_options = ["--a=2020-05-04"]
+    expected_defaults = Settings(date(2020, 5, 4))
+
+    cli_options = [
+        "--a=2020-05-04",
+    ]
+    expected_settings = Settings(date(2020, 5, 4))
+
+
+class TestTimedeltaParam(ParamBase):
+    """
+    Test date cli_options.
+    """
+
+    @settings
+    class Settings:
+        a: timedelta
+        b: timedelta = timedelta(days=1, seconds=4)
+        c: timedelta = timedelta(days=1, seconds=4)
+        d: Optional[timedelta] = None
+
+    click_expected_help = [
+        "  --a [-][Dd][HHh][MMm][SS[.ffffff]s]",
+        "                                  [required]",
+        "  --b [-][Dd][HHh][MMm][SS[.ffffff]s]",
+        "                                  [default: 1d4s]",
+        "  --c [-][Dd][HHh][MMm][SS[.ffffff]s]",
+        "                                  [default: 1d4s]",
+        "  --d [-][Dd][HHh][MMm][SS[.ffffff]s]",
+    ]
+    argparse_expected_help = [
+        "  --a [-][Dd][HHh][MMm][SS[.ffffff]s]",
+        "                        [required]",
+        "  --b [-][Dd][HHh][MMm][SS[.ffffff]s]",
+        "                        [default: 1d4s]",
+        "  --c [-][Dd][HHh][MMm][SS[.ffffff]s]",
+        "                        [default: 1d4s]",
+        "  --d [-][Dd][HHh][MMm][SS[.ffffff]s]",
+    ]
+
+    env_vars = {
+        "A": "P1DT03H04M",
+        "B": "3h4m",
+        "C": "03:04:02",
+    }
+    click_expected_env_var_defaults = [
+        "  --a [-][Dd][HHh][MMm][SS[.ffffff]s]",
+        "                                  [default: 1d3h4m]",
+        "  --b [-][Dd][HHh][MMm][SS[.ffffff]s]",
+        "                                  [default: 3h4m]",
+        "  --c [-][Dd][HHh][MMm][SS[.ffffff]s]",
+        "                                  [default: 3h4m2s]",
+        "  --d [-][Dd][HHh][MMm][SS[.ffffff]s]",
+    ]
+    argparse_expected_env_var_defaults = [
+        "  --a [-][Dd][HHh][MMm][SS[.ffffff]s]",
+        "                        [default: 1d3h4m]",
+        "  --b [-][Dd][HHh][MMm][SS[.ffffff]s]",
+        "                        [default: 3h4m]",
+        "  --c [-][Dd][HHh][MMm][SS[.ffffff]s]",
+        "                        [default: 3h4m2s]",
+        "  --d [-][Dd][HHh][MMm][SS[.ffffff]s]",
+    ]
+
+    default_options = ["--a=1d"]
+    expected_defaults = Settings(timedelta(days=1))
+
+    cli_options = [
+        "--a=1d",
+        "--b=1h",
+        "--c=1d2h3m4s",
+    ]
+    expected_settings = Settings(
+        timedelta(days=1),
+        timedelta(hours=1),
+        timedelta(days=1, hours=2, minutes=3, seconds=4),
     )
 
 

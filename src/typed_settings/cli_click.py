@@ -2,7 +2,7 @@
 Utilities for generating Click options.
 """
 
-from datetime import datetime
+from datetime import date, datetime, timedelta
 from enum import Enum
 from functools import partial, update_wrapper
 from pathlib import Path
@@ -28,7 +28,7 @@ from typing import (
 import click
 from click.core import ParameterSource
 
-from . import _core, cls_utils
+from . import _core, cls_utils, converters
 from .cli_utils import (
     DEFAULT_SENTINEL_NAME,
     NO_DEFAULT,
@@ -466,6 +466,42 @@ def handle_datetime(type: type, default: Default, is_optional: bool) -> StrDict:
     return kwargs
 
 
+def handle_date(type: type, default: Default, is_optional: bool) -> StrDict:
+    """
+    Use :class:`click.DateTime` as option type and convert the default value
+    to an ISO string.
+    """
+    typ = partial(converters.to_date, cls=date)
+    typ.__name__ = converters.to_date.__name__  # type: ignore[attr-defined]
+    kwargs: StrDict = {
+        "type": typ,
+        "metavar": "[%Y-%m-%d]",
+    }
+    if isinstance(default, date):
+        kwargs["default"] = default.isoformat()
+    elif is_optional:
+        kwargs["default"] = None
+    return kwargs
+
+
+def handle_timedelta(type: type, default: Default, is_optional: bool) -> StrDict:
+    """
+    Use :class:`click.DateTime` as option type and convert the default value
+    to an ISO string.
+    """
+    typ = partial(converters.to_timedelta, cls=timedelta)
+    typ.__name__ = converters.to_timedelta.__name__  # type: ignore[attr-defined]
+    kwargs: StrDict = {
+        "type": typ,
+        "metavar": "[-][Dd][HHh][MMm][SS[.ffffff]s]",
+    }
+    if isinstance(default, timedelta):
+        kwargs["default"] = converters.timedelta_to_str(default)
+    elif is_optional:
+        kwargs["default"] = None
+    return kwargs
+
+
 def handle_enum(type: Type[Enum], default: Default, is_optional: bool) -> StrDict:
     """
     Use :class:`click.Choice` as option type and use the enum value's name as
@@ -484,6 +520,8 @@ def handle_enum(type: Type[Enum], default: Default, is_optional: bool) -> StrDic
 #: Default handlers for click option types.
 DEFAULT_TYPES: Dict[type, TypeHandlerFunc] = {
     datetime: handle_datetime,
+    date: handle_date,
+    timedelta: handle_timedelta,
     Enum: handle_enum,
 }
 

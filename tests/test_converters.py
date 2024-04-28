@@ -708,6 +708,51 @@ class TestToTimedelta:
         }
         assert converters.to_timedelta(td_str, timedelta) == timedelta(**kwargs), td_str
 
+    @given(
+        positive=strategies.booleans(),
+        days=strategies.integers(0, 5),
+        hours=strategies.integers(0, 23),
+        minutes=strategies.integers(0, 59),
+        seconds=strategies.integers(0, 59),
+        micros=strategies.integers(0, 999999),
+    )
+    def test_timedelta_to_str(
+        self,
+        positive: bool,
+        days: int,
+        hours: int,
+        minutes: int,
+        seconds: int,
+        micros: int,
+    ) -> None:
+        """
+        Timedeltas can be converted back to a timedelta string (in simplified ISO
+        format).
+        """
+        td = timedelta(
+            days=days,
+            hours=hours,
+            minutes=minutes,
+            seconds=seconds,
+            microseconds=micros,
+        )
+        if not positive:
+            td = -td
+
+        micros_str = f".{micros:>06}".rstrip("0") if micros else ""
+        seconds_str = f"{seconds}{micros_str}s" if seconds or micros_str else ""
+        expected = ""
+        expected += f"{days}d" if days else ""
+        expected += f"{hours}h" if hours else ""
+        expected += f"{minutes}m" if minutes else ""
+        expected += seconds_str
+        if expected and not positive:
+            expected = f"-{expected}"
+
+        result = converters.timedelta_to_str(td)
+        assert result == expected
+        assert converters.to_timedelta(result, timedelta) == td
+
 
 @pytest.mark.parametrize(
     "cls, value",

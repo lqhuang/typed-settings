@@ -587,15 +587,15 @@ _DAYS = "(?P<days>[0-9]+)"
 _HOURS = "(?P<hours>[0-9]+)"
 _MINUTES = "(?P<minutes>[0-9]+)"
 _SECONDS = r"(?P<seconds>[0-9]+)(\.(?P<micros>[0-9]{1,6}))?"
-# [[[D ]HH:]MM:]SS[.ffffff]
+# [±][{D}d[,]][[{HH}:]{MM}:]{SS}[.{ffffff}]
 RE_TIMEDELTA_SIMPLE = re.compile(
     f"^{_SIGN}({_DAYS}D,?)?(({_HOURS}:)?{_MINUTES}:)?{_SECONDS}$", flags=re.IGNORECASE
 )
-# [nnD][nnH][nnM][nnS]
+# [±][{D}d][{HH}h][{MM}m][{SS}[.{ffffff}]s]
 RE_TIMEDELTA_SIMPLE_ISO = re.compile(
     f"^{_SIGN}({_DAYS}D)?({_HOURS}H)?({_MINUTES}M)?({_SECONDS}S)?$", flags=re.IGNORECASE
 )
-# P[nnD][T[nnH][nnM][nnS]]
+# [±]P[{D}D][T[{HH}H][{MM}M][{SS}[.{ffffff}]S]]
 RE_TIMEDELTA_ISO = re.compile(
     f"^{_SIGN}"
     r"P(?!\b)"  # "P", but not on a word boundary (e.g., at the end of the string)
@@ -624,21 +624,21 @@ def to_timedelta(
 
     Supported string formats (all are case-insensitive):
 
-    - :samp:`[±]P[{n}D][T[{nn}H][{nn}M][{nn}[.{ffffff}]S]]` (`ISO durations`_), e.g.:
+    - :samp:`[±]P[{D}D][T[{HH}H][{MM}M][{SS}[.{ffffff}]S]]` (`ISO durations`_), e.g.:
 
       - ``P1DT03H04M05S``
       - ``-P180D``
       - ``PT4H30M``
       - ``P1DT30S``
 
-    - :samp:`[±][{nn}D][{nn}H][{nn}M][{nn}S]` (simplified ISO variant), e.g.:
+    - :samp:`[±][{D}d][{HH}h][{MM}m][{SS}[.{ffffff}]s]` (simplified ISO variant), e.g.:
 
       - ``1d3h4m5s``
       - ``-180d``
       - ``4h30m``
       - ``1d30s``
 
-    - :samp:`[±][{d}D[,]][[{hh}:]{mm}:]{ss}[.{ffffff}]`, e.g.:
+    - :samp:`[±][{D}d[,]][[{HH}:]{MM}:]{SS}[.{ffffff}]`, e.g.:
 
       - ``1d,03:04:05``
       - ``-180D``
@@ -680,17 +680,43 @@ def to_timedelta(
         raise ValueError(f"Cannot parse value as timedelta: {value}")
 
     parts = match.groupdict(default="0")
-    sign_factor = -1 if parts["sign"] == "-" else 1
-    days = int(parts["days"]) * sign_factor
-    hours = int(parts["hours"]) * sign_factor
-    minutes = int(parts["minutes"]) * sign_factor
-    seconds = int(parts["seconds"]) * sign_factor
+    days = int(parts["days"])
+    hours = int(parts["hours"])
+    minutes = int(parts["minutes"])
+    seconds = int(parts["seconds"])
     # Append "0" to "micros" to get a 6-digit number (.7 -> 7 -> 700_000)
-    micros = int(f"{parts['micros']:<06}") * sign_factor
+    micros = int(f"{parts['micros']:<06}")
 
-    return cls(
+    td = cls(
         days=days, hours=hours, minutes=minutes, seconds=seconds, microseconds=micros
     )
+    if parts["sign"] == "-":
+        return -td
+    return td
+
+
+def timedelta_to_str(td: timedelta) -> str:
+    """
+    Serialize a timedelta to a string that can be parsed by :func:`to_timedelta()`.
+    """
+    if td == abs(td):
+        is_negative = False
+    else:
+        is_negative = True
+        td = -td
+    days = td.days
+    hours, seconds = divmod(td.seconds, 3600)
+    minutes, seconds = divmod(seconds, 60)
+    micros = f".{td.microseconds:>06}".rstrip("0") if td.microseconds else ""
+    result = (
+        f"{f'{days}d' if days else ''}"
+        f"{f'{hours}h' if hours else ''}"
+        f"{f'{minutes}m' if minutes else ''}"
+        f"{f'{seconds}{micros}s' if seconds or micros else ''}"
+    )
+    if result and is_negative:
+        result = f"-{result}"
+    return result
 
 
 def to_enum(value: Any, cls: Type[ET]) -> ET:
