@@ -3,7 +3,8 @@ Converters and structure hooks for various data types.
 """
 
 import dataclasses
-from datetime import datetime
+import re
+from datetime import date, datetime, timedelta
 from enum import Enum
 from pathlib import Path
 from types import MappingProxyType
@@ -25,7 +26,7 @@ from typing import (
     get_origin,
 )
 
-from ._compat import PY_310
+from ._compat import PY_310, PY_311
 
 
 if PY_310:
@@ -48,7 +49,7 @@ if TYPE_CHECKING:
 #     "get_default_structure_hooks",
 #     "register_attrs_hook_factory",
 #     "register_strlist_hook",
-#     "to_dt",
+#     "to_datetime",
 #     "to_bool",
 #     "to_enum",
 #     "to_path",
@@ -106,7 +107,9 @@ class TSConverter:
             int: to_type,
             float: to_type,
             str: to_type,
-            datetime: to_dt,
+            datetime: to_datetime,
+            date: to_date,  # Must come after "datetime" b/c of subclassing!
+            timedelta: to_timedelta,
             Enum: to_enum,
             Path: to_resolved_path if resolve_paths else to_path,
         }
@@ -184,7 +187,9 @@ def default_converter(*, resolve_paths: bool = True) -> Converter:
         - :class:`int`
         - :class:`float`
         - :class:`str`
-        - :class:`datetime.datetime` (see :func:`to_dt()`)
+        - :class:`datetime.datetime` (see :func:`to_datetime()`)
+        - :class:`datetime.date` (see :func:`to_date()`)
+        - :class:`datetime.timedelta` (see :func:`to_timedelta()`)
         - :class:`enum.Enum` using (see :func:`to_enum()`)
         - :class:`pathlib.Path` (see :func:`to_path()` and :func:`to_resolved_path()`)
         - :class:`list`
@@ -208,6 +213,8 @@ def default_converter(*, resolve_paths: bool = True) -> Converter:
     .. versionchanged:: 23.1.0
        Return a :program:`cattrs` converter if it is installed or else a Typed Settings
        converter.
+    .. versionchanged:: 24.3.0
+       Added :func:`to_date()` and :func:`to_timedelta()`.
     """
     try:
         import cattrs  # noqa: F401
@@ -281,7 +288,9 @@ def get_default_structure_hooks(
     path_hook = to_resolved_path if resolve_paths else to_path
     hooks: List[Tuple[type, Callable[[Any, type], Any]]] = [
         (bool, to_bool),
-        (datetime, to_dt),
+        (datetime, to_datetime),
+        (date, to_date),
+        (timedelta, to_timedelta),
         (Enum, to_enum),
         (Path, path_hook),
     ]
@@ -511,34 +520,203 @@ def to_bool(value: Any, _cls: type = bool) -> bool:
     raise ValueError(f"Cannot convert value to bool: {value}")
 
 
-def to_dt(value: Union[datetime, str], _cls: type = datetime) -> datetime:
+def to_date(value: Union[datetime, str], cls: Type[date] = date) -> date:
     """
-    Convert an ISO formatted string to :class:`datetime.datetime`.  Leave the
-    input untouched if it is already a datetime.
+    Convert an ISO formatted string to :class:`datetime.date`.  Leave the input
+    untouched if it is already a date.
 
-    See: :meth:`datetime.datetime.fromisoformat()`
-
-    The ``Z`` suffix is also supported and will be replaced with ``+00:00``.
+    See: :meth:`datetime.date.fromisoformat()`
 
     Args:
         value: The input data
-        _cls: (ignored)
+        cls: The target type.  Must be :class:`datetime.date` or a subclass.
+
+    Return:
+        The converted date instance
+
+    Raise:
+        TypeError: If *value* is neither a string nor a date
+        ValueError: If *value* cannot be parsed as date.
+
+    .. versionadded:: 24.3.0
+    """
+    if not isinstance(value, (date, str)):
+        raise TypeError(
+            f"Invalid type {type(value).__name__!r}; expected 'date' or " f"'str'."
+        )
+    if isinstance(value, str):
+        return cls.fromisoformat(value)
+    return value
+
+
+def to_datetime(
+    value: Union[datetime, str], cls: Type[datetime] = datetime
+) -> datetime:
+    """
+    Convert an ISO formatted string to :class:`datetime.datetime`.  Leave the input
+    untouched if it is already a datetime.
+
+    See: :meth:`datetime.datetime.fromisoformat()`
+
+    The ``Z`` suffix is supported on Python versions prior to 3.11, too.
+
+    Args:
+        value: The input data
+        cls: The target type.  Must be :class:`datetime.datetime` or a subclass.
 
     Return:
         The converted datetime instance
 
     Raise:
-        TypeError: If *val* is neither a string nor a datetime
+        TypeError: If *value* is neither a string nor a datetime
+        ValueError: If *value* cannot be parsed as datetime.
     """
     if not isinstance(value, (datetime, str)):
         raise TypeError(
             f"Invalid type {type(value).__name__!r}; expected 'datetime' or " f"'str'."
         )
     if isinstance(value, str):
-        if value[-1] == "Z":
+        if not PY_311 and value[-1] == "Z":
             value = value.replace("Z", "+00:00")
-        return datetime.fromisoformat(value)
+        return cls.fromisoformat(value)
     return value
+
+
+_SIGN = "(?P<sign>[+-])?"
+_DAYS = "(?P<days>[0-9]+)"
+_HOURS = "(?P<hours>[0-9]+)"
+_MINUTES = "(?P<minutes>[0-9]+)"
+_SECONDS = r"(?P<seconds>[0-9]+)(\.(?P<micros>[0-9]{1,6}))?"
+# [±][{D}d[,]][[{HH}:]{MM}:]{SS}[.{ffffff}]
+RE_TIMEDELTA_SIMPLE = re.compile(
+    f"^{_SIGN}({_DAYS}D,?)?(({_HOURS}:)?{_MINUTES}:)?{_SECONDS}$", flags=re.IGNORECASE
+)
+# [±][{D}d][{HH}h][{MM}m][{SS}[.{ffffff}]s]
+RE_TIMEDELTA_SIMPLE_ISO = re.compile(
+    f"^{_SIGN}({_DAYS}D)?({_HOURS}H)?({_MINUTES}M)?({_SECONDS}S)?$", flags=re.IGNORECASE
+)
+# [±]P[{D}D][T[{HH}H][{MM}M][{SS}[.{ffffff}]S]]
+RE_TIMEDELTA_ISO = re.compile(
+    f"^{_SIGN}"
+    r"P(?!\b)"  # "P", but not on a word boundary (e.g., at the end of the string)
+    f"({_DAYS}D)?"
+    f"("
+    r"T(?!\b)"  # "T", but not on a word boundary (e.g., at the end of the string)
+    f"({_HOURS}H)?"
+    f"({_MINUTES}M)?"
+    f"({_SECONDS}S)?"
+    r")?$",
+    flags=re.IGNORECASE,
+)
+
+
+def to_timedelta(
+    value: Union[timedelta, int, float, str], cls: Type[timedelta]
+) -> timedelta:
+    """
+    Convert *value* to a :class:`datetime.timedelta`.
+
+    Accepts strings, integers and floats, and timedelta instances.
+
+    Timedelta instances are returned unchanged.
+
+    Integers and floats are interpreted as seconds.
+
+    Supported string formats (all are case-insensitive):
+
+    - :samp:`[±]P[{D}D][T[{HH}H][{MM}M][{SS}[.{ffffff}]S]]` (`ISO durations`_), e.g.:
+
+      - ``P1DT03H04M05S``
+      - ``-P180D``
+      - ``PT4H30M``
+      - ``P1DT30S``
+
+    - :samp:`[±][{D}d][{HH}h][{MM}m][{SS}[.{ffffff}]s]` (simplified ISO variant), e.g.:
+
+      - ``1d3h4m5s``
+      - ``-180d``
+      - ``4h30m``
+      - ``1d30s``
+
+    - :samp:`[±][{D}d[,]][[{HH}:]{MM}:]{SS}[.{ffffff}]`, e.g.:
+
+      - ``1d,03:04:05``
+      - ``-180D``
+      - ``4:30:00``
+      - ``1d30``
+
+    .. _iso durations: https://en.wikipedia.org/wiki/ISO_8601#Durations
+
+    Args:
+        value: The input data
+        cls: The target type.  Must be :class:`datetime.timedelta` or a subclass.
+
+    Return:
+        The converted timedelta instance
+
+    Raise:
+        TypeError: If *value* is neither a string, float, or int nor a timedelta.
+        ValueError: If *value* cannot be parsed as timedelta.
+
+    .. versionadded:: 24.3.0
+    """
+    if not isinstance(value, (timedelta, str, float, int)):
+        raise TypeError(
+            f"Invalid type {type(value).__name__!r}; expected 'timedelta', 'float', "
+            f"'int', or 'str'."
+        )
+
+    if isinstance(value, timedelta):
+        return value
+
+    if isinstance(value, (int, float)):
+        return cls(seconds=value)
+
+    for regex in (RE_TIMEDELTA_ISO, RE_TIMEDELTA_SIMPLE_ISO, RE_TIMEDELTA_SIMPLE):
+        match = regex.match(value)
+        if match:
+            break
+    else:
+        raise ValueError(f"Cannot parse value as timedelta: {value}")
+
+    parts = match.groupdict(default="0")
+    days = int(parts["days"])
+    hours = int(parts["hours"])
+    minutes = int(parts["minutes"])
+    seconds = int(parts["seconds"])
+    # Append "0" to "micros" to get a 6-digit number (.7 -> 7 -> 700_000)
+    micros = int(f"{parts['micros']:<06}")
+
+    td = cls(
+        days=days, hours=hours, minutes=minutes, seconds=seconds, microseconds=micros
+    )
+    if parts["sign"] == "-":
+        return -td
+    return td
+
+
+def timedelta_to_str(td: timedelta) -> str:
+    """
+    Serialize a timedelta to a string that can be parsed by :func:`to_timedelta()`.
+    """
+    if td == abs(td):
+        is_negative = False
+    else:
+        is_negative = True
+        td = -td
+    days = td.days
+    hours, seconds = divmod(td.seconds, 3600)
+    minutes, seconds = divmod(seconds, 60)
+    micros = f".{td.microseconds:>06}".rstrip("0") if td.microseconds else ""
+    result = (
+        f"{f'{days}d' if days else ''}"
+        f"{f'{hours}h' if hours else ''}"
+        f"{f'{minutes}m' if minutes else ''}"
+        f"{f'{seconds}{micros}s' if seconds or micros else ''}"
+    )
+    if result and is_negative:
+        result = f"-{result}"
+    return result
 
 
 def to_enum(value: Any, cls: Type[ET]) -> ET:

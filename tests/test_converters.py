@@ -4,7 +4,7 @@ Tests for `typed_settings.attrs.converters`.
 
 import dataclasses
 import json
-from datetime import datetime, timedelta, timezone
+from datetime import date, datetime, timedelta, timezone
 from enum import Enum
 from pathlib import Path
 from types import MappingProxyType
@@ -25,9 +25,10 @@ import attrs
 import cattrs
 import pydantic
 import pytest
+from hypothesis import assume, given, strategies
 
 from typed_settings import converters
-from typed_settings._compat import PY_39, PY_310
+from typed_settings._compat import PY_39, PY_310, PY_311
 from typed_settings.cls_attrs import option, secret, settings
 
 
@@ -178,7 +179,7 @@ SUPPORTED_STDTYPES: Example4T = [
 ]
 SUPPORTED_TYPES_DATA += SUPPORTED_STDTYPES
 
-# datetime - can be parsed from a limit set of ISO formats
+# datetime - can be parsed from ISO format
 SUPPORTED_DATETIME: Example3T = [
     ("datetime(naive-space)", "2020-05-04 13:37:00", datetime(2020, 5, 4, 13, 37)),
     ("datetime(naive-T)", "2020-05-04T13:37:00", datetime(2020, 5, 4, 13, 37)),
@@ -200,6 +201,71 @@ SUPPORTED_DATETIME: Example3T = [
     ("datetime(inst)", datetime(2020, 5, 4, 13, 37), datetime(2020, 5, 4, 13, 37)),
 ]
 SUPPORTED_TYPES_DATA += [(n, v, e, datetime) for n, v, e in SUPPORTED_DATETIME]
+
+# date - can be parsed from ISO format
+SUPPORTED_DATE: Example3T = [
+    ("date(str)", "2020-05-04", date(2020, 5, 4)),
+    ("date(str-no-dashes)", "20200504" if PY_311 else "2020-05-04", date(2020, 5, 4)),
+    ("date(inst)", date(2020, 5, 4), date(2020, 5, 4)),
+]
+SUPPORTED_TYPES_DATA += [(n, v, e, date) for n, v, e in SUPPORTED_DATE]
+
+# timedelta - can be parsed from ISO and simpliefied string formats
+SUPPORTED_TIMEDELTA: Example3T = [
+    (f"timedelta({kind}-{example})", td_str, td)
+    for (td, example), examples in {
+        (timedelta(seconds=1), "s"): [
+            ("iso", "PT01S"),
+            ("simple-iso", "1s"),
+            ("simple", "1"),
+        ],
+        (timedelta(minutes=1, seconds=1), "ms"): [
+            ("iso", "PT01M01S"),
+            ("simple-iso", "1m1s"),
+            ("simple", "1:01"),
+        ],
+        (timedelta(hours=1, minutes=1, seconds=1), "hms"): [
+            ("iso", "PT01H01M01S"),
+            ("simple-iso", "1h1m1s"),
+            ("simple", "1:01:01"),
+        ],
+        (timedelta(days=1, hours=1, minutes=1, seconds=1), "dhms"): [
+            ("iso", "P01DT01H01M01S"),
+            ("simple-iso", "1d1h1m1s"),
+            ("simple", "1d,1:01:01"),
+        ],
+        (timedelta(days=1, seconds=1), "ds"): [
+            ("iso", "P1DT1S"),
+            ("simple-iso", "1d1s"),
+            ("simple", "1d1"),
+        ],
+        (timedelta(hours=1, seconds=1), "hs"): [
+            ("iso", "PT01H01S"),
+            ("simple-iso", "1h1s"),
+            ("simple", "1:0:01"),
+        ],
+        (timedelta(seconds=-(24 * 60 * 60 + 1)), "-ds"): [
+            ("iso", "-P01DT01S"),
+            ("simple-iso", "-1d1s"),
+            ("simple", "-1D00:00:01"),
+        ],
+        (timedelta(microseconds=1), "mic1"): [
+            ("iso", "PT0.000001S"),
+            ("simple-iso", "0.000001s"),
+            ("simple", "0.000001"),
+        ],
+        (timedelta(microseconds=100_000), "mic1hk"): [
+            ("iso", "PT0.1S"),
+            ("simple-iso", "0.1s"),
+            ("simple", "0.1"),
+        ],
+    }.items()
+    for kind, td_str in examples
+] + [
+    ("timedelta(float)", 1.0, timedelta(seconds=1)),
+    ("timedelta(inst)", timedelta(days=1, seconds=2), timedelta(days=1, seconds=2)),
+]
+SUPPORTED_TYPES_DATA += [(n, v, e, timedelta) for n, v, e in SUPPORTED_TIMEDELTA]
 
 # Enum - Enums are parsed from their "key"
 SUPPORTED_ENUM: Example3T = [
@@ -520,6 +586,210 @@ def test_supported_types(
     assert converter.structure(value, typ) == expected
 
 
+class TestToTimedelta:
+    """
+    Tests for "to_timedelta()".
+    """
+
+    @given(
+        simple_fmt=strategies.booleans(),
+        left_pad=strategies.booleans(),
+        sign=strategies.sampled_from([None, "+", "-"]),
+        days=strategies.one_of(strategies.none(), strategies.integers(0, 9999)),
+        hours=strategies.one_of(strategies.none(), strategies.integers(0, 9999)),
+        minutes=strategies.one_of(strategies.none(), strategies.integers(0, 9999)),
+        seconds=strategies.one_of(strategies.none(), strategies.integers(0, 9999)),
+        micros=strategies.one_of(strategies.none(), strategies.integers(0, 999999)),
+    )
+    def test_from_iso_string(
+        self,
+        simple_fmt: bool,
+        left_pad: bool,
+        sign: Optional[str],
+        days: Optional[int],
+        hours: Optional[int],
+        minutes: Optional[int],
+        seconds: Optional[int],
+        micros: Optional[int],
+    ) -> None:
+        """
+        Timedeltas can be parsed from ISO strings and simplified ISO strings (missing
+        the "P" and the "T").
+
+        - P[nnD][T[nnH][nnM][nnS]]
+        - [nnD][nnH][nnM][nnS]
+
+        The regex is case-insensitive.  Numbers may be left-padded with 0 (e.g., "02")
+        and they can also be > 99.
+
+        All places (days, hours, minutes, seconds) are optional.
+        """
+        # Ditch examples where everything is None
+        assume(any(i is not None for i in [days, hours, minutes, seconds, micros]))
+
+        if micros is not None and not seconds:
+            seconds = 0
+
+        fmt = ">02d" if left_pad else "d"
+
+        # Strip trailing "0" from microseconds and make shure "x." -> "x.0"
+        micros_str = "" if micros is None else f".{micros:>06}".rstrip("0")
+        micros_str = ".0" if micros_str == "." else micros_str
+        time_str = "" if hours is None else f"{hours:{fmt}}H"
+        time_str += "" if minutes is None else f"{minutes:{fmt}}M"
+        time_str += "" if seconds is None else f"{seconds:{fmt}}{micros_str}S"
+        td_str = "" if sign is None else sign
+        td_str += "P"
+        td_str += "" if days is None else f"{days}D"
+        td_str += f"T{time_str}" if time_str else ""
+        if simple_fmt:
+            td_str = td_str.replace("P", "").replace("T", "").lower()
+
+        _kwargs = {
+            "days": days,
+            "hours": hours,
+            "minutes": minutes,
+            "seconds": seconds,
+            "microseconds": micros,
+        }
+        kwargs = {
+            k: (-v if sign == "-" else v) for k, v in _kwargs.items() if v is not None
+        }
+        assert converters.to_timedelta(td_str, timedelta) == timedelta(**kwargs), td_str
+
+    @given(
+        left_pad=strategies.booleans(),
+        sign=strategies.sampled_from([None, "+", "-"]),
+        comma=strategies.sampled_from(["", ","]),
+        days=strategies.one_of(strategies.none(), strategies.integers(0, 9999)),
+        hours=strategies.one_of(strategies.none(), strategies.integers(0, 9999)),
+        minutes=strategies.one_of(strategies.none(), strategies.integers(0, 9999)),
+        seconds=strategies.integers(0, 9999),
+        micros=strategies.one_of(strategies.none(), strategies.integers(0, 999999)),
+    )
+    def test_from_simple_string(
+        self,
+        left_pad: bool,
+        sign: Optional[str],
+        comma: str,
+        days: Optional[int],
+        hours: Optional[int],
+        minutes: Optional[int],
+        seconds: int,
+        micros: Optional[int],
+    ) -> None:
+        """
+        Timedeltas can be parsed a simple string format..
+
+        - [dD[,]][[hh:]mm:]ss[.ffffff]
+
+        Numbers may be left-padded with 0 (e.g., "02") and they can also be > 99.
+        """
+        if hours is not None and minutes is None:
+            minutes = 0
+        fmt = ">02d" if left_pad else "d"
+        micros_str = "" if micros is None else f".{micros:>06}".rstrip("0")
+        micros_str = ".0" if micros_str == "." else micros_str
+        td_str = f"{seconds:{fmt}}{micros_str}"
+        td_str = td_str if minutes is None else f"{minutes:{fmt}}:{td_str}"
+        td_str = td_str if hours is None else f"{hours:{fmt}}:{td_str}"
+        td_str = td_str if days is None else f"{days}D{comma}{td_str}"
+        td_str = td_str if sign is None else f"{sign}{td_str}"
+
+        _kwargs = {
+            "days": days,
+            "hours": hours,
+            "minutes": minutes,
+            "seconds": seconds,
+            "microseconds": micros,
+        }
+        kwargs = {
+            k: (-v if sign == "-" else v) for k, v in _kwargs.items() if v is not None
+        }
+        assert converters.to_timedelta(td_str, timedelta) == timedelta(**kwargs), td_str
+
+    @given(
+        positive=strategies.booleans(),
+        days=strategies.integers(0, 5),
+        hours=strategies.integers(0, 23),
+        minutes=strategies.integers(0, 59),
+        seconds=strategies.integers(0, 59),
+        micros=strategies.integers(0, 999999),
+    )
+    def test_timedelta_to_str(
+        self,
+        positive: bool,
+        days: int,
+        hours: int,
+        minutes: int,
+        seconds: int,
+        micros: int,
+    ) -> None:
+        """
+        Timedeltas can be converted back to a timedelta string (in simplified ISO
+        format).
+        """
+        td = timedelta(
+            days=days,
+            hours=hours,
+            minutes=minutes,
+            seconds=seconds,
+            microseconds=micros,
+        )
+        if not positive:
+            td = -td
+
+        micros_str = f".{micros:>06}".rstrip("0") if micros else ""
+        seconds_str = f"{seconds}{micros_str}s" if seconds or micros_str else ""
+        expected = ""
+        expected += f"{days}d" if days else ""
+        expected += f"{hours}h" if hours else ""
+        expected += f"{minutes}m" if minutes else ""
+        expected += seconds_str
+        if expected and not positive:
+            expected = f"-{expected}"
+
+        result = converters.timedelta_to_str(td)
+        assert result == expected
+        assert converters.to_timedelta(result, timedelta) == td
+
+
+@pytest.mark.parametrize(
+    "cls, value",
+    [
+        # "to_bool()" is flexible, but does not accept anything
+        (bool, ""),
+        (bool, []),
+        (bool, "spam"),
+        (bool, 2),
+        (bool, -1),
+        (datetime, 3),
+        (date, 3),
+        (timedelta, datetime(1, 1, 1)),
+        (timedelta, "1s1h"),  # Not ordered properly
+        # len(value) does not match len(tuple-args)
+        (Tuple[int, int], (1,)),
+        (Tuple[int, int], (1, 2, 3)),
+        (Union[int, datetime, None], "3.1"),  # float is not part of the Union
+        (Sequence, [0, 1]),  # Type not supported
+        (AttrsCls, {"foo": 3}),  # Invalid attribute
+        (AttrsCls, {"opt", "x"}),  # Invalid value
+        (DataCls, {"foo": 3}),  # Invalid attribute
+        (DataCls, {"opt", "x"}),  # Invalid value
+        (PydanticCls, {"foo": 3}),  # Invalid attribute
+        (PydanticCls, {"opt", "x"}),  # Invalid value
+    ],
+)
+def test_unsupported_values(value: Any, cls: type) -> None:
+    """
+    Unsupported input leads to low level exceptions.  These are later unified by
+    "_core.convert()".
+    """
+    converter = converters.TSConverter()
+    with pytest.raises((KeyError, TypeError, ValueError)):
+        converter.structure(value, cls)
+
+
 @pytest.mark.parametrize(
     "converter",
     [
@@ -544,39 +814,6 @@ def test_resolve_path(
         expected = expected.relative_to(Path.cwd())
     c = converter(resolve_paths)
     assert c.structure(value, Path) == expected
-
-
-@pytest.mark.parametrize(
-    "cls, value",
-    [
-        # "to_bool()" is flexible, but does not accept anything
-        (bool, ""),
-        (bool, []),
-        (bool, "spam"),
-        (bool, 2),
-        (bool, -1),
-        (datetime, 3),
-        # len(value) does not match len(tuple-args)
-        (Tuple[int, int], (1,)),
-        (Tuple[int, int], (1, 2, 3)),
-        (Union[int, datetime, None], "3.1"),  # float is not part of the Union
-        (Sequence, [0, 1]),  # Type not supported
-        (AttrsCls, {"foo": 3}),  # Invalid attribute
-        (AttrsCls, {"opt", "x"}),  # Invalid value
-        (DataCls, {"foo": 3}),  # Invalid attribute
-        (DataCls, {"opt", "x"}),  # Invalid value
-        (PydanticCls, {"foo": 3}),  # Invalid attribute
-        (PydanticCls, {"opt", "x"}),  # Invalid value
-    ],
-)
-def test_unsupported_values(value: Any, cls: type) -> None:
-    """
-    Unsupported input leads to low level exceptions.  These are later unified by
-    "_core.convert()".
-    """
-    converter = converters.TSConverter()
-    with pytest.raises((KeyError, TypeError, ValueError)):
-        converter.structure(value, cls)
 
 
 STRLIST_TEST_DATA = [

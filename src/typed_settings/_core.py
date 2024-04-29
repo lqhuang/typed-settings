@@ -372,7 +372,10 @@ def _load_settings(state: SettingsState) -> MergedSettings:
     return merged_settings
 
 
-def convert(merged_settings: MergedSettings, state: SettingsState[ST]) -> ST:
+def convert(
+    merged_settings: MergedSettings,
+    state: SettingsState[ST],
+) -> ST:
     """
     Create an instance of *cls* from the settings in *merged_settings*.
 

@@ -6,9 +6,9 @@ Utilities for generating an :mod:`argparse` based CLI.
 
 import argparse
 import itertools
-from datetime import datetime
+from datetime import date, datetime, timedelta
 from enum import Enum
-from functools import wraps
+from functools import partial, wraps
 from pathlib import Path
 from typing import (
     TYPE_CHECKING,
@@ -29,7 +29,7 @@ from typing import (
 if TYPE_CHECKING:
     from argparse import FileType
 
-from . import _core
+from . import _core, converters
 from .cli_utils import (
     DEFAULT_SENTINEL,
     DEFAULT_SENTINEL_NAME,
@@ -41,7 +41,7 @@ from .cli_utils import (
     get_default,
 )
 from .constants import ARGPARSE_METADATA_KEY as METADATA_KEY
-from .converters import Converter, default_converter
+from .converters import Converter
 from .loaders import Loader
 from .processors import Processor
 from .types import (
@@ -79,11 +79,41 @@ def handle_datetime(type: type, default: Default, is_optional: bool) -> StrDict:
     Handle isoformatted datetimes.
     """
     kwargs: StrDict = {
-        "type": datetime.fromisoformat,
+        "type": partial(converters.to_datetime, cls=datetime),
         "metavar": "YYYY-MM-DD[Thh:mm:ss[+xx:yy]]",
     }
     if isinstance(default, datetime):
         kwargs["default"] = default.isoformat()
+    elif is_optional:
+        kwargs["default"] = None
+    return kwargs
+
+
+def handle_date(type: type, default: Default, is_optional: bool) -> StrDict:
+    """
+    Handle isoformatted datetimes.
+    """
+    kwargs: StrDict = {
+        "type": partial(converters.to_date, cls=date),
+        "metavar": "YYYY-MM-DD",
+    }
+    if isinstance(default, date):
+        kwargs["default"] = default.isoformat()
+    elif is_optional:
+        kwargs["default"] = None
+    return kwargs
+
+
+def handle_timedelta(type: type, default: Default, is_optional: bool) -> StrDict:
+    """
+    Handle isoformatted datetimes.
+    """
+    kwargs: StrDict = {
+        "type": partial(converters.to_timedelta, cls=timedelta),
+        "metavar": "[-][Dd][HHh][MMm][SS[.ffffff]s]",
+    }
+    if isinstance(default, timedelta):
+        kwargs["default"] = converters.timedelta_to_str(default)
     elif is_optional:
         kwargs["default"] = None
     return kwargs
@@ -119,6 +149,8 @@ def handle_path(type: Type[Path], default: Default, is_optional: bool) -> StrDic
 #: Default handlers for argparse option types.
 DEFAULT_TYPES: Dict[type, TypeHandlerFunc] = {
     datetime: handle_datetime,
+    date: handle_date,
+    timedelta: handle_timedelta,
     Enum: handle_enum,
     Path: handle_path,
 }
@@ -280,7 +312,7 @@ def cli(
     """
     if isinstance(loaders, str):
         loaders = _core.default_loaders(loaders)
-    converter = converter or default_converter()
+    converter = converter or converters.default_converter()
     state = _core.SettingsState(settings_cls, loaders, processors, converter, base_dir)
     type_args_maker = type_args_maker or TypeArgsMaker(ArgparseHandler())
 
@@ -345,7 +377,7 @@ def make_parser(
     """
     if isinstance(loaders, str):
         loaders = _core.default_loaders(loaders)
-    converter = converter or default_converter()
+    converter = converter or converters.default_converter()
     state = _core.SettingsState(settings_cls, loaders, processors, converter, base_dir)
     type_args_maker = type_args_maker or TypeArgsMaker(ArgparseHandler())
 
@@ -383,7 +415,7 @@ def namespace2settings(
     .. versionchanged:: 23.1.0
        Added the *base_dir* argument
     """
-    converter = converter or default_converter()
+    converter = converter or converters.default_converter()
     state = _core.SettingsState(settings_cls, [], [], converter, base_dir)
     return _ns2settings(namespace, state, merged_settings)
 

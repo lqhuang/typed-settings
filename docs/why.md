@@ -27,7 +27,7 @@ This page introduces you to similar libraries and shows why Typed Settings might
   Typed Settings has a built-in converter that is used as a fallback.
   You can extend the existing converters or drop in your own.
 
-  - By default, all basic data types (bool, int, float, str) are supported, as well as enums, paths and datetimes.
+  - By default, all basic data types (bool, int, float, str) are supported, as well as enums, paths, datetimes and timedeltas.
     Most built-in collection types are supported, as well as optional values.
   - You can extend the converter to support additional types.
 

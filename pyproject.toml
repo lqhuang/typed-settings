@@ -83,6 +83,7 @@ lint = [
 test = [
     "typed-settings[all]",
     "coverage[toml]>=5.3",
+    "hypothesis",
     "pytest-cov",
     "pytest>=7.2.0",
     "rich-click>=1.6",
