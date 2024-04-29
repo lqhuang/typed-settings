@@ -477,11 +477,13 @@ def combine(
 
     try:
         globalns = sys.modules[base_cls.__module__].__dict__
-    except KeyError:
-        globalns = {}
+    except KeyError:  # pragma: no cover
+        globalns = None
 
     cls = attr.make_class(name, attribs)
     cls.__annotations__ = annotations
     cls.__doc__ = base_cls.__doc__
-    cls.__globals__ = globalns
+    # Store globals in class so that they can later be used,
+    # see ".cls_utils.Attrs.iter_fields()".
+    cls.__globals__ = globalns  # type: ignore[attr-defined]
     return cls
