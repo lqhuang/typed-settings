@@ -23,16 +23,17 @@ Support for older Python versions is dropped when they become [end-of-life](http
 
 - ✨ Add converters for `date` and `timedelta`, e.g.:
 
-  - date: `2025-05-04` (or `2ß250504` on Python ≥ 3.11)
-  - timedelta (ISO): `P180DT03H04M05S`, `PT0.5S`, `-P180D`, `PT1H30M`
-  - timedelta (ISO simpliefied): `180d03h04m05s`, `0.5s`, `-180d`, `1h30m`
-  - timedelta (simple): `180d,03:04:05`, `0.5`, `-180d`, `01:30:00`
+  - date: `2025-05-04` (or `20250504` on Python ≥ 3.11) ([docs][docs-to_date])
+  - timedelta (ISO): `P180DT03H04M05S`, `PT0.5S`, `-P180D`, `PT1H30M` ([docs][docs-to_timedelta])
+  - timedelta (ISO simpliefied): `180d03h04m05s`, `0.5s`, `-180d`, `1h30m` ([docs][docs-to_timedelta])
+  - timedelta (simple): `180d,03:04:05`, `0.5`, `-180d`, `01:30:00` ([docs][docs-to_timedelta])
 
   See: [#55]
 
-- 🐛 `typed_settings.cls_attrs.combine()` now properly populates the
-  `__annotations__` dict of the generated class.  Without that,
-  postponed annotations ([PEP 563]) wouldn't work properly.  ([#54])
+- 🐛 [typed_settings.cls_attrs.combine()][docs-combine] now properly
+  populates the `__annotations__` dict of the generated class.  Without
+  that, postponed annotations ([PEP 563]) wouldn't work properly.
+  ([#54])
 
 - 📝 Update the [development guide] ([#53]).
 
@@ -41,6 +42,9 @@ Support for older Python versions is dropped when they become [end-of-life](http
 [#55]: https://gitlab.com/sscherfke/typed-settings/-/issues/55
 [PEP 563]: https://peps.python.org/pep-0563/
 [development guide]: https://typed-settings.readthedocs.io/en/latest/development.html
+[docs-combine]: https://typed-settings.readthedocs.io/en/latest/apiref.html#typed_settings.cls_attrs.combine
+[docs-to_date]: https://typed-settings.readthedocs.io/en/latest/apiref.html#typed_settings.converters.to_date
+[docs-to_timedelta]: https://typed-settings.readthedocs.io/en/latest/apiref.html#typed_settings.converters.to_timedelta
 
 
 ## 24.2.0 (2024-03-12)
