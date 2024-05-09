@@ -19,7 +19,7 @@ Support for older Python versions is dropped when they become [end-of-life](http
 
 <!-- changelog follows -->
 
-## 24.3.0 (unreleased)
+## 24.3.0 (2024-05-09)
 
 - ✨ Add converters for `date` and `timedelta`, e.g.:
 
