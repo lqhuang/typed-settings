@@ -3,6 +3,7 @@ Tests for "typed_settings.cls_attrs".
 """
 
 import typing as t
+from pathlib import Path
 
 import attrs
 import pytest
@@ -369,17 +370,20 @@ class TestCombine:
         @attrs.define
         class BaseSettings:
             a: "bool" = False
+            p: "Path" = Path.cwd()
 
         Composed = combine("Composed", BaseSettings, {"n1": Nested1()})
 
         # Composed has __annotations__ populated with base and nested attribs
         assert Composed.__annotations__ == {
             "a": "bool",
+            "p": "Path",
             "n1": Nested1,
         }
 
         # Types can be resolved
-        Composed = attrs.resolve_types(Composed)
+        Composed = attrs.resolve_types(Composed, globalns=globals())
         fields = attrs.fields(Composed)
         assert fields.a.type is bool
+        assert fields.p.type is Path
         assert fields.n1.type is Nested1

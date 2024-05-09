@@ -32,8 +32,10 @@ Support for older Python versions is dropped when they become [end-of-life](http
 
 - 🐛 [typed_settings.cls_attrs.combine()][docs-combine] now properly
   populates the `__annotations__` dict of the generated class.  Without
-  that, postponed annotations ([PEP 563]) wouldn't work properly.
-  ([#54])
+  that, forward references and postponed annotations ([PEP 563])
+  wouldn't work properly ([#54]).
+
+- 📝 Add [information about forward references] to the docs ([#54]).
 
 - 📝 Update the [development guide] ([#53]).
 
@@ -45,7 +47,7 @@ Support for older Python versions is dropped when they become [end-of-life](http
 [docs-combine]: https://typed-settings.readthedocs.io/en/latest/apiref.html#typed_settings.cls_attrs.combine
 [docs-to_date]: https://typed-settings.readthedocs.io/en/latest/apiref.html#typed_settings.converters.to_date
 [docs-to_timedelta]: https://typed-settings.readthedocs.io/en/latest/apiref.html#typed_settings.converters.to_timedelta
-
+[information about forward references]: https://typed-settings.readthedocs.io/en/latest/guides/settings-classes.html#forward-references
 
 ## 24.2.0 (2024-03-12)
 

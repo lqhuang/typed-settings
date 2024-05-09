@@ -2,6 +2,7 @@
 Helpers for and additions to :mod:`attrs`.
 """
 
+import sys
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -474,7 +475,15 @@ def combine(
         attribs[aname] = attr.attrib(default=default, type=default.__class__)
         annotations[aname] = default.__class__
 
+    try:
+        globalns = sys.modules[base_cls.__module__].__dict__
+    except KeyError:  # pragma: no cover
+        globalns = None
+
     cls = attr.make_class(name, attribs)
     cls.__annotations__ = annotations
     cls.__doc__ = base_cls.__doc__
+    # Store globals in class so that they can later be used,
+    # see ".cls_utils.Attrs.iter_fields()".
+    cls.__globals__ = globalns  # type: ignore[attr-defined]
     return cls

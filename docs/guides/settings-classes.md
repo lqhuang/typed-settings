@@ -260,3 +260,22 @@ You can activate the plugin via your {file}`pyproject.toml` or {file}`mypy.ini`:
  [mypy]
  plugins=typed_settings.mypy
 ```
+
+
+## Forward References
+
+```{hint}
+Type annotations that are encoded as string literals (e.g. `x: "int"`) are called [forward references].
+
+Forward references can be resolved to actual types at runtime using functions like {func}`typing.get_type_hints()` or {func}`attrs.resolve_types()`}.
+
+[forward references]: https://peps.python.org/pep-0484/#forward-references
+```
+
+Typed Settings tries to resolve forward references when loading settings or
+combining settings from attrs classes to new classes.
+
+This may not always work reliably,
+especially if classes are defined inside nested scopes (i.e., inside functions or other classes).
+
+In these cases, you can try to manually pass your settings class to {func}`typing.get_type_hints()` or {func}`attrs.resolve_types()`.
