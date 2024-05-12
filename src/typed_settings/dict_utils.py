@@ -49,6 +49,8 @@ def get_path(dct: SettingsDict, path: str) -> Any:
     Performs a nested dict lookup for *path* and returns the result.
 
     Calling ``get_path(dct, "a.b")`` is equivalent to ``dict["a"]["b"]``.
+    If a part of the path is a non-negative integer, it is treated as list index.
+    Calling ``get_path(dct, "a.0.b")`` is therefore equivalent to ``dct["a"][0]["b"]``.
 
     Args:
         dct: The source dict
@@ -60,9 +62,13 @@ def get_path(dct: SettingsDict, path: str) -> Any:
 
     Raises:
         KeyError: if a key in *path* does not exist.
+        IndexError: if a index in *path* is out of range.
     """
     for part in path.split("."):
-        dct = dct[part]
+        if part.isnumeric():
+            dct = dct[int(part)]
+        else:
+            dct = dct[part]
     return dct
 
 
@@ -73,15 +79,24 @@ def set_path(dct: SettingsDict, path: str, val: Any) -> None:
 
     Calling ``set_path(dct, "a.b", 3)`` is equivalent to ``dict["a"]["b"]
     = 3``.
+    If a part of the path is a non-negative integer, it is treated as list index.
+    Calling ``set_path(dct, "a.0.b", 3)`` is therefore equivalent to
+    ``dct["a"][0]["b"] = 3``.
 
     Args:
         dct: The dict that should contain the value
         path: The (nested) path, a dot-separated concatenation of keys.
         val: The value to set
+
+    Raises:
+        IndexError: if a index in *path* is out of range.
     """
     *parts, key = path.split(".")
     for part in parts:
-        dct = dct.setdefault(part, {})
+        if part.isnumeric():
+            dct = dct[int(part)]
+        else:
+            dct = dct.setdefault(part, {})
     dct[key] = val
 
 
