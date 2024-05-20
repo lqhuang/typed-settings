@@ -30,6 +30,16 @@ myst_enable_extensions = [
 templates_path = ["_templates"]
 exclude_patterns = ["_build", "Thumbs.db", ".DS_Store"]
 
+nitpick_ignore = [
+    ("py:class", "NewTypeLike"),
+    ("py:class", "attr.AttrsInstance"),
+    ("py:class", "attrs.AttrsInstance"),
+    ("py:class", "pydantic.SecretBytes"),
+    ("py:class", "pydantic.SecretStr"),
+    ("py:class", "typed_settings.cli_click.F"),
+    ("py:class", "typed_settings.types._Auto"),
+]
+
 
 html_theme = "furo"
 html_theme_options = {
@@ -69,6 +79,7 @@ intersphinx_mapping = {
         "https://click-option-group.readthedocs.io/en/latest/",
         None,
     ),
+    "jinja": ("https://jinja.palletsprojects.com/en/latest/", None),
 }
 
 

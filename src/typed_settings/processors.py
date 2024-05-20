@@ -255,7 +255,7 @@ class FormatProcessor:
 
 
 if TYPE_CHECKING:
-    from jinja2 import Environment
+    import jinja2
 
 
 class JinjaProcessor:
@@ -276,7 +276,7 @@ class JinjaProcessor:
     .. versionadded:: 23.0.0
     """
 
-    def __init__(self, environment: Optional["Environment"] = None) -> None:
+    def __init__(self, environment: Optional["jinja2.Environment"] = None) -> None:
         try:
             import jinja2
         except ImportError as e:
