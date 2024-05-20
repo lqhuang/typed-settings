@@ -262,7 +262,7 @@ You can activate the plugin via your {file}`pyproject.toml` or {file}`mypy.ini`:
 ```
 
 
-## Forward References
+## Postponed Annotations / Forward References
 
 ```{hint}
 Type annotations that are encoded as string literals (e.g. `x: "int"`) are called [forward references].
@@ -273,9 +273,88 @@ Forward references can be resolved to actual types at runtime using functions li
 ```
 
 Typed Settings tries to resolve forward references when loading settings or
-combining settings from attrs classes to new classes.
+when combining settings from attrs classes to new classes.
 
-This may not always work reliably,
-especially if classes are defined inside nested scopes (i.e., inside functions or other classes).
+This may not always work reliably, for example
 
-In these cases, you can try to manually pass your settings class to {func}`typing.get_type_hints()` or {func}`attrs.resolve_types()`.
+- if classes are defined inside nested scopes (i.e., inside functions or other classes):
+
+  ```python
+  >>> import attrs
+  >>>
+  >>> def get_cls():
+  ...     @attrs.frozen
+  ...     class Nested:
+  ...         x: "int"
+  ...
+  ...     @attrs.frozen
+  ...     class Settings:
+  ...         opt: "Nested"
+  ...
+  ...     return Settings
+  >>>
+  >>> attrs.resolve_types(get_cls())
+  Traceback (most recent call last):
+    ...
+  NameError: name 'Nested' is not defined
+  ```
+
+- if classes reference other classes in a collection:
+
+  ```python
+  >>> import attrs
+  >>>
+  >>> @attrs.frozen
+  ... class Nested:
+  ...     x: "int"
+  ...
+  >>> @attrs.frozen
+  ... class Settings:
+  ...     opt: "list[Nested]"
+  ...
+  >>>
+  >>> # This works
+  >>> # ("globalns" and "localns" are only required for this doctest example):
+  >>> Settings = attrs.resolve_types(Settings, globalns=globals(), localns=locals())
+  >>> attrs.fields(Settings).opt.type
+  list[__test__.Nested]
+  >>> # But "resolve_types" is not recursive, so "Nested" is still unresolved:
+  >>> attrs.fields(Nested).x.type
+  'int'
+  ```
+
+In these cases, you can decorate your classes with {func}`typed_settings.resolve_types()`,
+which is an improved version of {func}`attrs.resolve_types()`.
+You can pass globals and locals when using it as a class decorator and
+it also supports dataclasses:
+
+```python
+>>> import attrs
+>>> import typed_settings as ts
+>>>
+>>> def get_cls():
+...
+...     @ts.resolve_types
+...     @attrs.frozen
+...     class Nested:
+...         x: "int"
+...
+...     @ts.resolve_types(globalns=globals(), localns=locals())
+...     @attrs.frozen
+...     class Settings:
+...         opt: "list[Nested]"
+...
+...     return Settings, Nested
+>>>
+>>> Settings2, Nested2 = get_cls()
+>>> attrs.fields(Settings2).opt.type
+list[__test__.get_cls.<locals>.Nested]
+>>> attrs.fields(Nested2).x.type
+<class 'int'>
+```
+
+
+```{hint}
+Pydantic models are not resolved ({func}`~typed_settings.resolve_types()` is a no-op),
+because they [just work](https://docs.pydantic.dev/latest/concepts/postponed_annotations/) out-of-the box.
+```

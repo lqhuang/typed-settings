@@ -62,6 +62,10 @@ Aliases for more convenient imports.
 
    Alias for :func:`typed_settings.cls_attrs.combine()`
 
+.. function:: resolve_types()
+
+   Alias for :func:`typed_settings.cls_utils.resolve_types()`
+
 .. function:: default_converter()
 
    Alias for :func:`typed_settings.converters.default_converter()`

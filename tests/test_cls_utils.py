@@ -3,7 +3,7 @@ Tests for "typed_settings.cls_utils".
 """
 
 import dataclasses
-from typing import Callable, Optional
+from typing import Callable, List, Optional
 
 import attrs
 import pydantic
@@ -49,6 +49,59 @@ def test_deep_options_typerror() -> None:
         x: int = 0
 
     pytest.raises(TypeError, cls_utils.deep_options, C)
+
+
+@pytest.mark.parametrize("kind", ["attrs", "dataclasses", "pydantic"])
+def test_resolve_types_decorator(kind: str) -> None:
+    """
+    The "resolve_type" function can be used as class decorator for all supported
+    class libs.
+    """
+    if kind == "attrs":
+
+        @cls_utils.resolve_types
+        @attrs.define
+        class NestedA:
+            x: "int"
+
+        @cls_utils.resolve_types(globalns=globals(), localns=locals())
+        @attrs.define
+        class A:
+            opt: "List[NestedA]"
+
+        assert attrs.fields(NestedA).x.type is int
+        assert attrs.fields(A).opt.type is List[NestedA]
+
+    elif kind == "dataclasses":
+
+        @cls_utils.resolve_types
+        @dataclasses.dataclass
+        class NestedB:
+            x: "int"
+
+        @cls_utils.resolve_types(globalns=globals(), localns=locals())
+        @dataclasses.dataclass
+        class B:
+            opt: "List[NestedB]"
+
+        assert dataclasses.fields(NestedB)[0].type is int
+        assert dataclasses.fields(B)[0].type is List[NestedB]
+
+    elif kind == "pydantic":
+
+        @cls_utils.resolve_types
+        class NestedC(pydantic.BaseModel):
+            x: "int"
+
+        @cls_utils.resolve_types(globalns=globals(), localns=locals())
+        class C(pydantic.BaseModel):
+            opt: "List[NestedC]"
+
+        assert NestedC.model_fields["x"].annotation is int
+        assert C.model_fields["opt"].annotation is List[NestedC]
+
+    else:
+        pytest.fail(f"Invalid kind: {kind}")
 
 
 class TestGroupOptions:
