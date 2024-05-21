@@ -3,21 +3,38 @@
 Typed Settings follows [Calendar Versioning](https://calver.org):
 
 - The **first number** of the version is the year.
-- The **second number** is incremented with each release, starting at 0 for each year.
-- The **third number** is for emergencies when we need to start branches for older releases.
+- The **second number** is incremented with each release, starting at
+  0 for each year.
+- The **third number** is for emergencies when we need to start branches
+  for older releases.
 
-We try to be as backwards-compatible as possible,
-so you should not be afraid to upgrade if you're only using our documented public APIs and
+We try to be as backwards-compatible as possible, so you should not be
+afraid to upgrade if you're only using our documented public APIs and
 pay attention to `DeprecationWarning`s.
 
-Whenever there's a need to break compatibility, it is announced in this changelog.
-The affected function raises a `DeprecationWarning` for at least half a year (if possible) before it's finally really broken.
+Whenever there's a need to break compatibility, it is announced in this
+changelog.  The affected function raises a `DeprecationWarning` for at
+least half a year (if possible) before it's finally really broken.
 
-Except for emergencies, only the latest version is supported and will receive bugfixes.
+Except for emergencies, only the latest version is supported and will
+receive bugfixes.
 
-Support for older Python versions is dropped when they become [end-of-life](https://devguide.python.org/versions/).
+Support for older Python versions is dropped when they become
+[end-of-life](https://devguide.python.org/versions/).
 
 <!-- changelog follows -->
+
+## 24.4.0 (unreleased)
+
+- ✨ Add `resolve_types()` function, which is an extended version of
+  `attrs.resolve_types()` ([docs][docs-resolve_types], [#56]).
+
+- 📝 Further improve the [docs about postponed annotations / forward
+  references][information about forward references] ([#56]).
+
+[#56]: https://gitlab.com/sscherfke/typed-settings/-/issues/56
+[docs-resolve_types]: https://typed-settings.readthedocs.io/en/latest/apiref.html#typed_settings.cls_utils.resolve_types
+
 
 ## 24.3.0 (2024-05-09)
 
@@ -47,7 +64,7 @@ Support for older Python versions is dropped when they become [end-of-life](http
 [docs-combine]: https://typed-settings.readthedocs.io/en/latest/apiref.html#typed_settings.cls_attrs.combine
 [docs-to_date]: https://typed-settings.readthedocs.io/en/latest/apiref.html#typed_settings.converters.to_date
 [docs-to_timedelta]: https://typed-settings.readthedocs.io/en/latest/apiref.html#typed_settings.converters.to_timedelta
-[information about forward references]: https://typed-settings.readthedocs.io/en/latest/guides/settings-classes.html#forward-references
+[information about forward references]: https://typed-settings.readthedocs.io/en/latest/guides/settings-classes.html#postponed-annotations-forward-references
 
 ## 24.2.0 (2024-03-12)
 

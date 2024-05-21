@@ -9,8 +9,21 @@ Supported backends are:
 """
 
 import dataclasses
+import functools
 from itertools import groupby
-from typing import Any, Dict, List, Optional, Protocol, Tuple, Type, cast
+from typing import (
+    Any,
+    Callable,
+    Dict,
+    List,
+    Optional,
+    Protocol,
+    Tuple,
+    Type,
+    Union,
+    cast,
+    overload,
+)
 
 from . import constants, types
 from ._compat import PY_39
@@ -56,6 +69,37 @@ class ClsHandler(Protocol):
         """
         Return the instances attributes as dict, recurse into nested classes of the
         same kind.
+        """
+
+    @staticmethod
+    def resolve_types(
+        cls: Type[types.T],
+        globalns: Optional[Dict[str, Any]] = None,
+        localns: Optional[Dict[str, Any]] = None,
+        include_extras: bool = True,
+    ) -> Type[types.T]:
+        """
+        Resolve any strings and forward annotations in type annotations.
+
+        With no arguments, names will be looked up in the module in which the class was
+        created.  If this is not what you want, e.g. if the name only exists inside
+        a method, you may pass *globalns* or *localns* to specify other dictionaries in
+        which to look up these names.  See the docs of :func:`typing.get_type_hints()`
+        for more details.
+
+        Args:
+            cls: Class to resolve.
+            globalns: Dictionary containing global variables.
+            localns: Dictionary containing local variables.
+            include_extras: Resolve more accurately, if possible.
+                Pass ``include_extras`` to ``typing.get_hints``, if supported by the
+                typing module.  On supported Python versions (3.9+), this resolves the
+                types more accurately.
+
+        Return: *cls* so you can use this function also as a class decorator.  Please
+            note that you have to apply it **after** :func:`attrs.define` or
+            :func:`dataclasses.dataclass`.  That means the decorator has to come in the
+            line **before** :func:`attrs.define` or :func:`dataclasses.dataclass`.
         """
 
 
@@ -131,6 +175,19 @@ class Attrs:
 
         return attrs.asdict(inst)
 
+    @staticmethod
+    def resolve_types(
+        cls: Type[types.T],
+        globalns: Optional[Dict[str, Any]] = None,
+        localns: Optional[Dict[str, Any]] = None,
+        include_extras: bool = True,
+    ) -> Type[types.T]:
+        import attrs
+
+        return attrs.resolve_types(  # type: ignore[type-var]
+            cls, globalns=globalns, localns=localns, include_extras=include_extras
+        )
+
 
 class Dataclasses:
     """
@@ -198,33 +255,6 @@ class Dataclasses:
         localns: Optional[Dict[str, Any]] = None,
         include_extras: bool = True,
     ) -> Type[types.T]:
-        """
-        Resolve any strings and forward annotations in type annotations.
-
-        This is only required if you need concrete types in fields' *type* field. In
-        other words, you don't need to resolve your types if you only use them for
-        static type checking.
-
-        With no arguments, names will be looked up in the module in which the class was
-        created. If this is not what you want, e.g. if the name only exists inside
-        a method, you may pass *globalns* or *localns* to specify other dictionaries in
-        which to look up these names. See the docs of `typing.get_type_hints` for more
-        details.
-
-        Args:
-            cls: Class to resolve.
-            globalns: Dictionary containing global variables.
-            localns: Dictionary containing local variables.
-            include_extras: Resolve more accurately, if possible.
-                Pass ``include_extras`` to ``typing.get_hints``, if supported by the
-                typing module. On supported Python versions (3.9+), this resolves the
-                types more accurately.
-
-        Return:
-            *cls* so you can use this function also as a class decorator.
-            Please note that you have to apply it **after** `attrs.define`. That
-            means the decorator has to come in the line **before** `attrs.define`.
-        """
         # Since calling get_type_hints is expensive we cache whether we've
         # done it already.
         if getattr(cls, "__dataclass_types_resolved__", None) != cls:
@@ -327,6 +357,16 @@ class Pydantic:
     def asdict(inst: Any) -> types.SettingsDict:
         return inst.dict()
 
+    @staticmethod
+    def resolve_types(
+        cls: Type[types.T],
+        globalns: Optional[Dict[str, Any]] = None,
+        localns: Optional[Dict[str, Any]] = None,
+        include_extras: bool = True,
+    ) -> Type[types.T]:
+        # Pydantic classes automatically resolve themselves.
+        return cls
+
 
 CLASS_HANDLERS: List[Type[ClsHandler]] = [
     Attrs,
@@ -370,7 +410,7 @@ def deep_options(cls: type) -> types.OptionList:
 
     Raises:
         NameError: if the type annotations can not be resolved.  This is, e.g., the
-        case when recursive classes are being used.
+            case when recursive classes are being used.
     """
     cls_handler = find_handler(cls)
     return cls_handler.iter_fields(cls)
@@ -418,6 +458,97 @@ def group_options(
     grouper = groupby(options, key=keyfn)
     grouped_options = [(g_cls[1], tuple(g_opts)) for g_cls, g_opts in grouper]
     return grouped_options
+
+
+@overload
+def resolve_types(
+    cls: None = None,
+    *,
+    globalns: Optional[Dict[str, Any]] = None,
+    localns: Optional[Dict[str, Any]] = None,
+    include_extras: bool = True,
+) -> Callable[[Type[types.T]], Type[types.T]]: ...
+
+
+@overload
+def resolve_types(
+    cls: Type[types.T],
+    *,
+    globalns: Optional[Dict[str, Any]] = None,
+    localns: Optional[Dict[str, Any]] = None,
+    include_extras: bool = True,
+) -> Type[types.T]: ...
+
+
+def resolve_types(
+    cls: Optional[Type[types.T]] = None,
+    *,
+    globalns: Optional[Dict[str, Any]] = None,
+    localns: Optional[Dict[str, Any]] = None,
+    include_extras: bool = True,
+) -> Union[Type[types.T], Callable[[Type[types.T]], Type[types.T]]]:
+    """
+    Resolve any strings and forward annotations in type annotations.
+
+    This is only required if you need concrete types in fields' *type* field. In other
+    words, you don't need to resolve your types if you only use them for static type
+    checking.
+
+    With no arguments, names will be looked up in the module in which the class was
+    created. If this is not what you want, e.g. if the name only exists inside a method,
+    you may pass *globalns* or *localns* to specify other dictionaries in which to look
+    up these names. See the docs of `typing.get_type_hints` for more details.
+
+    Args:
+        cls: Class to resolve.
+        globalns: Dictionary containing global variables.
+        localns: Dictionary containing local variables.
+        include_extras: Resolve more accurately, if possible.
+            Pass ``include_extras`` to ``typing.get_hints``, if supported by the typing
+            module. On supported Python versions (3.9+), this resolves the types more
+            accurately.
+
+    Return:
+        *cls* so you can use this function also as a class decorator.  Please note that
+        you have to apply it **after** `attrs.define`. That means the decorator has to
+        come in the line **before** `attrs.define`.
+
+    Examples:
+        ::
+
+            >>> import typed_settings as ts
+            >>>
+            >>> @ts.settings
+            ... class A:
+            ...     opt: "int"
+            ...
+            >>> A = ts.resolve_types(A)
+            >>>
+            >>> @ts.resolve_types
+            ... @ts.settings
+            ... class B:
+            ...     opt: "int"
+            ...
+            >>> @ts.resolve_types(globalns=globals(), localns=locals())
+            ... @ts.settings
+            ... class C:
+            ...     opt: "int"
+            ...
+
+    .. versionadded:: 24.4.0
+    """
+    if cls is None:
+        return functools.partial(  # type: ignore[return-value]
+            resolve_types,
+            globalns=globalns,
+            localns=localns,
+            include_extras=include_extras,
+        )
+
+    cls_handler = find_handler(cls)
+    return cls_handler.resolve_types(
+        cls, globalns=globalns, localns=localns, include_extras=include_extras
+    )
 
 
 def _get_metadata(metadata_or_none: Any, default_help: Optional[str] = None) -> dict:

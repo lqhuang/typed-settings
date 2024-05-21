@@ -7,6 +7,7 @@ from typing import Any, List
 from ._core import SettingsState, convert, default_loaders, load, load_settings
 from ._file_utils import find
 from .cli_argparse import cli
+from .cls_utils import resolve_types
 from .converters import default_converter, register_strlist_hook
 from .loaders import EnvLoader, FileLoader, TomlFormat
 from .types import Secret, SecretStr
@@ -60,6 +61,8 @@ __all__ = [
     # Types
     "Secret",
     "SecretStr",
+    # Class utils
+    "resolve_types",
     # File utils
     "find",
     # Loaders

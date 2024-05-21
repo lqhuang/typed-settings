@@ -81,6 +81,7 @@ def test_dir() -> None:
         "option",
         "pass_settings",
         "register_strlist_hook",
+        "resolve_types",
         "secret",
         "settings",
     ]
