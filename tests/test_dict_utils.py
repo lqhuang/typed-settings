@@ -51,6 +51,16 @@ def test_iter_settings():
             default_is_factory=False,
         )
     )
+    option_infos.append(
+        types.OptionInfo(
+            parent_cls=type,
+            path="x",
+            cls=List[str],
+            default=attrs.NOTHING,
+            has_no_default=True,
+            default_is_factory=False,
+        )
+    )
     settings = {
         "a": 0,
         "b": {
@@ -63,6 +73,7 @@ def test_iter_settings():
                 "w": 6,
             }
         ],
+        "x": "hello:world"
     }
     result = list(dict_utils.iter_settings(settings, option_infos))
     assert result == [
@@ -71,6 +82,7 @@ def test_iter_settings():
         ("u.0", 4),
         ("u.1", 5),
         ("v.0.w", 6),
+        ("x", "hello:world")
     ]
 
 

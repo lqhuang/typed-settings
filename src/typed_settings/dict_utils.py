@@ -2,7 +2,7 @@
 Utility functions for working settings dicts and serilizing nested settings.
 """
 
-from typing import Any, Generator, Sequence, Tuple, get_args, get_origin
+from typing import Any, Generator, Sequence, Tuple, get_args
 
 from .cls_utils import deep_options, handler_exists
 from .types import (
@@ -24,6 +24,14 @@ __all__ = [
 ]
 
 
+def is_mutable_sequence(val: Any) -> bool:
+    return (
+        hasattr(val, "__iter__")
+        and hasattr(val, "__getitem__")
+        and hasattr(val, "__setitem__")
+    )
+
+
 def iter_settings(
     dct: SettingsDict, options: OptionList
 ) -> Generator[Tuple[str, Any], None, None]:
@@ -42,11 +50,13 @@ def iter_settings(
         try:
             option_value = get_path(dct, option.path)
 
-            if get_origin(option.cls) == list and isinstance(option_value, list):
+            if is_mutable_sequence(option_value) and not isinstance(
+                option_value, (str, bytes)
+            ):
                 # only sub iterate in if declaration and actual value are lists
                 args = get_args(option.cls)
 
-                if len(args) > 0 and handler_exists(args[0]):
+                if args != () and handler_exists(args[0]):
                     # Recurse if "list[NestedSettings]" is detected and if
                     # NestedSettings is, e.g., an attrs class.
                     sub_options = deep_options(args[0])
