@@ -40,21 +40,24 @@ def iter_settings(
     """
     for option in options:
         try:
-            if get_origin(option.cls) == list:
+            option_value = get_path(dct, option.path)
+
+            if get_origin(option.cls) == list and isinstance(option_value, list):
+                # only sub iterate in if declaration and actual value are lists
                 args = get_args(option.cls)
 
                 if len(args) > 0 and handler_exists(args[0]):
                     sub_options = deep_options(args[0])
 
-                    for idx, sub_dct in enumerate(get_path(dct, option.path)):
+                    for idx, sub_dct in enumerate(option_value):
                         for path, value in iter_settings(sub_dct, sub_options):
                             yield f"{option.path}.{idx}.{path}", value
                 else:
-                    # a list of scalars
-                    for idx, value in enumerate(get_path(dct, option.path)):
+                    # list of scalars
+                    for idx, value in enumerate(option_value):
                         yield f"{option.path}.{idx}", value
             else:
-                yield option.path, get_path(dct, option.path)
+                yield option.path, option_value
         except (KeyError, IndexError):
             continue
 

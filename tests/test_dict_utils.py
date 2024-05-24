@@ -108,13 +108,16 @@ def test_get_path(path: str, expected: Union[int, Type[Exception]]) -> None:
 def test_set_path() -> None:
     """We can set arbitrary paths, nested dicts will be created as needed."""
     dct: Dict[str, Any] = {}
-    dct["u"] = [0, 0]
     dict_utils.set_path(dct, "a", 0)
     dict_utils.set_path(dct, "a", 1)
     dict_utils.set_path(dct, "b.d.e", 3)
     dict_utils.set_path(dct, "b.c", 2)
     dict_utils.set_path(dct, "u.0", 4)
     dict_utils.set_path(dct, "u.1", 5)
+    dict_utils.set_path(dct, "u", [None, None])
+    dict_utils.set_path(dct, "u.1", 5)
+    dict_utils.set_path(dct, "v", [{}])
+    dict_utils.set_path(dct, "v.0.w", 6)
     assert dct == {
         "a": 1,
         "b": {
@@ -123,7 +126,12 @@ def test_set_path() -> None:
                 "e": 3,
             },
         },
-        "u": [4, 5]
+        "u": [None, 5],
+        "v": [
+            {
+                "w": 6
+            }
+        ]
     }
 
 
