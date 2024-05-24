@@ -47,6 +47,8 @@ def iter_settings(
                 args = get_args(option.cls)
 
                 if len(args) > 0 and handler_exists(args[0]):
+                    # Recurse if "list[NestedSettings]" is detected and if
+                    # NestedSettings is, e.g., an attrs class.
                     sub_options = deep_options(args[0])
 
                     for idx, sub_dct in enumerate(option_value):

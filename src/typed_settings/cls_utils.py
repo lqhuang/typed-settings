@@ -377,13 +377,13 @@ CLASS_HANDLERS: List[Type[ClsHandler]] = [
 
 def handler_exists(cls: type) -> bool:
     """
-    Check if a proper class handler for *cls* exist.
+    Check if a class handler for *cls* exist.
 
     Args:
         cls: The settings class to check the existence of a handler for.
 
     Return:
-        `True` if there is a handler, otherwise `False`.
+        ``True`` if there is a handler, otherwise ``False``.
     """
     for cls_handler in CLASS_HANDLERS:
         if cls_handler.check(cls):
