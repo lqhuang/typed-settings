@@ -2,8 +2,9 @@
 Utility functions for working settings dicts and serilizing nested settings.
 """
 
-from typing import Any, Generator, Sequence, Tuple
+from typing import Any, Generator, Sequence, Tuple, get_args, get_origin
 
+from .cls_utils import deep_options, handler_exists
 from .types import (
     LoadedSettings,
     LoadedValue,
@@ -39,8 +40,22 @@ def iter_settings(
     """
     for option in options:
         try:
-            yield option.path, get_path(dct, option.path)
-        except KeyError:
+            if get_origin(option.cls) == list:
+                args = get_args(option.cls)
+
+                if len(args) > 0 and handler_exists(args[0]):
+                    sub_options = deep_options(args[0])
+
+                    for idx, sub_dct in enumerate(get_path(dct, option.path)):
+                        for path, value in iter_settings(sub_dct, sub_options):
+                            yield f"{option.path}.{idx}.{path}", value
+                else:
+                    # a list of scalars
+                    for idx, value in enumerate(get_path(dct, option.path)):
+                        yield f"{option.path}.{idx}", value
+            else:
+                yield option.path, get_path(dct, option.path)
+        except (KeyError, IndexError):
             continue
 
 
@@ -66,7 +81,7 @@ def get_path(dct: SettingsDict, path: str) -> Any:
     """
     for part in path.split("."):
         if part.isnumeric():
-            dct = dct[int(part)]
+            dct = dct[int(part)]  # type: ignore[index]
         else:
             dct = dct[part]
     return dct
@@ -94,9 +109,12 @@ def set_path(dct: SettingsDict, path: str, val: Any) -> None:
     *parts, key = path.split(".")
     for part in parts:
         if part.isnumeric():
-            dct = dct[int(part)]
+            dct = dct[int(part)]  # type: ignore[index]
         else:
             dct = dct.setdefault(part, {})
+
+    if key.isnumeric():
+        key = int(key)  # type: ignore[assignment]
     dct[key] = val
 
 
