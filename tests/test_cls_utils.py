@@ -104,6 +104,29 @@ def test_resolve_types_decorator(kind: str) -> None:
         pytest.fail(f"Invalid kind: {kind}")
 
 
+def test_handler_exists() -> None:
+    """Test if proper class handler exists."""
+    @attrs.define
+    class Attrs:
+        a: int
+
+    @dataclasses.dataclass
+    class Dataclass:
+        a: int
+
+    class Pydantic(pydantic.BaseModel):
+        a: int
+
+    assert cls_utils.handler_exists(Attrs)
+    assert cls_utils.handler_exists(Dataclass)
+    assert cls_utils.handler_exists(Pydantic)
+    assert not cls_utils.handler_exists(int)
+    assert not cls_utils.handler_exists(float)
+    assert not cls_utils.handler_exists(str)
+    assert not cls_utils.handler_exists(list)
+    assert not cls_utils.handler_exists(dict)
+
+
 class TestGroupOptions:
     """
     Tests for "group_options()".
