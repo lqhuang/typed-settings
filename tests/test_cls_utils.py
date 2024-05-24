@@ -20,6 +20,26 @@ class AttrsCls:
 
     x: int = 0
 
+@dataclasses.dataclass
+class DataclassCls:
+    """
+    Test class for "dataclass".
+    """
+    x: int
+
+class PydanticCls(pydantic.BaseModel):
+    """
+    Test class for "pydantic".
+    """
+    x: int
+
+
+class NormalClass:
+    """
+    Test class.
+    """
+    x: int
+
 
 @pytest.mark.parametrize("cls", [AttrsCls])
 def test_deep_options(cls: type) -> None:
@@ -104,27 +124,26 @@ def test_resolve_types_decorator(kind: str) -> None:
         pytest.fail(f"Invalid kind: {kind}")
 
 
-def test_handler_exists() -> None:
-    """Test if proper class handler exists."""
-    @attrs.define
-    class Attrs:
-        a: int
-
-    @dataclasses.dataclass
-    class Dataclass:
-        a: int
-
-    class Pydantic(pydantic.BaseModel):
-        a: int
-
-    assert cls_utils.handler_exists(Attrs)
-    assert cls_utils.handler_exists(Dataclass)
-    assert cls_utils.handler_exists(Pydantic)
-    assert not cls_utils.handler_exists(int)
-    assert not cls_utils.handler_exists(float)
-    assert not cls_utils.handler_exists(str)
-    assert not cls_utils.handler_exists(list)
-    assert not cls_utils.handler_exists(dict)
+@pytest.mark.parametrize(
+    "cls, expected",
+    [
+        (AttrsCls, True),
+        (DataclassCls, True),
+        (PydanticCls, True),
+        (NormalClass, False),
+        (int, False),
+        (float, False),
+        (str, False),
+        (list, False),
+        (dict, False),
+    ],
+)
+def test_handler_exists(cls: type, expected: bool) -> None:
+    """
+    "handler_exists()" return "True" for classes of a supported
+    lib (attrs, dataclasses, Pydantic), but "False" for everything else.
+    """
+    assert cls_utils.handler_exists(cls) is expected
 
 
 class TestGroupOptions:
