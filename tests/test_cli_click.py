@@ -282,7 +282,7 @@ class TestDefaultsLoading:
         Default factories are not invoked by click when the CLI is generated.
         They are evaluate during the "convert" phase each time the CLI is invoked.
         """
-        loaded_settings: List["Settings"] = []
+        loaded_settings: List["Settings"] = []  # noqa: UP037
 
         @settings
         class Settings:
