@@ -53,7 +53,7 @@ $ python example.py
 Settings(a='spam', b='spamspam')
 ```
 
-You can access nested settings like dictionary items but you have to leave out the quotes.
+You can access nested settings like dictionary/list items but you have to leave out the quotes.
 It is also okay to refer to values that are themselves format strings:
 
 ```{code-block} python
@@ -72,6 +72,8 @@ class Nested:
 class Settings:
     a: str = "{nested[x]}"
     b: str = "spam"
+    c: str = "{d[1]}"
+    d: list[str] = ["foo", "bar"]
     nested: Nested = Nested()
 
 
@@ -84,7 +86,7 @@ print(settings)
 ```
 ```{code-block} console
 $ python example.py
-Settings(a='spam', b='spam', nested=Nested(x='spam'))
+Settings(a='spam', b='spam', c='bar', d=['foo', 'bar'], nested=Nested(x='spam'))
 ```
 
 ## Templating

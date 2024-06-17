@@ -29,6 +29,8 @@ Support for older Python versions is dropped when they become
 - ✨ Add `resolve_types()` function, which is an extended version of
   `attrs.resolve_types()` ([docs][docs-resolve_types], [#56]).
 
+- ✨ Add support for processing of list items, regardless if they are strings or nested settings classes. ([#57])
+
 - 📝 Further improve the [docs about postponed annotations / forward
   references][information about forward references] ([#56]).
 

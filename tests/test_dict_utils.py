@@ -2,7 +2,8 @@
 Tests for "typed_settings.dict_utils".
 """
 
-from typing import Any, Dict, Type, Union
+import dataclasses
+from typing import Any, Dict, List, Type, Union
 
 import attrs
 import pytest
@@ -15,6 +16,10 @@ def test_iter_settings():
     "iter_settings()" iterates the settings.  It ignores invalid settings keys
     or non-existing settings.
     """
+    @dataclasses.dataclass
+    class ListSettings:
+        w: int
+
     option_infos = [
         types.OptionInfo(
             parent_cls=type,
@@ -26,17 +31,58 @@ def test_iter_settings():
         )
         for path in ["a", "b.x", "b.y", "c"]
     ]
+    option_infos.append(
+        types.OptionInfo(
+            parent_cls=type,
+            path="u",
+            cls=List[int],
+            default=attrs.NOTHING,
+            has_no_default=True,
+            default_is_factory=False,
+        )
+    )
+    option_infos.append(
+        types.OptionInfo(
+            parent_cls=type,
+            path="v",
+            cls=List[ListSettings],
+            default=attrs.NOTHING,
+            has_no_default=True,
+            default_is_factory=False,
+        )
+    )
+    option_infos.append(
+        types.OptionInfo(
+            parent_cls=type,
+            path="x",
+            cls=List[str],
+            default=attrs.NOTHING,
+            has_no_default=True,
+            default_is_factory=False,
+        )
+    )
     settings = {
         "a": 0,
         "b": {
             "y": 1,
         },
         "z": 2,
+        "u": [4, 5],
+        "v": [
+            {
+                "w": 6,
+            }
+        ],
+        "x": "hello:world"
     }
     result = list(dict_utils.iter_settings(settings, option_infos))
     assert result == [
         ("a", 0),
         ("b.y", 1),
+        ("u.0", 4),
+        ("u.1", 5),
+        ("v.0.w", 6),
+        ("x", "hello:world")
     ]
 
 
@@ -48,6 +94,9 @@ def test_iter_settings():
         ("b.d.e", 3),
         ("x", KeyError),
         ("b.x", KeyError),
+        ("u.0", 4),
+        ("u.1", 5),
+        ("u.2", IndexError),
     ],
 )
 def test_get_path(path: str, expected: Union[int, Type[Exception]]) -> None:
@@ -60,6 +109,7 @@ def test_get_path(path: str, expected: Union[int, Type[Exception]]) -> None:
                 "e": 3,
             },
         },
+        "u": [4, 5],
     }
     if isinstance(expected, int):
         assert dict_utils.get_path(dct, path) == expected
@@ -74,6 +124,12 @@ def test_set_path() -> None:
     dict_utils.set_path(dct, "a", 1)
     dict_utils.set_path(dct, "b.d.e", 3)
     dict_utils.set_path(dct, "b.c", 2)
+    dict_utils.set_path(dct, "u.0", 4)
+    dict_utils.set_path(dct, "u.1", 5)
+    dict_utils.set_path(dct, "u", [None, None])
+    dict_utils.set_path(dct, "u.1", 5)
+    dict_utils.set_path(dct, "v", [{}])
+    dict_utils.set_path(dct, "v.0.w", 6)
     assert dct == {
         "a": 1,
         "b": {
@@ -82,6 +138,12 @@ def test_set_path() -> None:
                 "e": 3,
             },
         },
+        "u": [None, 5],
+        "v": [
+            {
+                "w": 6
+            }
+        ]
     }
 
 
