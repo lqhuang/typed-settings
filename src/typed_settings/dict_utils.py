@@ -2,8 +2,9 @@
 Utility functions for working settings dicts and serilizing nested settings.
 """
 
-from typing import Any, Generator, Sequence, Tuple
+from typing import Any, Generator, Sequence, Tuple, get_args
 
+from .cls_utils import deep_options, handler_exists
 from .types import (
     LoadedSettings,
     LoadedValue,
@@ -23,6 +24,14 @@ __all__ = [
 ]
 
 
+def is_mutable_sequence(val: Any) -> bool:
+    return (
+        hasattr(val, "__iter__")
+        and hasattr(val, "__getitem__")
+        and hasattr(val, "__setitem__")
+    )
+
+
 def iter_settings(
     dct: SettingsDict, options: OptionList
 ) -> Generator[Tuple[str, Any], None, None]:
@@ -39,8 +48,29 @@ def iter_settings(
     """
     for option in options:
         try:
-            yield option.path, get_path(dct, option.path)
-        except KeyError:
+            option_value = get_path(dct, option.path)
+
+            if is_mutable_sequence(option_value) and not isinstance(
+                option_value, (str, bytes)
+            ):
+                # only sub iterate in if declaration and actual value are lists
+                args = get_args(option.cls)
+
+                if args != () and handler_exists(args[0]):
+                    # Recurse if "list[NestedSettings]" is detected and if
+                    # NestedSettings is, e.g., an attrs class.
+                    sub_options = deep_options(args[0])
+
+                    for idx, sub_dct in enumerate(option_value):
+                        for path, value in iter_settings(sub_dct, sub_options):
+                            yield f"{option.path}.{idx}.{path}", value
+                else:
+                    # list of scalars
+                    for idx, value in enumerate(option_value):
+                        yield f"{option.path}.{idx}", value
+            else:
+                yield option.path, option_value
+        except (KeyError, IndexError):
             continue
 
 
@@ -49,6 +79,8 @@ def get_path(dct: SettingsDict, path: str) -> Any:
     Performs a nested dict lookup for *path* and returns the result.
 
     Calling ``get_path(dct, "a.b")`` is equivalent to ``dict["a"]["b"]``.
+    If a part of the path is a non-negative integer, it is treated as list index.
+    Calling ``get_path(dct, "a.0.b")`` is therefore equivalent to ``dct["a"][0]["b"]``.
 
     Args:
         dct: The source dict
@@ -60,9 +92,13 @@ def get_path(dct: SettingsDict, path: str) -> Any:
 
     Raises:
         KeyError: if a key in *path* does not exist.
+        IndexError: if a index in *path* is out of range.
     """
     for part in path.split("."):
-        dct = dct[part]
+        if part.isnumeric():
+            dct = dct[int(part)]  # type: ignore[index]
+        else:
+            dct = dct[part]
     return dct
 
 
@@ -73,15 +109,27 @@ def set_path(dct: SettingsDict, path: str, val: Any) -> None:
 
     Calling ``set_path(dct, "a.b", 3)`` is equivalent to ``dict["a"]["b"]
     = 3``.
+    If a part of the path is a non-negative integer, it is treated as list index.
+    Calling ``set_path(dct, "a.0.b", 3)`` is therefore equivalent to
+    ``dct["a"][0]["b"] = 3``.
 
     Args:
         dct: The dict that should contain the value
         path: The (nested) path, a dot-separated concatenation of keys.
         val: The value to set
+
+    Raises:
+        IndexError: if a index in *path* is out of range.
     """
     *parts, key = path.split(".")
     for part in parts:
-        dct = dct.setdefault(part, {})
+        if part.isnumeric():
+            dct = dct[int(part)]  # type: ignore[index]
+        else:
+            dct = dct.setdefault(part, {})
+
+    if key.isnumeric():
+        key = int(key)  # type: ignore[assignment]
     dct[key] = val
 
 
