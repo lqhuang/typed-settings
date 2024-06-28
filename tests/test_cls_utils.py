@@ -20,17 +20,21 @@ class AttrsCls:
 
     x: int = 0
 
+
 @dataclasses.dataclass
 class DataclassCls:
     """
     Test class for "dataclass".
     """
+
     x: int
+
 
 class PydanticCls(pydantic.BaseModel):
     """
     Test class for "pydantic".
     """
+
     x: int
 
 
@@ -38,6 +42,7 @@ class NormalClass:
     """
     Test class.
     """
+
     x: int
 
 

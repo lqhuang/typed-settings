@@ -13,11 +13,18 @@ repos:
       - id: ruff
         name: ruff
         entry: ruff
+        args: [check]
         language: system
         types: [python]
       - id: ruff-fix
         name: ruff-fix
-        args: [--fix, --exit-non-zero-on-fix]
+        args: [check, --fix, --exit-non-zero-on-fix]
+        entry: ruff
+        language: system
+        types: [python]
+      - id: ruff-fmt
+        name: ruff-fmt
+        args: [format]
         entry: ruff
         language: system
         types: [python]

@@ -125,9 +125,9 @@ class ExampleItem(pytest.Item):
 
         for cmd, output_lines in cmds.items():
             expected = "\n".join(output_lines)
-            output = subprocess.run(
+            output = subprocess.run(  # noqa: S602
                 cmd,
-                shell=True,  # noqa: S602
+                shell=True,
                 cwd=self.path.parent,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.STDOUT,

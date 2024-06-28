@@ -16,6 +16,7 @@ def test_iter_settings():
     "iter_settings()" iterates the settings.  It ignores invalid settings keys
     or non-existing settings.
     """
+
     @dataclasses.dataclass
     class ListSettings:
         w: int
@@ -73,7 +74,7 @@ def test_iter_settings():
                 "w": 6,
             }
         ],
-        "x": "hello:world"
+        "x": "hello:world",
     }
     result = list(dict_utils.iter_settings(settings, option_infos))
     assert result == [
@@ -82,7 +83,7 @@ def test_iter_settings():
         ("u.0", 4),
         ("u.1", 5),
         ("v.0.w", 6),
-        ("x", "hello:world")
+        ("x", "hello:world"),
     ]
 
 
@@ -139,11 +140,7 @@ def test_set_path() -> None:
             },
         },
         "u": [None, 5],
-        "v": [
-            {
-                "w": 6
-            }
-        ]
+        "v": [{"w": 6}],
     }
 
 

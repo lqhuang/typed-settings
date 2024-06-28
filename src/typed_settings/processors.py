@@ -161,12 +161,18 @@ def handle_script(value: str, scheme: str) -> str:
     """
     **URL handler:** Run *value* as shell script and return its output.
 
+    .. attention::
+
+       This handler can run arbitrary shell scripts with the permissions of your
+       application.
+       Only use this handler if you only load configuration from trusted sources!
+
     .. versionadded:: 23.0.0
     """
     try:
-        result = subprocess.run(
+        result = subprocess.run(  # noqa: S602
             value,
-            shell=True,  # noqa: S602
+            shell=True,
             capture_output=True,
             text=True,
             check=True,
