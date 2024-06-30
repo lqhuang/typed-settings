@@ -10,7 +10,7 @@ import textwrap
 import zipfile
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import List, Tuple
+from typing import Dict, List, Tuple
 
 
 try:
@@ -45,6 +45,7 @@ LINT_PATHS = [p for paths in MYPY_PATHS for p in paths]
 # Dependencies for which to test against multiple versions
 PYTHON_VERSIONS = ["3.8", "3.9", "3.10", "3.11", "3.12"]
 LATEST_STABLE_PYTHON = PYTHON_VERSIONS[-1]
+COVERAGE_PYTHON_VERSIONS = [PYTHON_VERSIONS[0], PYTHON_VERSIONS[-1]]
 DEPS_MATRIX = {
     "attrs",
     "cattrs",
@@ -112,8 +113,8 @@ def get_filetree(
     Return a rich "Tree" for the contents of a Wheel or sdist.
     """
     tree = rich.tree.Tree(f":package: [bold magenta]{filename.name}[/]")
-    nodes: dict[Path, rich.tree.Tree] = {}
-    maxlen: dict[Path, int] = {}
+    nodes: Dict[Path, rich.tree.Tree] = {}
+    maxlen: Dict[Path, int] = {}
     for _is_dir, path, _size, _time in infos:
         maxlen[path.parent] = max(len(path.name), maxlen.get(path.parent, 0))
 
@@ -216,15 +217,26 @@ def test(session: nox.Session, deps_min_version: bool) -> None:
 
     session.install(f"typed-settings[test] @ {pkg_file}", *install_deps)
 
-    # We have to run the tests for the doctests in "src" separately or we'll
-    # get an "ImportPathMismatchError" (the "same" file is located in the
-    # cwd and in the nox venv).
-    if tuple(map(int, session.python.split("."))) < (3, 10):  # type: ignore
+    env: Dict[str, str] = {}
+    test_args: Tuple[str, ...] = ()
+    test_prefix: Tuple[str, ...] = ()
+
+    version_tuple = tuple(map(int, session.python.split(".")))  # type: ignore
+    if version_tuple >= (3, 12):
+        # Still experimental but has much better performance:
+        env = {"COVERAGE_CORE": "sysmon"}
+
+    if version_tuple < (3, 10):
         # Skip doctests on older Python versions
         # The output of arparse's "--help" has changed in 3.10
-        session.run("coverage", "run", "-m", "pytest", "tests", "-k", "not test_readme")
-    else:
-        session.run("coverage", "run", "-m", "pytest")
+        test_args = ("tests", "-k", "not test_readme")
+
+    if session.python in COVERAGE_PYTHON_VERSIONS:
+        # Only measure coverage for the minimum and maximum supported Python versions
+        # for performance reasons:
+        test_prefix = ("coverage", "run", "-m")
+
+    session.run(*test_prefix, "pytest", *test_args, env=env)
 
 
 @nox.session(tags=["test"])
@@ -234,7 +246,14 @@ def test_no_optionals(session: nox.Session) -> None:
     """
     pkgs = glob.glob("dist/*.whl")
     session.install(f"typed-settings @ {pkgs[0]}", "coverage", "pytest", "sybil")
-    session.run("coverage", "run", "-m", "pytest", "tests/test_no_optionals.py")
+    session.run(
+        "coverage",
+        "run",
+        "-m",
+        "pytest",
+        "tests/test_no_optionals.py",
+        env={"COVERAGE_CORE": "sysmon"},
+    )
 
 
 @nox.session(name="coverage-report", tags=["test"])
