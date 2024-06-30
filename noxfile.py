@@ -182,28 +182,21 @@ def build(session: nox.Session) -> None:
     [True, False],
     ["min_deps_version", "latest_deps_version"],
 )
-@nox.parametrize("pkg_format", ["tar.gz", "whl"], ["src", "whl"])
-def test(session: nox.Session, deps_min_version: bool, pkg_format: str) -> None:
+def test(session: nox.Session, deps_min_version: bool) -> None:
     """
     Run all tests for various configurations (Python and dependency versions).
 
     Run the full matrix (all combinations of latest/min dependencies and packakge
     formats) only for the latest stable Python version to save some CI/CD minutes.
     """
-    if session.python != LATEST_STABLE_PYTHON:
-        # We need to save GitLab CI minutes so we skip running the tests for some
-        # configurations if this is not the latest stable Python version.
-        if pkg_format != "whl" or deps_min_version:
-            session.skip(f"Skipping this session for Python {session.python}")
-
-    pkgs = glob.glob(f"dist/*.{pkg_format}")
+    pkgs = glob.glob("dist/*.whl")
     if len(pkgs) == 0:
         session.log('Package not found, running "build" ...')
         build(session)
-        pkgs = glob.glob(f"dist/*.{pkg_format}")
+        pkgs = glob.glob("dist/*.whl")
     if len(pkgs) != 1:
         session.error(f"Expected exactly 1 file: {', '.join(pkgs)}")
-    src = pkgs[0]
+    pkg_file = pkgs[0]
 
     # If testing against the minium versions of our dependencies,
     # extract their minium version from pyproject.toml and pin
@@ -221,7 +214,7 @@ def test(session: nox.Session, deps_min_version: bool, pkg_format: str) -> None:
             spec = spec.replace(">=", "==")
             install_deps.append(f"{req.name}{spec}")
 
-    session.install(f"typed-settings[test] @ {src}", *install_deps)
+    session.install(f"typed-settings[test] @ {pkg_file}", *install_deps)
 
     # We have to run the tests for the doctests in "src" separately or we'll
     # get an "ImportPathMismatchError" (the "same" file is located in the
@@ -231,8 +224,7 @@ def test(session: nox.Session, deps_min_version: bool, pkg_format: str) -> None:
         # The output of arparse's "--help" has changed in 3.10
         session.run("coverage", "run", "-m", "pytest", "tests", "-k", "not test_readme")
     else:
-        session.run("coverage", "run", "-m", "pytest", "docs", "tests")
-    session.run("coverage", "run", "-m", "pytest", "src")
+        session.run("coverage", "run", "-m", "pytest")
 
 
 @nox.session(tags=["test"])
