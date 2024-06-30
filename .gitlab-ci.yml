@@ -6,14 +6,18 @@ stages:
   - release
 
 variables:
+  FORCE_COLOR: "1"
+  NOX_DEFAULT_VENV_BACKEND: 'uv'
   PIP_CACHE_DIR: '$CI_PROJECT_DIR/.cache/pip'
   UV_CACHE_DIR: '$CI_PROJECT_DIR/.cache/uv'
-  NOX_DEFAULT_VENV_BACKEND: 'uv'
 
 default:
   image: python:3
   before_script:
-    - pip install nox uv
+    - 'pip install uv'
+    - 'uv venv .venv-tooling'
+    - 'uv pip install --python=.venv-tooling/bin/python nox packaging rich'
+    - 'export PATH="$CI_PROJECT_DIR/.venv-tooling/bin:$PATH"'
   cache:
     paths:
       - .cache/pip
@@ -22,7 +26,7 @@ default:
 build:
   stage: build
   script:
-    - nox --forcecolor -s build
+    - nox -s build
   artifacts:
     paths:
       - dist/
@@ -30,17 +34,17 @@ build:
 lint:
   stage: test
   script:
-    - nox --forcecolor -s lint
+    - nox -s lint
 
 mypy:
   stage: test
   script:
-    - nox --forcecolor -s mypy
+    - nox -s mypy
 
 sec-check:
   stage: test
   script:
-    - nox --forcecolor -s sec-check
+    - nox -s sec-check
 
 test:
   stage: test
@@ -53,8 +57,8 @@ test:
   script:
     # "%%-*" strips the longest possible match of "-*" from the right:
     - >-
-      nox --forcecolor -s "test-${PY%%-*}($PKG_FORMAT, $DEPS_VERSION)" --
-      --junit-xml=report-${PY%%-*}-${PKG_FORMAT}-${DEPS_VERSION}.xml
+      nox -s "test-${PY%%-*}($PKG_FORMAT, $DEPS_VERSION)" --
+      --junit-xml=report-${PY%%-*}-${DEPS_VERSION}.xml
   artifacts:
     paths:
       - ".coverage"
@@ -65,7 +69,7 @@ test:
 test-no-optionals:
   stage: test
   script:
-    - nox --forcecolor -s test_no_optionals -- --junit-xml=report-no-optionals.xml
+    - nox -s test_no_optionals -- --junit-xml=report-no-optionals.xml
   artifacts:
     paths:
       - ".coverage"
@@ -76,7 +80,7 @@ test-no-optionals:
 test-coverage:
   stage: post-test
   script:
-    - nox --forcecolor -s coverage-report
+    - nox -s coverage-report
   coverage: '/^TOTAL.*\s+(\d+\%)\s*$/'
   artifacts:
     paths:

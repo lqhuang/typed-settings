@@ -3,8 +3,14 @@ Configuration and tasks for **Nox**.
 """
 
 import glob
+import logging
 import os
-import pathlib
+import tarfile
+import textwrap
+import zipfile
+from datetime import datetime, timezone
+from pathlib import Path
+from typing import List, Tuple
 
 
 try:
@@ -13,10 +19,14 @@ except ImportError:
     import tomli as tomllib  # type: ignore[no-redef]
 
 import nox
+import rich
+import rich.console
+import rich.markdown
+import rich.tree
 from packaging.requirements import Requirement
 
 
-PROJECT_DIR = pathlib.Path(__file__).parent
+PROJECT_DIR = Path(__file__).parent
 MYPY_PATHS = [
     [
         "./noxfile.py",
@@ -54,6 +64,81 @@ if IN_CI:
     ]
 
 
+def list_wheel(filename: Path) -> List[Tuple[bool, Path, int, datetime]]:
+    """
+    List contents of a Wheel package.
+
+    Return a list of tuples *(is_dir, filename, size_in_bytes, mtime)*.
+    """
+    with zipfile.ZipFile(filename) as zf:
+        items = [
+            (
+                item.is_dir(),
+                Path(item.filename),
+                item.file_size,
+                datetime(*item.date_time, tzinfo=timezone.utc),
+            )
+            for item in zf.infolist()
+        ]
+    return items
+
+
+def list_sdist(filename: Path) -> Tuple[List[Tuple[bool, Path, int, datetime]], str]:
+    """
+    List contents of a source distribution.
+
+    Return a list of tuples *(is_dir, filename, size_in_bytes, mtime)* and the
+    package metadata.
+    """
+    with tarfile.open("dist/typed_settings-24.3.0.tar.gz") as tf:
+        items = [
+            (
+                item.isdir(),
+                Path(item.name),
+                item.size,
+                datetime.fromtimestamp(item.mtime, tz=timezone.utc),
+            )
+            for item in tf.getmembers()
+        ]
+        fname = f"{filename.stem.removesuffix('.tar')}/PKG-INFO"
+        metadata = tf.extractfile(fname).read().decode()  # type: ignore[union-attr]
+        return items, metadata
+
+
+def get_filetree(
+    filename: Path, infos: List[Tuple[bool, Path, int, datetime]]
+) -> rich.tree.Tree:
+    """
+    Return a rich "Tree" for the contents of a Wheel or sdist.
+    """
+    tree = rich.tree.Tree(f":package: [bold magenta]{filename.name}[/]")
+    nodes: dict[Path, rich.tree.Tree] = {}
+    maxlen: dict[Path, int] = {}
+    for _is_dir, path, _size, _time in infos:
+        maxlen[path.parent] = max(len(path.name), maxlen.get(path.parent, 0))
+
+    for is_dir, path, size, time in infos:
+        components = [path, *path.parents][:-1]
+        idx = 0 if is_dir else 1
+        files = components[:idx]
+        parents = components[idx:]
+        for parent in reversed(parents):
+            if parent not in nodes:
+                label = f":open_file_folder: [bold blue]{parent.name}[/]"
+                nodes[parent] = nodes.get(parent.parent, tree).add(label)
+        parent_node = nodes[parent]
+        width = maxlen[parent]
+        for file in files:
+            label = (
+                f":page_facing_up: [bold]{file.name:<{width}}[/] "
+                f"[green]{time:%Y-%m-%d}[/]T[green]{time:%H-%M-%S}[/]Z "
+                f"[blue]{size}[cyan]B[/]"
+            )
+            parent_node.add(label)
+
+    return tree
+
+
 @nox.session
 def build(session: nox.Session) -> None:
     """
@@ -71,6 +156,24 @@ def build(session: nox.Session) -> None:
     session.run("rm", "-rf", "dist", external=True)
     session.run("python", "-m", "build", "--install=uv", "--outdir=dist", env=env)
     session.run("check-wheel-contents", "dist")
+
+    console = rich.console.Console(stderr=True)
+
+    session.log("Distribution contents:")
+    for dist in Path("dist").iterdir():
+        if dist.suffix == ".whl":
+            items = list_wheel(dist)
+        else:
+            items, metadata = list_sdist(dist)
+        console.print(get_filetree(dist, items))
+    assert metadata, "No sdist has been built"
+
+    session.log("Metadata:")
+    metadata, _, readme = metadata.partition("\n\n")
+    logging.getLogger("markdown_it").setLevel("WARNING")
+    console.print(textwrap.indent(metadata, "    "))
+    console.print()
+    console.print(rich.markdown.Markdown(readme))
 
 
 @nox.session(python=PYTHON_VERSIONS, tags=["test"])
