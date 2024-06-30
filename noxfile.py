@@ -59,9 +59,17 @@ def build(session: nox.Session) -> None:
     """
     Build an sdist and a wheel for TS.
     """
+    # Set 'SOURCE_DATE_EPOCH' based on the last commit for build reproducibility.
+    source_date_epoch = session.run(  # type: ignore[union-attr]
+        "git", "log", "-1", "--pretty=%ct", external=True, silent=True
+    ).strip()
+    env = {"SOURCE_DATE_EPOCH": source_date_epoch}
+    session.log(f"Setting SOURCE_DATE_EPOCH to {source_date_epoch}.")
+
     session.install("build", "check-wheel-contents")
+
     session.run("rm", "-rf", "dist", external=True)
-    session.run("python", "-m", "build", "--install=uv", "--outdir=dist")
+    session.run("python", "-m", "build", "--install=uv", "--outdir=dist", env=env)
     session.run("check-wheel-contents", "dist")
 
 
