@@ -59,10 +59,10 @@ def build(session: nox.Session) -> None:
     """
     Build an sdist and a wheel for TS.
     """
-    session.install("hatch", "check-wheel-contents")
-    session.run("rm", "-rf", "build", "dist", external=True)
-    session.run("hatch", "build")  # , external=True)
-    session.run("check-wheel-contents", *glob.glob("dist/*.whl"))
+    session.install("build", "check-wheel-contents")
+    session.run("rm", "-rf", "dist", external=True)
+    session.run("python", "-m", "build", "--install=uv", "--outdir=dist")
+    session.run("check-wheel-contents", "dist")
 
 
 @nox.session(python=PYTHON_VERSIONS, tags=["test"])
