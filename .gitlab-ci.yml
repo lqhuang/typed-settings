@@ -2,21 +2,21 @@ stages:
   - build
   - test
   - post-test
-  - pre-release
-  - release
+  - deploy
 
 variables:
   FORCE_COLOR: '1'
   NOX_DEFAULT_VENV_BACKEND: 'uv'
   PIP_CACHE_DIR: '$CI_PROJECT_DIR/.cache/pip'
   UV_CACHE_DIR: '$CI_PROJECT_DIR/.cache/uv'
+  TOOLING_ENV: '$CI_PROJECT_DIR/.venv-tooling'
 
 default:
   image: 'python:3'
   before_script:
     - 'pip install uv'
     - 'uv venv .venv-tooling'
-    - 'uv pip install --python=.venv-tooling/bin/python nox packaging rich'
+    - 'uv pip install "--python=$TOOLING_ENV/bin/python" nox packaging rich'
     - 'export PATH="$CI_PROJECT_DIR/.venv-tooling/bin:$PATH"'
   cache:
     paths:
@@ -45,7 +45,6 @@ sec-check:
   stage: test
   script:
     - 'nox -s sec-check'
-
 
 .test:
   stage: test
@@ -85,34 +84,45 @@ test-coverage:
         coverage_format: 'cobertura'
         path: 'coverage.xml'
 
-release-check:
-  stage: pre-release
-  only:
-    - tags
-  except:
-    - schedules
-  variables:
-    TWINE_USERNAME: '__token__'
-    TWINE_PASSWORD: '$TEST_PYPI_TOKEN'
-    TWINE_REPOSITORY_URL: 'https://test.pypi.org/legacy/'
-    TWINE_NON_INTERACTIVE: '1'
-  script:
-    - 'pip install twine'
-    - 'twine check dist/*'
-    - 'twine upload  dist/*'
-
-release:
-  stage: release
+.release:
+  stage: deploy
   only:
     - tags
   except:
     - schedules
   when: manual
-  variables:
-    TWINE_USERNAME: '__token__'
-    TWINE_PASSWORD: '$UPLOAD_PYPI_TOKEN'
-    TWINE_REPOSITORY_URL: 'https://upload.pypi.org/legacy/'
-    TWINE_NON_INTERACTIVE: '1'
+  id_tokens:
+    PYPI_ID_TOKEN:
+      aud: '$PYPI_OIDC_AUD'
   script:
-    - 'pip install twine'
+    - 'uv pip install "--python=$TOOLING_ENV/bin/python" twine id'
+    - 'oidc_token=$(python -m id PYPI)'
+    - 'resp=$(curl -X POST $PYPI_OIDC_URL -d "{\"token\":\"${oidc_token}\"}")'
+    - >-
+      TWINE_PASSWORD=$(python -c 'import json, sys; print(json.load(sys.stdin)["token"])' <<< "${resp}")
+    - 'twine check dist/*'
     - 'twine upload dist/*'
+
+release-test:
+  extends: .release
+  environment:
+    name: release-test
+    url: https://test.pypi.org/project/typed-settings/
+  variables:
+    PYPI_OIDC_AUD: 'testpypi'
+    PYPI_OIDC_URL: 'https://test.pypi.org/_/oidc/mint-token'
+    TWINE_USERNAME: '__token__'
+    TWINE_REPOSITORY_URL: 'https://test.pypi.org/legacy/'
+
+release:
+  extends: .release
+  dependencies:
+    - release-test
+  environment:
+    name: release
+    url: https://pypi.org/project/typed-settings/
+  variables:
+    PYPI_OIDC_AUD: 'pypi'
+    PYPI_OIDC_URL: 'https://pypi.org/_/oidc/mint-token'
+    TWINE_USERNAME: '__token__'
+    TWINE_REPOSITORY_URL: 'https://upload.pypi.org/legacy/'
