@@ -3,8 +3,14 @@ Configuration and tasks for **Nox**.
 """
 
 import glob
+import logging
 import os
-import pathlib
+import tarfile
+import textwrap
+import zipfile
+from datetime import datetime, timezone
+from pathlib import Path
+from typing import Dict, List, Tuple
 
 
 try:
@@ -13,10 +19,14 @@ except ImportError:
     import tomli as tomllib  # type: ignore[no-redef]
 
 import nox
+import rich
+import rich.console
+import rich.markdown
+import rich.tree
 from packaging.requirements import Requirement
 
 
-PROJECT_DIR = pathlib.Path(__file__).parent
+PROJECT_DIR = Path(__file__).parent
 MYPY_PATHS = [
     [
         "./noxfile.py",
@@ -35,6 +45,7 @@ LINT_PATHS = [p for paths in MYPY_PATHS for p in paths]
 # Dependencies for which to test against multiple versions
 PYTHON_VERSIONS = ["3.8", "3.9", "3.10", "3.11", "3.12"]
 LATEST_STABLE_PYTHON = PYTHON_VERSIONS[-1]
+COVERAGE_PYTHON_VERSIONS = [PYTHON_VERSIONS[0], PYTHON_VERSIONS[-1]]
 DEPS_MATRIX = {
     "attrs",
     "cattrs",
@@ -54,15 +65,116 @@ if IN_CI:
     ]
 
 
+def list_wheel(filename: Path) -> List[Tuple[bool, Path, int, datetime]]:
+    """
+    List contents of a Wheel package.
+
+    Return a list of tuples *(is_dir, filename, size_in_bytes, mtime)*.
+    """
+    with zipfile.ZipFile(filename) as zf:
+        items = [
+            (
+                item.is_dir(),
+                Path(item.filename),
+                item.file_size,
+                datetime(*item.date_time, tzinfo=timezone.utc),
+            )
+            for item in zf.infolist()
+        ]
+    return items
+
+
+def list_sdist(filename: Path) -> Tuple[List[Tuple[bool, Path, int, datetime]], str]:
+    """
+    List contents of a source distribution.
+
+    Return a list of tuples *(is_dir, filename, size_in_bytes, mtime)* and the
+    package metadata.
+    """
+    with tarfile.open("dist/typed_settings-24.3.0.tar.gz") as tf:
+        items = [
+            (
+                item.isdir(),
+                Path(item.name),
+                item.size,
+                datetime.fromtimestamp(item.mtime, tz=timezone.utc),
+            )
+            for item in tf.getmembers()
+        ]
+        fname = f"{filename.stem.removesuffix('.tar')}/PKG-INFO"
+        metadata = tf.extractfile(fname).read().decode()  # type: ignore[union-attr]
+        return items, metadata
+
+
+def get_filetree(
+    filename: Path, infos: List[Tuple[bool, Path, int, datetime]]
+) -> rich.tree.Tree:
+    """
+    Return a rich "Tree" for the contents of a Wheel or sdist.
+    """
+    tree = rich.tree.Tree(f":package: [bold magenta]{filename.name}[/]")
+    nodes: Dict[Path, rich.tree.Tree] = {}
+    maxlen: Dict[Path, int] = {}
+    for _is_dir, path, _size, _time in infos:
+        maxlen[path.parent] = max(len(path.name), maxlen.get(path.parent, 0))
+
+    for is_dir, path, size, time in infos:
+        components = [path, *path.parents][:-1]
+        idx = 0 if is_dir else 1
+        files = components[:idx]
+        parents = components[idx:]
+        for parent in reversed(parents):
+            if parent not in nodes:
+                label = f":open_file_folder: [bold blue]{parent.name}[/]"
+                nodes[parent] = nodes.get(parent.parent, tree).add(label)
+        parent_node = nodes[parent]
+        width = maxlen[parent]
+        for file in files:
+            label = (
+                f":page_facing_up: [bold]{file.name:<{width}}[/] "
+                f"[green]{time:%Y-%m-%d}[/]T[green]{time:%H-%M-%S}[/]Z "
+                f"[blue]{size}[cyan]B[/]"
+            )
+            parent_node.add(label)
+
+    return tree
+
+
 @nox.session
 def build(session: nox.Session) -> None:
     """
     Build an sdist and a wheel for TS.
     """
-    session.install("hatch", "check-wheel-contents")
-    session.run("rm", "-rf", "build", "dist", external=True)
-    session.run("hatch", "build")  # , external=True)
-    session.run("check-wheel-contents", *glob.glob("dist/*.whl"))
+    # Set 'SOURCE_DATE_EPOCH' based on the last commit for build reproducibility.
+    source_date_epoch = session.run(  # type: ignore[union-attr]
+        "git", "log", "-1", "--pretty=%ct", external=True, silent=True
+    ).strip()
+    env = {"SOURCE_DATE_EPOCH": source_date_epoch}
+    session.log(f"Setting SOURCE_DATE_EPOCH to {source_date_epoch}.")
+
+    session.install("build", "check-wheel-contents")
+
+    session.run("rm", "-rf", "dist", external=True)
+    session.run("python", "-m", "build", "--install=uv", "--outdir=dist", env=env)
+    session.run("check-wheel-contents", "dist")
+
+    console = rich.console.Console(stderr=True)
+
+    session.log("Distribution contents:")
+    for dist in Path("dist").iterdir():
+        if dist.suffix == ".whl":
+            items = list_wheel(dist)
+        else:
+            items, metadata = list_sdist(dist)
+        console.print(get_filetree(dist, items))
+    assert metadata, "No sdist has been built"
+
+    session.log("Metadata:")
+    metadata, _, readme = metadata.partition("\n\n")
+    logging.getLogger("markdown_it").setLevel("WARNING")
+    console.print(textwrap.indent(metadata, "    "))
+    console.print()
+    console.print(rich.markdown.Markdown(readme))
 
 
 @nox.session(python=PYTHON_VERSIONS, tags=["test"])
@@ -71,28 +183,21 @@ def build(session: nox.Session) -> None:
     [True, False],
     ["min_deps_version", "latest_deps_version"],
 )
-@nox.parametrize("pkg_format", ["tar.gz", "whl"], ["src", "whl"])
-def test(session: nox.Session, deps_min_version: bool, pkg_format: str) -> None:
+def test(session: nox.Session, deps_min_version: bool) -> None:
     """
     Run all tests for various configurations (Python and dependency versions).
 
     Run the full matrix (all combinations of latest/min dependencies and packakge
     formats) only for the latest stable Python version to save some CI/CD minutes.
     """
-    if session.python != LATEST_STABLE_PYTHON:
-        # We need to save GitLab CI minutes so we skip running the tests for some
-        # configurations if this is not the latest stable Python version.
-        if pkg_format != "whl" or deps_min_version:
-            session.skip(f"Skipping this session for Python {session.python}")
-
-    pkgs = glob.glob(f"dist/*.{pkg_format}")
+    pkgs = glob.glob("dist/*.whl")
     if len(pkgs) == 0:
         session.log('Package not found, running "build" ...')
         build(session)
-        pkgs = glob.glob(f"dist/*.{pkg_format}")
+        pkgs = glob.glob("dist/*.whl")
     if len(pkgs) != 1:
         session.error(f"Expected exactly 1 file: {', '.join(pkgs)}")
-    src = pkgs[0]
+    pkg_file = pkgs[0]
 
     # If testing against the minium versions of our dependencies,
     # extract their minium version from pyproject.toml and pin
@@ -110,18 +215,28 @@ def test(session: nox.Session, deps_min_version: bool, pkg_format: str) -> None:
             spec = spec.replace(">=", "==")
             install_deps.append(f"{req.name}{spec}")
 
-    session.install(f"typed-settings[test] @ {src}", *install_deps)
+    session.install(f"typed-settings[test] @ {pkg_file}", *install_deps)
 
-    # We have to run the tests for the doctests in "src" separately or we'll
-    # get an "ImportPathMismatchError" (the "same" file is located in the
-    # cwd and in the nox venv).
-    if tuple(map(int, session.python.split("."))) < (3, 10):  # type: ignore
+    env: Dict[str, str] = {}
+    test_args: Tuple[str, ...] = ()
+    test_prefix: Tuple[str, ...] = ()
+
+    version_tuple = tuple(map(int, session.python.split(".")))  # type: ignore
+    if version_tuple >= (3, 12):
+        # Still experimental but has much better performance:
+        env = {"COVERAGE_CORE": "sysmon"}
+
+    if version_tuple < (3, 10):
         # Skip doctests on older Python versions
         # The output of arparse's "--help" has changed in 3.10
-        session.run("coverage", "run", "-m", "pytest", "tests", "-k", "not test_readme")
-    else:
-        session.run("coverage", "run", "-m", "pytest", "docs", "tests")
-    session.run("coverage", "run", "-m", "pytest", "src")
+        test_args = ("tests", "-k", "not test_readme")
+
+    if session.python in COVERAGE_PYTHON_VERSIONS:
+        # Only measure coverage for the minimum and maximum supported Python versions
+        # for performance reasons:
+        test_prefix = ("coverage", "run", "-m")
+
+    session.run(*test_prefix, "pytest", *test_args, env=env)
 
 
 @nox.session(tags=["test"])
@@ -131,7 +246,14 @@ def test_no_optionals(session: nox.Session) -> None:
     """
     pkgs = glob.glob("dist/*.whl")
     session.install(f"typed-settings @ {pkgs[0]}", "coverage", "pytest", "sybil")
-    session.run("coverage", "run", "-m", "pytest", "tests/test_no_optionals.py")
+    session.run(
+        "coverage",
+        "run",
+        "-m",
+        "pytest",
+        "tests/test_no_optionals.py",
+        env={"COVERAGE_CORE": "sysmon"},
+    )
 
 
 @nox.session(name="coverage-report", tags=["test"])

@@ -6,81 +6,80 @@ stages:
   - release
 
 variables:
+  FORCE_COLOR: '1'
+  NOX_DEFAULT_VENV_BACKEND: 'uv'
   PIP_CACHE_DIR: '$CI_PROJECT_DIR/.cache/pip'
   UV_CACHE_DIR: '$CI_PROJECT_DIR/.cache/uv'
-  NOX_DEFAULT_VENV_BACKEND: 'uv'
 
 default:
-  image: python:3
+  image: 'python:3'
   before_script:
-    - pip install nox uv
+    - 'pip install uv'
+    - 'uv venv .venv-tooling'
+    - 'uv pip install --python=.venv-tooling/bin/python nox packaging rich'
+    - 'export PATH="$CI_PROJECT_DIR/.venv-tooling/bin:$PATH"'
   cache:
     paths:
-      - .cache/pip
-      - .cache/uv
+      - '.cache/pip'
+      - '.cache/uv'
 
 build:
   stage: build
   script:
-    - nox --forcecolor -s build
+    - 'nox -s build'
   artifacts:
     paths:
-      - dist/
+      - 'dist/'
 
 lint:
   stage: test
   script:
-    - nox --forcecolor -s lint
+    - 'nox -s lint'
 
 mypy:
   stage: test
   script:
-    - nox --forcecolor -s mypy
+    - 'nox -s mypy'
 
 sec-check:
   stage: test
   script:
-    - nox --forcecolor -s sec-check
+    - 'nox -s sec-check'
+
+
+.test:
+  stage: test
+  artifacts:
+    paths:
+      - '.coverage'
+      - '.coverage.*'
+    reports:
+      junit: 'report-*.xml'
 
 test:
-  stage: test
+  extends: '.test'
   parallel:
     matrix:
-      - PY: ["3.8", "3.9", "3.10", "3.11", "3.12"]
-        DEPS_VERSION: ["min_deps_version", "latest_deps_version"]
-        PKG_FORMAT: ["src", "whl"]
-  image: python:$PY
+      - PY: ['3.8', '3.9', '3.10', '3.11', '3.12']
+        DEPS_VERSION: ['min_deps_version', 'latest_deps_version']
+  image: 'python:$PY'
   script:
     # "%%-*" strips the longest possible match of "-*" from the right:
-    - >-
-      nox --forcecolor -s "test-${PY%%-*}($PKG_FORMAT, $DEPS_VERSION)" --
-      --junit-xml=report-${PY%%-*}-${PKG_FORMAT}-${DEPS_VERSION}.xml
-  artifacts:
-    paths:
-      - ".coverage"
-      - ".coverage.*"
-    reports:
-      junit: "report-*.xml"
+    - 'nox -s "test-${PY%%-*}($DEPS_VERSION)" -- --junit-xml=report-${PY%%-*}-${DEPS_VERSION}.xml'
 
 test-no-optionals:
-  stage: test
+  extends: '.test'
   script:
-    - nox --forcecolor -s test_no_optionals -- --junit-xml=report-no-optionals.xml
-  artifacts:
-    paths:
-      - ".coverage"
-      - ".coverage.*"
-    reports:
-      junit: "report-*.xml"
+    - 'nox -s test_no_optionals -- --junit-xml=report-no-optionals.xml'
 
 test-coverage:
   stage: post-test
   script:
-    - nox --forcecolor -s coverage-report
+    - 'nox -s coverage-report'
   coverage: '/^TOTAL.*\s+(\d+\%)\s*$/'
   artifacts:
     paths:
-      - "htmlcov"
+      - 'htmlcov'
     reports:
       coverage_report:
         coverage_format: 'cobertura'
@@ -93,14 +92,14 @@ release-check:
   except:
     - schedules
   variables:
-    TWINE_USERNAME: "__token__"
-    TWINE_PASSWORD: "$TEST_PYPI_TOKEN"
-    TWINE_REPOSITORY_URL: "https://test.pypi.org/legacy/"
-    TWINE_NON_INTERACTIVE: "1"
+    TWINE_USERNAME: '__token__'
+    TWINE_PASSWORD: '$TEST_PYPI_TOKEN'
+    TWINE_REPOSITORY_URL: 'https://test.pypi.org/legacy/'
+    TWINE_NON_INTERACTIVE: '1'
   script:
-    - pip install twine
-    - twine check dist/*
-    - twine upload  dist/*
+    - 'pip install twine'
+    - 'twine check dist/*'
+    - 'twine upload  dist/*'
 
 release:
   stage: release
@@ -110,10 +109,10 @@ release:
     - schedules
   when: manual
   variables:
-    TWINE_USERNAME: "__token__"
-    TWINE_PASSWORD: "$UPLOAD_PYPI_TOKEN"
-    TWINE_REPOSITORY_URL: "https://upload.pypi.org/legacy/"
-    TWINE_NON_INTERACTIVE: "1"
+    TWINE_USERNAME: '__token__'
+    TWINE_PASSWORD: '$UPLOAD_PYPI_TOKEN'
+    TWINE_REPOSITORY_URL: 'https://upload.pypi.org/legacy/'
+    TWINE_NON_INTERACTIVE: '1'
   script:
-    - pip install twine
-    - twine upload dist/*
+    - 'pip install twine'
+    - 'twine upload dist/*'
